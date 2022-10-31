@@ -1,5 +1,4 @@
-This is the source code for a python framework called Pytonium for building python apps with a GUI,
-based on web technologies, like the Electron Framework for Javascript.
+This is a framework for building python apps, with a GUI based on the web-technologies HTML, CSS and Javascript.
 
 It uses the Chromium Embedded Framework for rendering and execution of javascript.
 

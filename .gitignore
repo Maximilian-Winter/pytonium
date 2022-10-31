@@ -4,10 +4,13 @@ cef-binaries/include/
 cef-binaries/libcef_dll/
 cef-binaries/Release/
 cef-binaries/Resources/
-docs/
+cef-binaries/docs/
+cef-binaries/cmake/
 cef-binaries/cef_paths.gypi
 cef-binaries/cef_paths2.gypi
-
+cef-binaries/cmake/FindCEF.cmake
+cef-binaries/cmake/cef_variables.cmake
+cef-binaries/cmake/cef_macros.cmake
 # IDE settings folders
 .idea
 .vscode
@@ -39,3 +42,6 @@ src/Pytonium_Dev/PytoniumTests/cache/
 src/Pytonium_Dev/PytoniumTests/venv/
 
 src/Pytonium_Dev/Pytonium/src/pytonium.cpp
+/src/Pytonium_Dev/PytoniumTests/index.html
+/src/Pytonium_Dev/readme.md
+
