@@ -23,7 +23,7 @@ cmake-build-release-visual-studio/
 cef-binaries/libcef_dll/cmake-build-debug-visual-studio/
 cef-binaries/libcef_dll/cmake-build-release-visual-studio/
 src/.venv
-
+src/venv311
 venv/
 src/Pytonium_Dev/Pytonium/bin/
 src/Pytonium_Dev/Pytonium/cefsubprocess/
