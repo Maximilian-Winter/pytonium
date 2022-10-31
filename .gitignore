@@ -6,6 +6,9 @@ cef-binaries/Release/
 cef-binaries/Resources/
 cef-binaries/docs/
 cef-binaries/cmake/
+cef-binaries/tests/
+cef-binaries/Doxyfile
+cef-binaries/CMakeLists.txt
 cef-binaries/cef_paths.gypi
 cef-binaries/cef_paths2.gypi
 cef-binaries/cmake/FindCEF.cmake

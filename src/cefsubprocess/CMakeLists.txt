@@ -37,6 +37,21 @@ endif()
 # Determine the target output directory.
 SET_CEF_TARGET_OUT_DIR()
 
+if(OS_WINDOWS)
+
+    # Add custom manifest files to an executable target.
+    macro(ADD_WINDOWS_MANIFEST_ONE_PART manifest_path target extension)
+        add_custom_command(
+                TARGET ${target}
+                POST_BUILD
+                COMMAND "mt.exe" -nologo
+                -manifest \"${manifest_path}/${target}.${extension}.manifest\"
+                -outputresource:"${CEF_TARGET_OUT_DIR}/${target}.${extension}"\;\#1
+                COMMENT "Adding manifest..."
+        )
+    endmacro()
+
+endif(OS_WINDOWS)
 
 
 #
@@ -59,7 +74,7 @@ if(OS_WINDOWS)
   endif()
 
   # Add the custom manifest files to the executable.
-  ADD_WINDOWS_MANIFEST("${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_TARGET}" "exe")
+  ADD_WINDOWS_MANIFEST_ONE_PART("${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_TARGET}" "exe")
 
   # Copy binary and resource files to the target output directory.
   COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
