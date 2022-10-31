@@ -46,5 +46,6 @@ src/Pytonium_Dev/PytoniumTests/venv/
 
 src/Pytonium_Dev/Pytonium/src/pytonium.cpp
 /src/Pytonium_Dev/PytoniumTests/index.html
-/src/Pytonium_Dev/readme.md
+/src/Pytonium_Dev/README.md
 
+src/Pytonium_Dev/Pytonium/bin.zip

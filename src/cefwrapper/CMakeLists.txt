@@ -69,7 +69,7 @@ if(OS_WINDOWS)
 
   COPY_SINGLE_FILE(${CEF_TARGET} "./Release/cefwrapper.lib" "../../../src/Pytonium_Dev/Pytonium/src/lib/cefwrapper.lib")
   COPY_SINGLE_FILE(${CEF_TARGET} "../../../cef-binaries/Release/libcef.lib" "../../../src/Pytonium_Dev/Pytonium/src/lib/libcef.lib")
-  COPY_SINGLE_FILE(${CEF_TARGET} "../../libcef_dll_wrapper/Release/libcef_dll_wrapper.lib" "../../src/Pytonium_Dev/Pytonium/src/lib/libcef_dll_wrapper.lib")
+  COPY_SINGLE_FILE(${CEF_TARGET} "../../libcef_dll_wrapper/Release/libcef_dll_wrapper.lib" "../../../src/Pytonium_Dev/Pytonium/src/lib/libcef_dll_wrapper.lib")
   add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${CMAKE_SOURCE_DIR}/cef-binaries/include/ ${CMAKE_SOURCE_DIR}/src/Pytonium_Dev/Pytonium/src/include/)
