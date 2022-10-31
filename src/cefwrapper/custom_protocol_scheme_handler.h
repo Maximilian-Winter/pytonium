@@ -1,0 +1,10 @@
+//
+// Created by maxim on 19.10.2022.
+//
+
+#ifndef CEF_WRAPPER_CUSTOM_PROTOCOL_SCHEME_HANDLER_H
+#define CEF_WRAPPER_CUSTOM_PROTOCOL_SCHEME_HANDLER_H
+
+void RegisterSchemeHandlerFactory();
+
+#endif // CEF_WRAPPER_CUSTOM_PROTOCOL_SCHEME_HANDLER_H

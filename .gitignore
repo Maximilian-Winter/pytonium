@@ -1,0 +1,41 @@
+# this stuff comes from cef-binaries 106.0.27+g20ed841+chromium-106.0.5249.103_windows64
+cef-binaries/Debug/
+cef-binaries/include/
+cef-binaries/libcef_dll/
+cef-binaries/Release/
+cef-binaries/Resources/
+docs/
+cef-binaries/cef_paths.gypi
+cef-binaries/cef_paths2.gypi
+
+# IDE settings folders
+.idea
+.vscode
+
+
+# the rest is created by cmake, building the wrapper and python(virtual enviroments and package creation.
+
+cmake-build-debug-visual-studio/
+cmake-build-release-visual-studio/
+cef-binaries/libcef_dll/cmake-build-debug-visual-studio/
+cef-binaries/libcef_dll/cmake-build-release-visual-studio/
+src/.venv
+
+venv/
+src/Pytonium_Dev/Pytonium/bin/
+src/Pytonium_Dev/Pytonium/cefsubprocess/
+src/Pytonium_Dev/Pytonium.egg-info/
+src/Pytonium_Dev/test/cache/
+src/Pytonium_Dev/dist/
+src/Pytonium_Dev/Pytonium/src/lib/
+src/Pytonium_Dev/Pytonium/src/cefwrapper/
+src/Pytonium_Dev/Pytonium/src/include/
+src/Pytonium_Dev/build/
+src/Pytonium_Dev/__pycache__/
+src/Pytonium_Dev/Pytonium/__pycache__/
+
+src/Pytonium_Dev/PytoniumTests/.idea/
+src/Pytonium_Dev/PytoniumTests/cache/
+src/Pytonium_Dev/PytoniumTests/venv/
+
+src/Pytonium_Dev/Pytonium/src/pytonium.cpp

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=60.2.0", "Cython>=3.0.0a11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Pytonium"
+version = "0.0.1"
+authors = [
+  { name="Maximilian Winter", email="maximilian.winter.91@gmail.com" },
+]
+description = "A framework for building python apps, with a GUI based on the web-technologies HTML, CSS and Javascript.\nIt uses the Chromium Embedded Framework for the purpose of rendering the HTML and CSS and executing the javascript"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: Microsoft :: Windows",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Maximilian-Winter/pytonium"
+"Bug Tracker" = "https://github.com/Maximilian-Winter/pytonium/issues"

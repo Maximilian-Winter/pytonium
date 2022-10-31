@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PytoniumTest</title>
+</head>
+<body>
+<div id ="app">
+    <p>Hello World!</p>
+</div>
+
+</body>
+<script>
+
+    // Call function in python with arguments.
+    window.test_binding_python_function.testfunc(42, 24.42, true, 'Hello World!')
+    window.test_binding_python_object_methods.TestOne(42, 24.42, true, 'Hello World!')
+    window.test_binding_python_object_methods.TestTwo(42, 24.42, true, 'Hello World!')
+    window.test_binding_python_object_methods.TestThree(42, 24.42, true, 'Hello World!')
+    // Create function to call from python to update dom.
+    setTicker = (date) =>
+    {
+        document.getElementById('app').innerHTML = '<p>Hello World!</p>'+'<p>'+ date+ '</p>'
+    }
+
+    // Create a variable called state to expose the function to python.
+    window.state = { }
+    window.state.setTicker = setTicker
+</script>
+</html>
