@@ -11,3 +11,6 @@ It is still at an early stage.
 I will try to keep the Chromium Embedded Framework updated.
 
 Based on cef version: 106.1.1+g5891c70+chromium-106.0.5249.119
+
+To Build from source, you would have to copy the content of minimal 
+distrubition of the Chromium Embedded Framework into the folder called 'cef-binaries'.
