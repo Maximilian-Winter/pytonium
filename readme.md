@@ -11,4 +11,4 @@ It is still at an early stage.
 
 I will try to keep the Chromium Embedded Framework updated.
 
-Based on cef release folder: cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64
+Based on cef version: 106.1.1+g5891c70+chromium-106.0.5249.119
