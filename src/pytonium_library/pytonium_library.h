@@ -9,15 +9,15 @@
 #include "include/cef_sandbox_win.h"
 #include "javascript_binding.h"
 
-class CefWrapper {
+class PytoniumLibrary {
 public:
-  CefWrapper();
-  void InitCefSimple(std::string start_url, int init_width, int init_height);
+  PytoniumLibrary();
+  void InitPytonium(std::string start_url, int init_width, int init_height);
   void ExecuteJavascript(std::string code);
-  void ShutdownCefSimple();
+  void ShutdownPytonium();
   bool IsRunning();
   bool IsReadyToExecuteJavascript();
-  void DoCefMessageLoopWork();
+  void UpdateMessageLoop();
   void AddJavascriptBinding(std::string name,
                                 js_binding_function_ptr jsNativeApiFunctionPtr, std::string javascript_object);
   void AddJavascriptPythonBinding(std::string name,

@@ -1,4 +1,4 @@
-#include "library.h"
+#include "pytonium_library.h"
 
 #include "global_vars.h"
 #include "javascript_binding.h"
@@ -8,26 +8,26 @@
 
 
 std::string ExePath() {
-  std::filesystem::path cwd = std::filesystem::current_path() / "bin" / "cefsubprocess.exe";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\cefsubprocess\\Debug\\cefsubprocess.exe";
+  std::filesystem::path cwd = std::filesystem::current_path() / "bin" / "pytonium_subprocess.exe";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
   return cwd.string();
 }
 
 std::string ResourcePath() {
-  std::filesystem::path cwd = std::filesystem::current_path() /"bin" ;   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\cefsubprocess\\Debug\\cefsubprocess.exe";
+  std::filesystem::path cwd = std::filesystem::current_path() /"bin" ;   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
   return cwd.string();
 }
 
 std::string LocalesPath() {
-  std::filesystem::path cwd = std::filesystem::current_path() /"bin" / "locales";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\cefsubprocess\\Debug\\cefsubprocess.exe";
+  std::filesystem::path cwd = std::filesystem::current_path() /"bin" / "locales";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
   return cwd.string();
 }
 
 std::string CachePath() {
-  std::filesystem::path cwd = std::filesystem::current_path() / "cache";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\cefsubprocess\\Debug\\cefsubprocess.exe";
+  std::filesystem::path cwd = std::filesystem::current_path() / "cache";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
   return cwd.string();
 }
 
-void CefWrapper::InitCefSimple(std::string start_url, int init_width, int init_height) {
+void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int init_height) {
   CefEnableHighDPISupport();
 
   void *sandbox_info = nullptr;
@@ -77,10 +77,10 @@ void CefWrapper::InitCefSimple(std::string start_url, int init_width, int init_h
   }
   else
   {
-   // CefString(&settings.browser_subprocess_path).FromASCII(ExePath().c_str());
+    CefString(&settings.browser_subprocess_path).FromASCII(ExePath().c_str());
   }
 
-
+  //settings.log_severity = LOGSEVERITY_VERBOSE;
   CefInitialize(main_args, settings, m_App.get(), sandbox_info);
   g_IsRunning = true;
 
@@ -98,7 +98,7 @@ void CefWrapper::InitCefSimple(std::string start_url, int init_width, int init_h
     }
   }
 }
-void CefWrapper::ExecuteJavascript(std::string code) {
+void PytoniumLibrary::ExecuteJavascript(std::string code) {
   CefRefPtr<CefFrame> frame = m_App->GetBrowser()->GetMainFrame();
   if (g_IsRunning) {
     if (CefWrapperClientHandler::GetInstance()->IsReadyToExecuteJs()) {
@@ -106,48 +106,48 @@ void CefWrapper::ExecuteJavascript(std::string code) {
     }
   }
 }
-void CefWrapper::ShutdownCefSimple() { CefShutdown(); }
+void PytoniumLibrary::ShutdownPytonium() { CefShutdown(); }
 
-bool CefWrapper::IsRunning() { return g_IsRunning; }
+bool PytoniumLibrary::IsRunning() { return g_IsRunning; }
 
-void CefWrapper::DoCefMessageLoopWork() { CefDoMessageLoopWork(); }
-bool CefWrapper::IsReadyToExecuteJavascript() {
+void PytoniumLibrary::UpdateMessageLoop() { CefDoMessageLoopWork(); }
+bool PytoniumLibrary::IsReadyToExecuteJavascript() {
   return CefWrapperClientHandler::GetInstance()->IsReadyToExecuteJs();
 }
 
-void CefWrapper::AddJavascriptBinding(std::string name, js_binding_function_ptr jsNativeApiFunctionPtr, std::string javascript_object)
+void PytoniumLibrary::AddJavascriptBinding(std::string name, js_binding_function_ptr jsNativeApiFunctionPtr, std::string javascript_object)
 {
   m_Javascript_Bindings.push_back(JavascriptBinding(std::move(name), jsNativeApiFunctionPtr, std::move(javascript_object)));
 }
-CefWrapper::CefWrapper() {}
-void CefWrapper::AddJavascriptPythonBinding(
+PytoniumLibrary::PytoniumLibrary() {}
+void PytoniumLibrary::AddJavascriptPythonBinding(
     std::string name,
     js_python_bindings_handler_function_ptr python_bindings_handler,
     js_python_callback_object_ptr python_callback_object, std::string javascript_object) {
   m_Javascript_Python_Bindings.push_back(
       JavascriptPythonBinding(python_bindings_handler, name, python_callback_object, javascript_object));
 }
-void CefWrapper::SetCustomCefSubprocessPath(std::string cefsub_path) {
+void PytoniumLibrary::SetCustomCefSubprocessPath(std::string cefsub_path) {
   m_UseCustomCefSubPath = true;
   m_CustomCefSubPath = cefsub_path;
 }
-void CefWrapper::SetCustomCefCachePath(std::string cef_cache_path) {
+void PytoniumLibrary::SetCustomCefCachePath(std::string cef_cache_path) {
   m_UseCustomCefCachePath = true;
   m_CustomCefCachePath = cef_cache_path;
 }
-void CefWrapper::LoadUrl(std::string url) {
+void PytoniumLibrary::LoadUrl(std::string url) {
  m_App->LoadUrl(url);
 }
 
-void CefWrapper::SetCustomCefResourcePath(std::string cef_resources_path) {
+void PytoniumLibrary::SetCustomCefResourcePath(std::string cef_resources_path) {
   m_UseCustomCefResourcesPath = true;
   m_CustomCefResourcesPath = cef_resources_path;
 }
-void CefWrapper::SetCustomCefLocalesPath(std::string cef_locales_path) {
+void PytoniumLibrary::SetCustomCefLocalesPath(std::string cef_locales_path) {
   m_UseCustomCefLocalesPath = true;
   m_CustomCefLocalesPath = cef_locales_path;
 }
-void CefWrapper::SetCustomIconPath(std::string icon_path) {
+void PytoniumLibrary::SetCustomIconPath(std::string icon_path) {
   m_CustomIconPath = icon_path;
   m_UseCustomIcon = true;
 }

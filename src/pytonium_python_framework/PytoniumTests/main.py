@@ -1,6 +1,8 @@
 import os
 import time
 from datetime import datetime
+
+# Import the Pytonium class and the path for the sub-process executable.
 from Pytonium import Pytonium, pytonium_cefsubprocess_path
 
 
@@ -32,9 +34,11 @@ def my_js_binding(args):
     print(args)
 
 
+# Create a Pytonium instance
 pytonium = Pytonium()
 myApi = MyApi()
 
+#
 pytonium.set_cefsub_path(pytonium_cefsubprocess_path)
 
 pytonium.add_javascript_python_binding("testfunc", my_js_binding, "test_binding_python_function")

@@ -24,13 +24,13 @@ cdef extern from "src/cefwrapper/javascript_binding.h":
 
 # Declare the class with cdef
 cdef extern from "src/cefwrapper/library.h":
-    cdef cppclass CefWrapper:
-        CefWrapper() except +
-        void InitCefSimple(string start_url, int init_width, int init_height);
+    cdef cppclass PytoniumLibrary:
+        PytoniumLibrary() except +
+        void InitPytonium(string start_url, int init_width, int init_height);
         void ExecuteJavascript(string code);
-        void ShutdownCefSimple();
+        void ShutdownPytonium();
         bool IsRunning();
-        void DoCefMessageLoopWork();
+        void UpdateMessageLoop();
         void AddJavascriptPythonBinding(string name, js_python_bindings_handler_function_ptr handler_callback, void* python_callable, string javascript_object)
         void SetCustomCefSubprocessPath(string path)
         void SetCustomCefCachePath(string cef_cache_path)

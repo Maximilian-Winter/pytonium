@@ -2,9 +2,9 @@
 // Created by maxim on 11.10.2022.
 //
 
-#include "../cefwrapper/library.h"
-#include <iostream>
+#include "../pytonium_library/pytonium_library.h"
 #include <filesystem>
+#include <iostream>
 
 void testfunc(int size, CefValueWrapper* args)
 {
@@ -28,26 +28,26 @@ void testfunc4(void* python_callback_object, int size, CefValueWrapper* args)
 
 int main()
 {
-  CefWrapper cefSimpleWrapper;
+  PytoniumLibrary cefSimpleWrapper;
   cefSimpleWrapper.AddJavascriptPythonBinding("testfunc", testfunc4, nullptr, "test_binding_python_function");
   cefSimpleWrapper.AddJavascriptBinding("TestOne", testfunc, "test_binding_python_object_methods");
   cefSimpleWrapper.AddJavascriptBinding("TestTwo", testfunc2, "test_binding_python_object_methods");
   cefSimpleWrapper.AddJavascriptBinding("TestThree", testfunc3, "test_binding_python_object_methods");
   std::string currentPath = std::filesystem::current_path().string();
   cefSimpleWrapper.SetCustomIconPath("radioactive.ico");
-  cefSimpleWrapper.InitCefSimple(currentPath + R"(\index.html)", 1920, 1080);
+  cefSimpleWrapper.InitPytonium(currentPath + R"(\index.html)", 1920, 1080);
 
   long long counter = 0;
   while (cefSimpleWrapper.IsRunning())
   {
 	  Sleep(10);
-	  cefSimpleWrapper.DoCefMessageLoopWork();
+	  cefSimpleWrapper.UpdateMessageLoop();
           std::stringstream ss;
           ss << "window.state.setTicker(" << counter++ << ")";
           cefSimpleWrapper.ExecuteJavascript(ss.str());
   }
 
-  //cefSimpleWrapper.ShutdownCefSimple();
+  //cefSimpleWrapper.ShutdownPytonium();
   return 0;
 }
 

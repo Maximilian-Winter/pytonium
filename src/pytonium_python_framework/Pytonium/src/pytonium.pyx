@@ -2,9 +2,9 @@
 # cython: language_level=3
 import builtins
 
-from Pytonium.src.header.cefwrapper cimport CefWrapper, CefValueWrapper
+from PytoniumLibrary.src.header.cefwrapper cimport PytoniumLibrary, CefValueWrapper
 
-#from .header.cefsimplewrapper cimport CefWrapper, CefValueWrapper
+#from .header.cefsimplewrapper cimport PytoniumLibrary, CefValueWrapper
 
 
 cdef class PytoniumMethodWrapper:
@@ -84,14 +84,14 @@ cdef inline void java_binding_object_callback(void *python_function_object, int 
 
     (<PytoniumMethodWrapper>python_function_object)(arg_list)
 
-cdef class Pytonium:
-    cdef CefWrapper cef_wrapper;
+cdef class PytoniumLibrary:
+    cdef PytoniumLibrary cef_wrapper;
 
     def __init__(self):
-        self.cef_wrapper = CefWrapper()
+        self.cef_wrapper = PytoniumLibrary()
 
     def init_cef(self, start_url: str, init_width: int, init_height: int):
-        self.cef_wrapper.InitCefSimple(start_url.encode("utf-8"), init_width, init_height)
+        self.cef_wrapper.InitPytonium(start_url.encode("utf-8"), init_width, init_height)
 
     def execute_javascript(self, code: str):
         self.cef_wrapper.ExecuteJavascript(code.encode("utf-8"))
@@ -100,7 +100,7 @@ cdef class Pytonium:
        self.cef_wrapper.AddJavascriptPythonBinding(name.encode("utf-8"), java_binding_callback, <void *>func, javascript_object.encode("utf-8"))
 
     def shutdown_cef(self):
-        self.cef_wrapper.ShutdownCefSimple()
+        self.cef_wrapper.ShutdownPytonium()
 
     def is_running(self):
         return self.cef_wrapper.IsRunning()
@@ -122,7 +122,7 @@ cdef class Pytonium:
 
 
     def do_cef_message_loop_work(self):
-        return self.cef_wrapper.DoCefMessageLoopWork()
+        return self.cef_wrapper.UpdateMessageLoop()
 
     def set_cefsub_path(self, path: str):
         self.cef_wrapper.SetCustomCefSubprocessPath(path.encode("utf-8"))

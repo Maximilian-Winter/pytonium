@@ -71,7 +71,7 @@ cpp_flags = ['/std:c++20']
 extensions = [
     Extension(name="Pytonium.src", sources=["./Pytonium/src/pytonium.pyx"],
               include_dirs=["./Pytonium/"],
-              libraries=["user32", "libcef_dll_wrapper", "libcef", "cefwrapper"],
+              libraries=["user32", "libcef_dll_wrapper", "libcef", "pytonium_library"],
               library_dirs=["./Pytonium/src/lib/"],
               extra_compile_args=cpp_flags)
 
@@ -86,7 +86,7 @@ setup(
     author="Maximilian Winter",
     author_email = "maximilian.winter.91@gmail.com",
     cmdclass={'build_ext': build_ext},
-    packages=['Pytonium', 'PytoniumTests', 'Pytonium.bin', "Pytonium.src", "Pytonium.src.cefwrapper",
+    packages=['Pytonium', 'PytoniumTests', 'Pytonium.bin', "Pytonium.src", "Pytonium.src.pytonium_library",
               "Pytonium.src.include", "Pytonium.src.lib"],
     ext_modules=cythonize(extensions),
     include_package_data=True,
@@ -95,7 +95,7 @@ setup(
         'PytoniumTests': ['./__init__.py', './main.py', './index.html'],
         'Pytonium.bin': files_list[1],
         'Pytonium.src': ["./pytonium.pyx"],
-        "Pytonium.src.cefwrapper": ["./*.h"],
+        "Pytonium.src.pytonium_library": ["./*.h"],
         "Pytonium.src.include": ["./**/*.h", "./*.h"],
         "Pytonium.src.lib": ["./*.lib"]
     }

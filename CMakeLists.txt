@@ -12,13 +12,13 @@ find_package(CEF REQUIRED)
 add_subdirectory(${CEF_LIBCEF_DLL_WRAPPER_PATH} libcef_dll_wrapper)
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src")
-  add_subdirectory(src/cefwrapper)
-  add_subdirectory(src/cefsubprocess)
+  add_subdirectory(src/pytonium_library)
+  add_subdirectory(src/pytonium_subprocess)
 endif()
 
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/cefwrappertest")
-  add_subdirectory(src/cefwrappertest)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/pytonium_library_test")
+  add_subdirectory(src/pytonium_library_test)
 endif()
 
 PRINT_CEF_CONFIG()

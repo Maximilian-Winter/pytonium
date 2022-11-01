@@ -28,24 +28,24 @@ cef-binaries/libcef_dll/cmake-build-release-visual-studio/
 src/.venv
 src/venv311
 venv/
-src/Pytonium_Dev/Pytonium/bin/
-src/Pytonium_Dev/Pytonium/cefsubprocess/
-src/Pytonium_Dev/Pytonium.egg-info/
-src/Pytonium_Dev/test/cache/
-src/Pytonium_Dev/dist/
-src/Pytonium_Dev/Pytonium/src/lib/
-src/Pytonium_Dev/Pytonium/src/cefwrapper/
-src/Pytonium_Dev/Pytonium/src/include/
-src/Pytonium_Dev/build/
-src/Pytonium_Dev/__pycache__/
-src/Pytonium_Dev/Pytonium/__pycache__/
+src/pytonium_python_framework/Pytonium/bin/
+src/pytonium_python_framework/Pytonium/cefsubprocess/
+src/pytonium_python_framework/Pytonium.egg-info/
+src/pytonium_python_framework/test/cache/
+src/pytonium_python_framework/dist/
+src/pytonium_python_framework/Pytonium/src/lib/
+src/pytonium_python_framework/Pytonium/src/pytonium_library/
+src/pytonium_python_framework/Pytonium/src/include/
+src/pytonium_python_framework/build/
+src/pytonium_python_framework/__pycache__/
+src/pytonium_python_framework/Pytonium/__pycache__/
 
-src/Pytonium_Dev/PytoniumTests/.idea/
-src/Pytonium_Dev/PytoniumTests/cache/
-src/Pytonium_Dev/PytoniumTests/venv/
+src/pytonium_python_framework/PytoniumTests/.idea/
+src/pytonium_python_framework/PytoniumTests/cache/
+src/pytonium_python_framework/PytoniumTests/venv/
 
-src/Pytonium_Dev/Pytonium/src/pytonium.cpp
-/src/Pytonium_Dev/PytoniumTests/index.html
-/src/Pytonium_Dev/README.md
+src/pytonium_python_framework/Pytonium/src/pytonium.cpp
+/src/pytonium_python_framework/PytoniumTests/index.html
+/src/pytonium_python_framework/README.md
 
-src/Pytonium_Dev/Pytonium/bin.zip
+src/pytonium_python_framework/Pytonium/bin.zip

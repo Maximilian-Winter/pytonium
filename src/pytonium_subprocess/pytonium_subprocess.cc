@@ -3,8 +3,8 @@
 #include "include/cef_app.h"
 #include "include/cef_command_line.h"
 #include "include/cef_sandbox_win.h"
-#include "src/cefwrapper/cef_wrapper_app.h"
-#include "src/cefwrapper/javascript_binding.h"
+#include "src/pytonium_library/cef_wrapper_app.h"
+#include "src/pytonium_library/javascript_binding.h"
 
 
 #if defined(CEF_USE_SANDBOX)
