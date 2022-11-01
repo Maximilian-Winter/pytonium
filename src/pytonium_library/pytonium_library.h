@@ -23,10 +23,10 @@ public:
   void AddJavascriptPythonBinding(std::string name,
       js_python_bindings_handler_function_ptr python_bindings_handler,
       js_python_callback_object_ptr python_callback_object, std::string javascript_object);
-  void SetCustomCefSubprocessPath(std::string cefsub_path);
-  void SetCustomCefCachePath(std::string cef_cache_path);
-  void SetCustomCefResourcePath(std::string cef_resources_path);
-  void SetCustomCefLocalesPath(std::string cef_locales_path);
+  void SetCustomSubprocessPath(std::string cefsub_path);
+  void SetCustomCachePath(std::string cef_cache_path);
+  void SetCustomResourcePath(std::string cef_resources_path);
+  void SetCustomLocalesPath(std::string cef_locales_path);
 
   void SetCustomIconPath(std::string icon_path);
   void LoadUrl(std::string url);

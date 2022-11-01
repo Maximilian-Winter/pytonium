@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 # Import the Pytonium class and the path for the sub-process executable.
-from Pytonium import Pytonium, pytonium_cefsubprocess_path
+from Pytonium import Pytonium, pytonium_subprocess_path
 
 
 # This class expose three methods as an endpoint of a javascript binding, and they get called on the test website.
@@ -39,20 +39,20 @@ pytonium = Pytonium()
 myApi = MyApi()
 
 #
-pytonium.set_cefsub_path(pytonium_cefsubprocess_path)
+pytonium.set_subprocess_path(pytonium_subprocess_path)
 
-pytonium.add_javascript_python_binding("testfunc", my_js_binding, "test_binding_python_function")
-pytonium.add_javascript_python_binding_object(myApi, "test_binding_python_object_methods")
+pytonium.bind_function_to_javascript("testfunc", my_js_binding, "test_binding_python_function")
+pytonium.bind_object_methods_to_javascript(myApi, "test_binding_python_object_methods")
 
 # To load a html file, on start up from disk, we need the absolute path to it, so we get it here.
 pytonium_test_path = os.path.abspath(__file__)
 pytonium_test_path = os.path.dirname(pytonium_test_path)
 pytonium.set_custom_icon_path(f"{pytonium_test_path}\\radioactive.ico")
-pytonium.init_cef(f"{pytonium_test_path}\\index.html", 1920, 1080)
+pytonium.initialize(f"{pytonium_test_path}\\index.html", 1920, 1080)
 
 while pytonium.is_running():
     time.sleep(0.01)
-    pytonium.do_cef_message_loop_work()
+    pytonium.update_message_loop()
     now = datetime.now()
     date_time = now.strftime("%d.%m.%Y, %H:%M:%S")
     code = f"window.state.setTicker('{date_time}')"

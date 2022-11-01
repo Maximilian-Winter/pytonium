@@ -5,7 +5,7 @@ from time import sleep
 
 pytonium_path = os.path.abspath(__file__)
 pytonium_path = os.path.dirname(pytonium_path)
-pytonium_subprocess_path = f'{pytonium_path}\\bin\\cefsubprocess.exe'
+pytonium_subprocess_path = f'{pytonium_path}\\bin\\pytonium_subprocess.exe'
 pytonium_bin_zip_path = f'{pytonium_path}\\bin.zip'
 
 if os.path.exists(pytonium_bin_zip_path):

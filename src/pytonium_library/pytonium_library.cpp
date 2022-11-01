@@ -127,11 +127,11 @@ void PytoniumLibrary::AddJavascriptPythonBinding(
   m_Javascript_Python_Bindings.push_back(
       JavascriptPythonBinding(python_bindings_handler, name, python_callback_object, javascript_object));
 }
-void PytoniumLibrary::SetCustomCefSubprocessPath(std::string cefsub_path) {
+void PytoniumLibrary::SetCustomSubprocessPath(std::string cefsub_path) {
   m_UseCustomCefSubPath = true;
   m_CustomCefSubPath = cefsub_path;
 }
-void PytoniumLibrary::SetCustomCefCachePath(std::string cef_cache_path) {
+void PytoniumLibrary::SetCustomCachePath(std::string cef_cache_path) {
   m_UseCustomCefCachePath = true;
   m_CustomCefCachePath = cef_cache_path;
 }
@@ -139,11 +139,11 @@ void PytoniumLibrary::LoadUrl(std::string url) {
  m_App->LoadUrl(url);
 }
 
-void PytoniumLibrary::SetCustomCefResourcePath(std::string cef_resources_path) {
+void PytoniumLibrary::SetCustomResourcePath(std::string cef_resources_path) {
   m_UseCustomCefResourcesPath = true;
   m_CustomCefResourcesPath = cef_resources_path;
 }
-void PytoniumLibrary::SetCustomCefLocalesPath(std::string cef_locales_path) {
+void PytoniumLibrary::SetCustomLocalesPath(std::string cef_locales_path) {
   m_UseCustomCefLocalesPath = true;
   m_CustomCefLocalesPath = cef_locales_path;
 }

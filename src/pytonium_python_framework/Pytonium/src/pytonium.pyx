@@ -2,9 +2,9 @@
 # cython: language_level=3
 import builtins
 
-from PytoniumLibrary.src.header.cefwrapper cimport PytoniumLibrary, CefValueWrapper
+from Pytonium.src.header.pytonium_library cimport PytoniumLibrary, CefValueWrapper
 
-#from .header.cefsimplewrapper cimport PytoniumLibrary, CefValueWrapper
+#from .header.pytonium_library cimport PytoniumLibrary, CefValueWrapper
 
 
 cdef class PytoniumMethodWrapper:
@@ -84,28 +84,28 @@ cdef inline void java_binding_object_callback(void *python_function_object, int 
 
     (<PytoniumMethodWrapper>python_function_object)(arg_list)
 
-cdef class PytoniumLibrary:
-    cdef PytoniumLibrary cef_wrapper;
+cdef class Pytonium:
+    cdef PytoniumLibrary pytonium_library;
 
     def __init__(self):
-        self.cef_wrapper = PytoniumLibrary()
+        self.pytonium_library = PytoniumLibrary()
 
-    def init_cef(self, start_url: str, init_width: int, init_height: int):
-        self.cef_wrapper.InitPytonium(start_url.encode("utf-8"), init_width, init_height)
+    def initialize(self, start_url: str, init_width: int, init_height: int):
+        self.pytonium_library.InitPytonium(start_url.encode("utf-8"), init_width, init_height)
 
     def execute_javascript(self, code: str):
-        self.cef_wrapper.ExecuteJavascript(code.encode("utf-8"))
+        self.pytonium_library.ExecuteJavascript(code.encode("utf-8"))
 
-    def add_javascript_python_binding(self, name: str, func, javascript_object: str = ""):
-       self.cef_wrapper.AddJavascriptPythonBinding(name.encode("utf-8"), java_binding_callback, <void *>func, javascript_object.encode("utf-8"))
+    def bind_function_to_javascript(self, name: str, func, javascript_object: str = ""):
+       self.pytonium_library.AddJavascriptPythonBinding(name.encode("utf-8"), java_binding_callback, <void *>func, javascript_object.encode("utf-8"))
 
-    def shutdown_cef(self):
-        self.cef_wrapper.ShutdownPytonium()
+    def shutdown(self):
+        self.pytonium_library.ShutdownPytonium()
 
     def is_running(self):
-        return self.cef_wrapper.IsRunning()
+        return self.pytonium_library.IsRunning()
 
-    def add_javascript_python_binding_object(self, obj: object, javascript_object: str = ""):
+    def bind_object_methods_to_javascript(self, obj: object, javascript_object: str = ""):
         methods = [a for a in dir(obj) if not a.startswith('__') and callable(getattr(obj, a))]
         for method in methods:
             meth = getattr(obj, method)
@@ -118,21 +118,21 @@ cdef class PytoniumLibrary:
                 obj.python_api_methods = []
                 obj.python_api_methods.append(py_meth_wrapper)
                 size_methods = 1
-            self.cef_wrapper.AddJavascriptPythonBinding(method.encode("utf-8"), java_binding_object_callback, <void *> obj.python_api_methods[size_methods-1], javascript_object.encode("utf-8"))
+            self.pytonium_library.AddJavascriptPythonBinding(method.encode("utf-8"), java_binding_object_callback, <void *> obj.python_api_methods[size_methods - 1], javascript_object.encode("utf-8"))
 
 
-    def do_cef_message_loop_work(self):
-        return self.cef_wrapper.UpdateMessageLoop()
+    def update_message_loop(self):
+        return self.pytonium_library.UpdateMessageLoop()
 
-    def set_cefsub_path(self, path: str):
-        self.cef_wrapper.SetCustomCefSubprocessPath(path.encode("utf-8"))
+    def set_subprocess_path(self, path: str):
+        self.pytonium_library.SetCustomSubprocessPath(path.encode("utf-8"))
 
-    def set_cef_cache_path(self, path: str):
-        self.cef_wrapper.SetCustomCefCachePath(path.encode("utf-8"))
+    def set_cache_path(self, path: str):
+        self.pytonium_library.SetCustomCachePath(path.encode("utf-8"))
 
     def set_custom_icon_path(self, path: str):
-        self.cef_wrapper.SetCustomIconPath(path.encode("utf-8"))
+        self.pytonium_library.SetCustomIconPath(path.encode("utf-8"))
 
     def load_url(self, url: str):
-        self.cef_wrapper.LoadUrl(url.encode("utf-8"))
+        self.pytonium_library.LoadUrl(url.encode("utf-8"))
 
