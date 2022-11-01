@@ -27,6 +27,8 @@ public:
   void SetCustomCefCachePath(std::string cef_cache_path);
   void SetCustomCefResourcePath(std::string cef_resources_path);
   void SetCustomCefLocalesPath(std::string cef_locales_path);
+
+  void SetCustomIconPath(std::string icon_path);
   void LoadUrl(std::string url);
 private:
 
@@ -43,6 +45,9 @@ private:
 
     bool m_UseCustomCefLocalesPath = false;
     std::string m_CustomCefLocalesPath = "";
+
+    bool m_UseCustomIcon = false;
+    std::string m_CustomIconPath = "";
 
     std::vector<JavascriptBinding> m_Javascript_Bindings;
     std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;

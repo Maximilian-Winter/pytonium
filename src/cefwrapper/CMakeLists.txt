@@ -66,6 +66,8 @@ if(OS_WINDOWS)
 
   # Copy binary and resource files to the target output directory.
   #COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
+  COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/Pytonium_Dev/Pytonium/bin/")
+  COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/Pytonium_Dev/Pytonium/bin/")
 
   COPY_SINGLE_FILE(${CEF_TARGET} "./Release/cefwrapper.lib" "../../../src/Pytonium_Dev/Pytonium/src/lib/cefwrapper.lib")
   COPY_SINGLE_FILE(${CEF_TARGET} "../../../cef-binaries/Release/libcef.lib" "../../../src/Pytonium_Dev/Pytonium/src/lib/libcef.lib")

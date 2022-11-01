@@ -130,6 +130,9 @@ cdef class Pytonium:
     def set_cef_cache_path(self, path: str):
         self.cef_wrapper.SetCustomCefCachePath(path.encode("utf-8"))
 
+    def set_custom_icon_path(self, path: str):
+        self.cef_wrapper.SetCustomIconPath(path.encode("utf-8"))
+
     def load_url(self, url: str):
         self.cef_wrapper.LoadUrl(url.encode("utf-8"))
 

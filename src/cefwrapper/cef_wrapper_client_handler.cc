@@ -378,9 +378,6 @@ void CefWrapperClientHandler::OnLoadingStateChange(
   if(!isLoading)
   {
     m_IsReadyToExecuteJs = true;
-    //std::string code = "const event = new Event('cefready'); window.dispatchEvent(event);";
-    //browser->GetMainFrame()->ExecuteJavaScript(code, browser->GetMainFrame()->GetURL(), 0);
-
   }
   else
   {

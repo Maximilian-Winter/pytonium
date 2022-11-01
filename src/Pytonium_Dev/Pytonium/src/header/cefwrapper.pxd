@@ -34,4 +34,5 @@ cdef extern from "src/cefwrapper/library.h":
         void AddJavascriptPythonBinding(string name, js_python_bindings_handler_function_ptr handler_callback, void* python_callable, string javascript_object)
         void SetCustomCefSubprocessPath(string path)
         void SetCustomCefCachePath(string cef_cache_path)
+        void SetCustomIconPath(string custom_icon_path)
         void LoadUrl(string url);

@@ -77,12 +77,26 @@ void CefWrapper::InitCefSimple(std::string start_url, int init_width, int init_h
   }
   else
   {
-    CefString(&settings.browser_subprocess_path).FromASCII(ExePath().c_str());
+   // CefString(&settings.browser_subprocess_path).FromASCII(ExePath().c_str());
   }
 
 
   CefInitialize(main_args, settings, m_App.get(), sandbox_info);
   g_IsRunning = true;
+
+  if(m_UseCustomIcon)
+  {
+    std::wstring temp = std::wstring(m_CustomIconPath.begin(), m_CustomIconPath.end());
+    LPCWSTR w_icon_path = temp.c_str();
+
+    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+
+    if (hwnd)
+    {
+      HICON hIcon = (HICON)LoadImage(NULL, w_icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+      SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+    }
+  }
 }
 void CefWrapper::ExecuteJavascript(std::string code) {
   CefRefPtr<CefFrame> frame = m_App->GetBrowser()->GetMainFrame();
@@ -132,4 +146,8 @@ void CefWrapper::SetCustomCefResourcePath(std::string cef_resources_path) {
 void CefWrapper::SetCustomCefLocalesPath(std::string cef_locales_path) {
   m_UseCustomCefLocalesPath = true;
   m_CustomCefLocalesPath = cef_locales_path;
+}
+void CefWrapper::SetCustomIconPath(std::string icon_path) {
+  m_CustomIconPath = icon_path;
+  m_UseCustomIcon = true;
 }

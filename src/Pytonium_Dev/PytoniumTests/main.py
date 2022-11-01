@@ -32,13 +32,18 @@ def my_js_binding(args):
     print(args)
 
 
-myApi = MyApi()
 pytonium = Pytonium()
+myApi = MyApi()
+
 pytonium.set_cefsub_path(pytonium_cefsubprocess_path)
+
 pytonium.add_javascript_python_binding("testfunc", my_js_binding, "test_binding_python_function")
 pytonium.add_javascript_python_binding_object(myApi, "test_binding_python_object_methods")
+
+# To load a html file, on start up from disk, we need the absolute path to it, so we get it here.
 pytonium_test_path = os.path.abspath(__file__)
 pytonium_test_path = os.path.dirname(pytonium_test_path)
+pytonium.set_custom_icon_path(f"{pytonium_test_path}\\radioactive.ico")
 pytonium.init_cef(f"{pytonium_test_path}\\index.html", 1920, 1080)
 
 while pytonium.is_running():

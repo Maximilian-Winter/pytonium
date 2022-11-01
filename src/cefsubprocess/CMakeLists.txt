@@ -60,6 +60,7 @@ endif(OS_WINDOWS)
 add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
 add_compile_definitions(symbol_level=2)
 if(OS_WINDOWS)
+
   # Executable target.
   add_executable(${CEF_TARGET} WIN32 ${CEFSUB_SRCS})
   add_dependencies(${CEF_TARGET} cefwrapper)
@@ -82,18 +83,17 @@ if(OS_WINDOWS)
 
  # COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../cefwrappertest/debug/cefsubprocess/")
  # COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../cefwrappertest/debug/cefsubprocess")
- COPY_FILES("${CEF_TARGET}" "cefsubprocess.exe" "${CEF_TARGET_OUT_DIR}" "../cefwrappertest/debug/bin")
+  #COPY_FILES("${CEF_TARGET}" "cefsubprocess.exe" "${CEF_TARGET_OUT_DIR}" "../cefwrappertest/debug/bin")
 #
  # COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../cefwrappertest/release/cefsubprocess/")
  # COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../cefwrappertest/release/cefsubprocess")
- COPY_FILES("${CEF_TARGET}" "cefsubprocess.exe" "${CEF_TARGET_OUT_DIR}" "../cefwrappertest/release/bin")
+  #COPY_FILES("${CEF_TARGET}" "cefsubprocess.exe" "${CEF_TARGET_OUT_DIR}" "../cefwrappertest/release/bin")
 
 
 
-  COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/Pytonium_Dev/Pytonium/bin/")
-  COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/Pytonium_Dev/Pytonium/bin/")
+
 
   #COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/Pytonium_Dev/Pytonium/cefsubprocess/")
   #COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/Pytonium_Dev/Pytonium/cefsubprocess/")
-  COPY_FILES("${CEF_TARGET}" "cefsubprocess.exe" "${CEF_TARGET_OUT_DIR}" "../../../src/Pytonium_Dev/Pytonium/bin/")
+  #COPY_FILES("${CEF_TARGET}" "cefsubprocess.exe" "${CEF_TARGET_OUT_DIR}" "../../../src/Pytonium_Dev/Pytonium/bin/")
 endif()
