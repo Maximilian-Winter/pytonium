@@ -2,7 +2,7 @@
 # cython: language_level=3
 import builtins
 
-from Pytonium.src.header.cefsimplewrapper cimport CefWrapper, CefValueWrapper
+from Pytonium.src.header.cefwrapper cimport CefWrapper, CefValueWrapper
 
 #from .header.cefsimplewrapper cimport CefWrapper, CefValueWrapper
 

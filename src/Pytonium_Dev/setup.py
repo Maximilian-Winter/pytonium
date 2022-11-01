@@ -9,19 +9,21 @@ from os.path import isfile, join
 
 
 def compress_binaries():
-    if not os.path.isfile("Pytonium/bin.zip"):
+    if not os.path.isfile("./Pytonium/bin.zip"):
         compression = zipfile.ZIP_LZMA
-        zf = zipfile.ZipFile("Pytonium/bin.zip", mode="w")
-        mypath = "./Pytonium/bin/"
-        onlyfiles = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-        mypath2 = "./Pytonium/bin/locales/"
-        onlyfiles2 = [f for f in listdir(mypath2) if isfile(join(mypath2, f))]
-        try:
-            for file_to_write in onlyfiles:
-                zf.write(mypath + file_to_write, file_to_write, compress_type=compression)
+        zf = zipfile.ZipFile("./Pytonium/bin.zip", mode="w")
 
-            for file_to_write in onlyfiles2:
-                zf.write(mypath2 + file_to_write, "locales/" + file_to_write, compress_type=compression)
+        pytonium_binaries_path = "./Pytonium/bin/"
+        binaries = [f for f in listdir(pytonium_binaries_path) if isfile(join(pytonium_binaries_path, f))]
+
+        pytonium_locales_path = "./Pytonium/bin/locales/"
+        locales_files = [f for f in listdir(pytonium_locales_path) if isfile(join(pytonium_locales_path, f))]
+        try:
+            for file_to_write in binaries:
+                zf.write(pytonium_binaries_path + file_to_write, file_to_write, compress_type=compression)
+
+            for file_to_write in locales_files:
+                zf.write(pytonium_locales_path + file_to_write, "locales/" + file_to_write, compress_type=compression)
 
         except FileNotFoundError as e:
             print(f' *** Exception occurred during zip process - {e}')
@@ -35,13 +37,13 @@ class BuildExt(build_ext):
         super().build_extension(ext)
 
 
-CPPFLAGS = ['/std:c++17']
+cpp_flags = ['/std:c++20']
 extensions = [
     Extension(name="Pytonium.src", sources=["./Pytonium/src/pytonium.pyx"],
               include_dirs=["./Pytonium/"],
               libraries=["user32", "libcef_dll_wrapper", "libcef", "cefwrapper"],
               library_dirs=["./Pytonium/src/lib/"],
-              extra_compile_args=CPPFLAGS)
+              extra_compile_args=cpp_flags)
 
 ]
 
@@ -53,7 +55,8 @@ setup(
     description="This is a python framework called Pytonium for building python apps with a GUI, based on web technologies. ",
     long_description="This is a python framework called Pytonium for building python apps with a GUI, based on web technologies. It uses the Chromium Embedded Framework for rendering and execution of javascript.\nAt the moment the framework has basic functionality for loading an url and add Javascript bindings, so a python function can be called from Javascript. And also Javascript can be executed, on the website, from python.",
     cmdclass={'build_ext': build_ext},
-    packages=['Pytonium', 'PytoniumTests', 'Pytonium.bin', "Pytonium.src", "Pytonium.src.cefwrapper", "Pytonium.src.include", "Pytonium.src.lib"],
+    packages=['Pytonium', 'PytoniumTests', 'Pytonium.bin', "Pytonium.src", "Pytonium.src.cefwrapper",
+              "Pytonium.src.include", "Pytonium.src.lib"],
     ext_modules=cythonize(extensions),
     include_package_data=True,
     package_data={
@@ -63,6 +66,5 @@ setup(
         "Pytonium.src.cefwrapper": ["./*.h"],
         "Pytonium.src.include": ["./**/*.h", "./*.h"],
         "Pytonium.src.lib": ["./*.lib"]
-    },
-    version="0.0.4"
+    }
 )
