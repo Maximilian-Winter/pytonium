@@ -7,7 +7,7 @@ from os import listdir
 from os.path import isfile, join
 
 
-is_pytonium_release_build = False
+is_pytonium_release_build = True
 
 
 def compress_binaries():
@@ -61,12 +61,6 @@ def compress_binaries():
     return [pytonium_files, pytonium_bin_files]
 
 
-def create_release_build_marker():
-    if is_pytonium_release_build:
-        pytonium_release_marker_path = "Pytonium/release_build_marker.txt"
-        open(pytonium_release_marker_path, 'x').close()
-
-
 cpp_flags = ['/std:c++20']
 extensions = [
     Extension(name="Pytonium.src", sources=["./Pytonium/src/pytonium.pyx"],
@@ -78,7 +72,6 @@ extensions = [
 ]
 
 
-create_release_build_marker()
 files_list = compress_binaries()
 
 setup(
