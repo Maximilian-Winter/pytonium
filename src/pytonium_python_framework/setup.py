@@ -1,3 +1,5 @@
+from time import sleep
+
 from Cython.Build import cythonize
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as build_ext
@@ -93,3 +95,18 @@ setup(
         "Pytonium.src.lib": ["./*.lib"]
     }
 )
+
+pytonium_path = os.path.abspath(__file__)
+pytonium_path = os.path.dirname(pytonium_path)
+pytonium_path += "\\Pytonium"
+pytonium_bin_zip_path = f'{pytonium_path}\\bin.zip'
+
+if os.path.exists(pytonium_bin_zip_path):
+    print("Pytonium: On the first start up after installation, Pytonium has to extract some dlls and resources!")
+    print("Pytonium: This will take a moment, but only happens on first start up!")
+    compression = zipfile.ZIP_LZMA
+    with zipfile.ZipFile(pytonium_bin_zip_path, compression=compression, mode='r') as zip_ref:
+        zip_ref.extractall(f'{pytonium_path}\\bin')
+        zip_ref.close()
+    sleep(0.1)
+    os.remove(pytonium_bin_zip_path)

@@ -38,7 +38,7 @@ def my_js_binding(args):
 pytonium = Pytonium()
 myApi = MyApi()
 
-#
+# Here we set the path of the Subprocess executable.
 pytonium.set_subprocess_path(pytonium_subprocess_path)
 
 pytonium.bind_function_to_javascript("testfunc", my_js_binding, "test_binding_python_function")

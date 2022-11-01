@@ -1,5 +1,5 @@
-## PytoniumLibrary
-### PytoniumLibrary is a framework for building python apps, with a GUI based on the web-technologies HTML, CSS and Javascript.
+## Pytonium
+### Pytonium is a framework for building python apps, with a GUI based on the web-technologies HTML, CSS and Javascript.
 
 It uses the Chromium Embedded Framework for rendering and execution of javascript.
 
@@ -7,81 +7,81 @@ At the moment the framework has basic functionality for loading an url and add
 Javascript bindings, so a python function can be called from Javascript.
 And also Javascript can be executed, on the website, from python.
 
-To start PytoniumLibrary and load a website, you have to first import PytoniumLibrary
+To start Pytonium and load a website, you have to first import Pytonium
 
 ```python
-from PytoniumLibrary import PytoniumLibrary, pytonium_cefsubprocess_path
+from Pytonium import Pytonium, pytonium_subprocess_path
 ```
 
-This imports the PytoniumLibrary class and the path to the sub-process executable, which PytoniumLibrary
+This imports the Pytonium class and the path to the sub-process executable, which Pytonium
 will need to render the browser in a window.
-After we have created an instance of PytoniumLibrary, we need to call "set_cefsub_path" on this instance.
+After we have created an instance of Pytonium, we need to call "set_subprocess_path" on this instance.
 
 ```python
-from PytoniumLibrary import PytoniumLibrary, pytonium_cefsubprocess_path
+from Pytonium import Pytonium, pytonium_subprocess_path
 
-pytonium = PytoniumLibrary()
-pytonium.set_cefsub_path(pytonium_cefsubprocess_path)
+pytonium = Pytonium()
+pytonium.set_subprocess_path(pytonium_subprocess_path)
 ```
 
-Once we have set the sub-process path, we can initialize PytoniumLibrary, with an initial window width and height and
+Once we have set the sub-process path, we can initialize Pytonium, with an initial window width and height and
 a URL or filepath. Now the App starts the browser on the URL or filepath, we provided.
 
 ```python
-from PytoniumLibrary import PytoniumLibrary, pytonium_cefsubprocess_path
+from Pytonium import Pytonium, pytonium_subprocess_path
 
-pytonium = PytoniumLibrary()
-pytonium.set_cefsub_path(pytonium_cefsubprocess_path)
+pytonium = Pytonium()
+pytonium.set_subprocess_path(pytonium_subprocess_path)
 
-pytonium.init_cef("C:\TestSite\index.html", 1920, 1080)
+pytonium.initialize("C:\TestSite\index.html", 1920, 1080)
 ```
-After the initialization, we need to call the method "do_cef_message_loop_work" on the PytoniumLibrary instance. We need to do
+After the initialization, we need to call the method "update_message_loop" on the Pytonium instance. We need to do
 this in a regular interval, so the chromium embedded framework can update.
 The easiest way to do this, is with a while loop, that runs as long the browser is open.
 
 ```python
 import time
-from PytoniumLibrary import PytoniumLibrary, pytonium_cefsubprocess_path
+from Pytonium import Pytonium, pytonium_subprocess_path
 
-pytonium = PytoniumLibrary()
-pytonium.set_cefsub_path(pytonium_cefsubprocess_path)
+pytonium = Pytonium()
+pytonium.set_subprocess_path(pytonium_subprocess_path)
 
-pytonium.init_cef("C:\TestSite\index.html", 1920, 1080)
+pytonium.initialize("C:\TestSite\index.html", 1920, 1080)
 
 while pytonium.is_running():
     time.sleep(0.01)
-    pytonium.do_cef_message_loop_work()
+    pytonium.update_message_loop()
 ```
 
 This are the basics to load an HTML file, with CSS and Javascript. 
 
 We have the option to register python functions and methods in Javascript. And make them callable from there.
 
-To do this we just have to call the method "add_javascript_python_binding" on the PytoniumLibrary instance, before we call "init_cef".
+To do this we just have to call the method "bind_function_to_javascript" on the Pytonium instance, before we call "initialize".
 
 
 ```python
 import time
-from PytoniumLibrary import PytoniumLibrary, pytonium_cefsubprocess_path
+from Pytonium import Pytonium, pytonium_subprocess_path
 
 # Let's define a function and bind it to name testfunc in javascript
 def testfunc(args):
     print(args)
 
-pytonium = PytoniumLibrary()
-pytonium.set_cefsub_path(pytonium_cefsubprocess_path)
+pytonium = Pytonium()
+pytonium.set_subprocess_path(pytonium_subprocess_path)
 
 # Here we add the actual binding.
-pytonium.add_javascript_python_binding("testfunc", testfunc)
+pytonium.bind_function_to_javascript("testfunc", testfunc)
 
-pytonium.init_cef("C:\TestSite\index.html", 1920, 1080)
+pytonium.initialize("C:\TestSite\index.html", 1920, 1080)
 
 while pytonium.is_running():
     time.sleep(0.01)
-    pytonium.do_cef_message_loop_work()
+    pytonium.update_message_loop()
 ```
 
-The method "add_javascript_python_binding" takes two required parameters and one optional, the first parameter is
+The method "bind_function_to_javascript" takes two required parameters and one optional, the first parameter is
 the name which the function is bind to in javascript. The second one is the actual function object. And the third optional
 parameter is an optional name for a Javascript object, on which the function will be bind.
 
@@ -94,7 +94,7 @@ window.testfunc(42, 24.42, true, 'Hello World!')
 When I use the optional third parameter like this:
 
 ```python
-pytonium.add_javascript_python_binding("testfunc", testfunc, "python_api")
+pytonium.bind_function_to_javascript("testfunc", testfunc, "python_api")
 ```
 
 It would be called like this in javascript:
@@ -126,7 +126,7 @@ class MyApi:
         print(self.data)
 myApi = MyApi()
 
-pytonium.pytonium.add_javascript_python_binding_object(myApi, "test_binding_python_object_methods")
+pytonium.pytonium.bind_object_methods_to_javascript(myApi, "test_binding_python_object_methods")
 ```
 Here the first parameter is the object to bind and the second is the optional javascript object name.
 
