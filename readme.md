@@ -17,41 +17,30 @@ pip install Pytonium
 To start Pytonium and load a website, you have to first import Pytonium
 
 ```python
-from Pytonium import Pytonium, pytonium_subprocess_path
+from Pytonium import Pytonium
 ```
+This imports the Pytonium class.
 
-This imports the Pytonium class and the path to the sub-process executable, which Pytonium
-will need to render the browser in a window.
-After we have created an instance of Pytonium, we need to call "set_subprocess_path" on this instance.
+After we have created an instance of Pytonium, we can initialize Pytonium, with an initial window width and height and
+a URL or filepath. 
 
 ```python
-from Pytonium import Pytonium, pytonium_subprocess_path
+from Pytonium import Pytonium
 
 pytonium = Pytonium()
-pytonium.set_subprocess_path(pytonium_subprocess_path)
-```
-
-Once we have set the sub-process path, we can initialize Pytonium, with an initial window width and height and
-a URL or filepath. Now the App starts the browser on the URL or filepath, we provided.
-
-```python
-from Pytonium import Pytonium, pytonium_subprocess_path
-
-pytonium = Pytonium()
-pytonium.set_subprocess_path(pytonium_subprocess_path)
-
 pytonium.initialize("C:\TestSite\index.html", 1920, 1080)
 ```
+Now the App starts the browser on the URL or filepath, we provided.
+
 After the initialization, we need to call the method "update_message_loop" on the Pytonium instance. We need to do
 this in a regular interval, so the chromium embedded framework can update.
 The easiest way to do this, is with a while loop, that runs as long the browser is open.
 
 ```python
 import time
-from Pytonium import Pytonium, pytonium_subprocess_path
+from Pytonium import Pytonium
 
 pytonium = Pytonium()
-pytonium.set_subprocess_path(pytonium_subprocess_path)
 
 pytonium.initialize("C:\TestSite\index.html", 1920, 1080)
 
@@ -69,15 +58,13 @@ To do this we just have to call the method "bind_function_to_javascript" on the 
 
 ```python
 import time
-from Pytonium import Pytonium, pytonium_subprocess_path
+from Pytonium import Pytonium
 
 # Let's define a function and bind it to name testfunc in javascript
 def testfunc(args):
     print(args)
 
 pytonium = Pytonium()
-pytonium.set_subprocess_path(pytonium_subprocess_path)
-
 # Here we add the actual binding.
 pytonium.bind_function_to_javascript("testfunc", testfunc)
 
@@ -133,7 +120,7 @@ class MyApi:
         print(self.data)
 myApi = MyApi()
 
-pytonium.pytonium.bind_object_methods_to_javascript(myApi, "test_binding_python_object_methods")
+pytonium.bind_object_methods_to_javascript(myApi, "test_binding_python_object_methods")
 ```
 Here the first parameter is the object to bind and the second is the optional javascript object name.
 
@@ -162,3 +149,86 @@ Based on cef version: 106.1.1+g5891c70+chromium-106.0.5249.119
 
 To Build from source, you would have to copy the content of minimal 
 distribution of the Chromium Embedded Framework into the folder called 'cef-binaries' and run cmake.
+
+
+Here is an example main.py, with all current features used, you can find the complete source code in the PytoniumTest Package, which is installed with Pytonium.
+
+```python
+import os
+import time
+from datetime import datetime
+
+# Import the Pytonium class
+from Pytonium import Pytonium
+
+
+# This class expose three methods as an endpoint of a javascript binding, and they get called on the test website.
+# The functions need to be defined with a parameter, in case the function is called with arguments.
+class MyApi:
+
+    def __init__(self):
+        self.data = []
+
+
+    @staticmethod
+    def TestOne(args):
+        print("Static Python Method called from Javascript!")
+
+    def TestTwo(self, args):
+        print("Python Method called from Javascript!")
+        self.data.append(args[0])
+        print(self.data)
+
+    def TestThree(self, args):
+        print("Python Method called from Javascript!")
+        self.data[0] += args[1]
+        print(self.data)
+
+
+# This function is the endpoint of a javascript binding, and it's get called on the test website.
+def my_js_binding(args):
+    print("Python Function is called from Javascript!")
+    print(args)
+
+
+# Create a Pytonium instance.
+pytonium = Pytonium()
+
+# Create a MyApi instance.
+myApi = MyApi()
+
+# Bind the MyApi instance and the test function to javascript.
+pytonium.bind_function_to_javascript("testfunc", my_js_binding, "test_binding_python_function")
+pytonium.bind_object_methods_to_javascript(myApi, "test_binding_python_object_methods")
+
+# To load a html file, on start up from disk, we need the absolute path to it, so we get it here.
+pytonium_test_path = os.path.abspath(__file__)
+pytonium_test_path = os.path.dirname(pytonium_test_path)
+
+# Set a custom icon for the window.
+pytonium.set_custom_icon_path(f"radioactive.ico")
+
+# Start Pytonium and pass it the start-up URL or file and the width and height of the Window.
+pytonium.initialize(f"{pytonium_test_path}\\index.html", 1920, 1080)
+
+# Start a loop to update the Pytonium message loop and execute some javascript.
+
+while pytonium.is_running():
+    time.sleep(0.01)
+
+    # Update the message loop.
+    pytonium.update_message_loop()
+
+    # Get the current time and date
+    now = datetime.now()
+
+    # Format the date and time string.
+    date_time = now.strftime("%d.%m.%Y, %H:%M:%S")
+
+    # Save the needed Javascript, to call a function and update a ticker with the current date and time.
+    # We created and exposed this function in Javascript on the HTML site.
+    code = f"window.state.setTicker('{date_time}')"
+
+    # Execute the javascript.
+    pytonium.execute_javascript(code)
+```
