@@ -7,7 +7,8 @@ At the moment the framework has basic functionality for loading an url and add
 Javascript bindings, so a python function can be called from Javascript.
 And also Javascript can be executed, on the website, from python.
 
-The package is avaible via pip
+The package is avaible via pip.
+
 So just type the following in the console to install it.
 ```
 pip install Pytonium
