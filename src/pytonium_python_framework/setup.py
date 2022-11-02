@@ -16,6 +16,8 @@ def compress_binaries():
     pytonium_files = []
     pytonium_bin_files = []
     if not isfile("./Pytonium/bin.zip") and is_pytonium_release_build:
+        print("Building Pytonium Release")
+        print("Creating Pytonium binaries zip file...")
         pytonium_files = ['./bin.zip']
         compression = zipfile.ZIP_LZMA
         zf = zipfile.ZipFile("./Pytonium/bin.zip", mode="w")
@@ -44,6 +46,7 @@ def compress_binaries():
             zf.close()
     else:
         if is_pytonium_release_build:
+            print("Building Pytonium Release")
             pytonium_files = ['./bin.zip']
         else:
             pytonium_files = []
@@ -52,14 +55,18 @@ def compress_binaries():
         binaries = [f for f in listdir(pytonium_binaries_path) if isfile(join(pytonium_binaries_path, f))]
 
         for file_to_write in binaries:
+            os.remove(pytonium_binaries_path + file_to_write)
+            open(pytonium_binaries_path + file_to_write, 'x').close()
             pytonium_bin_files.append(file_to_write)
+
 
         pytonium_locales_path = "./Pytonium/bin/locales/"
         locales_files = [f for f in listdir(pytonium_locales_path) if isfile(join(pytonium_locales_path, f))]
 
         for file_to_write in locales_files:
+            os.remove(pytonium_locales_path + file_to_write)
+            open(pytonium_locales_path + file_to_write, 'x').close()
             pytonium_bin_files.append("locales/" + file_to_write)
-
     return [pytonium_files, pytonium_bin_files]
 
 
@@ -81,13 +88,13 @@ setup(
     author="Maximilian Winter",
     author_email = "maximilian.winter.91@gmail.com",
     cmdclass={'build_ext': build_ext},
-    packages=['Pytonium', 'PytoniumTests', 'Pytonium.bin', "Pytonium.src", "Pytonium.src.pytonium_library",
+    packages=['Pytonium', 'PytoniumTest', 'Pytonium.bin', "Pytonium.src", "Pytonium.src.pytonium_library",
               "Pytonium.src.include", "Pytonium.src.lib"],
     ext_modules=cythonize(extensions),
     include_package_data=True,
     package_data={
         'Pytonium': files_list[0],
-        'PytoniumTests': ['./__init__.py', './main.py', './index.html'],
+        'PytoniumTest': ['./__init__.py', './main.py', './index.html',  './radioactive.ico'],
         'Pytonium.bin': files_list[1],
         'Pytonium.src': ["./pytonium.pyx"],
         "Pytonium.src.pytonium_library": ["./*.h"],
@@ -102,11 +109,7 @@ pytonium_path += "\\Pytonium"
 pytonium_bin_zip_path = f'{pytonium_path}\\bin.zip'
 
 if os.path.exists(pytonium_bin_zip_path):
-    print("Pytonium: On the first start up after installation, Pytonium has to extract some dlls and resources!")
-    print("Pytonium: This will take a moment, but only happens on first start up!")
     compression = zipfile.ZIP_LZMA
     with zipfile.ZipFile(pytonium_bin_zip_path, compression=compression, mode='r') as zip_ref:
         zip_ref.extractall(f'{pytonium_path}\\bin')
         zip_ref.close()
-    sleep(0.1)
-    os.remove(pytonium_bin_zip_path)

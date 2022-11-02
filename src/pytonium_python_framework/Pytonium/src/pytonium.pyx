@@ -1,6 +1,5 @@
 # distutils: language=c++
 # cython: language_level=3
-import builtins
 
 from Pytonium.src.header.pytonium_library cimport PytoniumLibrary, CefValueWrapper
 
@@ -46,8 +45,8 @@ cdef class PytoniumValueWrapper:
         return self.cef_value_wrapper.GetString()
 
 
-cdef inline void java_binding_callback(void *python_function_object, int size, CefValueWrapper* args):
-    cdef CefValueWrapper* fargs = args
+cdef inline list get_java_binding_arg_list(CefValueWrapper* args, int size):
+    cdef CefValueWrapper * fargs = args
     arg_list = []
     cdef PytoniumValueWrapper v2
     for i in range(size):
@@ -63,32 +62,32 @@ cdef inline void java_binding_callback(void *python_function_object, int size, C
             arg_list.append(v2.get_double())
         fargs += 1
 
-    (<object>python_function_object)(arg_list)
+    return arg_list
+
+
+cdef inline void java_binding_callback(void *python_function_object, int size, CefValueWrapper* args):
+    arg_list = get_java_binding_arg_list(args, size)
+
+    if len(arg_list) == 0:
+        (<object> python_function_object)()
+    else:
+        (<object> python_function_object)(arg_list)
+
 
 cdef inline void java_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args):
-    cdef CefValueWrapper* fargs = args
-    arg_list = []
-    cdef PytoniumValueWrapper v2
-    for i in range(size):
-        v2 = PytoniumValueWrapper()
-        v2.cef_value_wrapper = fargs[0]
-        if v2.is_int():
-            arg_list.append(v2.get_int())
-        if v2.is_bool():
-            arg_list.append(v2.get_bool())
-        if v2.is_string():
-            arg_list.append(bytes.decode(v2.get_string(), "utf-8"))
-        if v2.is_double():
-            arg_list.append(v2.get_double())
-        fargs += 1
+    arg_list = get_java_binding_arg_list(args, size)
 
-    (<PytoniumMethodWrapper>python_function_object)(arg_list)
+    if len(arg_list) == 0:
+        (<PytoniumMethodWrapper> python_function_object)()
+    else:
+        (<PytoniumMethodWrapper>python_function_object)(arg_list)
 
 cdef class Pytonium:
     cdef PytoniumLibrary pytonium_library;
-
+    pytonium_subprocess_path = ""
     def __init__(self):
         self.pytonium_library = PytoniumLibrary()
+        self.pytonium_library.SetCustomSubprocessPath(Pytonium.pytonium_subprocess_path)
 
     def initialize(self, start_url: str, init_width: int, init_height: int):
         self.pytonium_library.InitPytonium(start_url.encode("utf-8"), init_width, init_height)

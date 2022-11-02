@@ -21,3 +21,4 @@ if os.path.exists(pytonium_bin_zip_path):
 os.add_dll_directory(f'{pytonium_path}\\bin')
 
 from .src import Pytonium
+Pytonium.pytonium_subprocess_path = pytonium_subprocess_path
