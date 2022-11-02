@@ -67,27 +67,21 @@ cdef inline list get_java_binding_arg_list(CefValueWrapper* args, int size):
 
 cdef inline void java_binding_callback(void *python_function_object, int size, CefValueWrapper* args):
     arg_list = get_java_binding_arg_list(args, size)
-
-    if len(arg_list) == 0:
-        (<object> python_function_object)()
-    else:
-        (<object> python_function_object)(arg_list)
+    (<object> python_function_object)(arg_list)
 
 
 cdef inline void java_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args):
     arg_list = get_java_binding_arg_list(args, size)
+    (<PytoniumMethodWrapper> python_function_object)(arg_list)
 
-    if len(arg_list) == 0:
-        (<PytoniumMethodWrapper> python_function_object)()
-    else:
-        (<PytoniumMethodWrapper>python_function_object)(arg_list)
 
 cdef class Pytonium:
     cdef PytoniumLibrary pytonium_library;
-    pytonium_subprocess_path = ""
+    pytonium_subprocess_path: str
+
     def __init__(self):
         self.pytonium_library = PytoniumLibrary()
-        self.pytonium_library.SetCustomSubprocessPath(Pytonium.pytonium_subprocess_path)
+        self.pytonium_library.SetCustomSubprocessPath(Pytonium.pytonium_subprocess_path.encode("utf-8"))
 
     def initialize(self, start_url: str, init_width: int, init_height: int):
         self.pytonium_library.InitPytonium(start_url.encode("utf-8"), init_width, init_height)

@@ -17,7 +17,6 @@ class MyApi:
     @staticmethod
     def TestOne(args):
         print("Static Python Method called from Javascript!")
-        print(args)
 
     def TestTwo(self, args):
         print("Python Method called from Javascript!")

@@ -90,3 +90,5 @@ src/pytonium_python_framework/PytoniumTest/cache/Session Storage/LOG.old
 src/pytonium_python_framework/PytoniumTest/cache/Session Storage/MANIFEST-000001
 src/pytonium_python_framework/PytoniumTest/cache/Visited Links
 src/pytonium_python_framework/PytoniumTest/cache/000003.log
+src/pytonium_python_framework/PytoniumTest/cache/LocalPrefs.json
+src/pytonium_python_framework/PytoniumTest/cache/Network/Network Persistent State
