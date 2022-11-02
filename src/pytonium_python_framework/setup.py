@@ -8,7 +8,7 @@ import os
 from os import listdir
 from os.path import isfile, join
 
-is_pytonium_release_build = False
+is_pytonium_release_build = True
 
 
 def compress_binaries():

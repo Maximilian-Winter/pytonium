@@ -11,8 +11,8 @@ cdef class PytoniumMethodWrapper:
     def __init__(self, method):
         self.python_method = method
 
-    def __call__(self, args):
-        self.python_method(args)
+    def __call__(self, *args):
+        self.python_method(*args)
 
 cdef class PytoniumValueWrapper:
     cdef CefValueWrapper cef_value_wrapper;
@@ -67,12 +67,15 @@ cdef inline list get_java_binding_arg_list(CefValueWrapper* args, int size):
 
 cdef inline void java_binding_callback(void *python_function_object, int size, CefValueWrapper* args):
     arg_list = get_java_binding_arg_list(args, size)
-    (<object> python_function_object)(arg_list)
+    (<object> python_function_object)(*arg_list)
+
 
 
 cdef inline void java_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args):
     arg_list = get_java_binding_arg_list(args, size)
-    (<PytoniumMethodWrapper> python_function_object)(arg_list)
+    (<PytoniumMethodWrapper> python_function_object)(*arg_list)
+
+
 
 
 cdef class Pytonium:

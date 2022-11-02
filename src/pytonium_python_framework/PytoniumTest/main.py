@@ -7,7 +7,6 @@ from Pytonium import Pytonium
 
 
 # This class expose three methods as an endpoint of a javascript binding, and they get called on the test website.
-# The functions need to be defined with a parameter, in case the function is called with arguments.
 class MyApi:
 
     def __init__(self):
@@ -15,24 +14,27 @@ class MyApi:
 
 
     @staticmethod
-    def TestOne(args):
+    def TestOne():
         print("Static Python Method called from Javascript!")
 
-    def TestTwo(self, args):
+    def TestTwo(self, arg1):
         print("Python Method called from Javascript!")
-        self.data.append(args[0])
+        self.data.append(arg1)
         print(self.data)
 
-    def TestThree(self, args):
+    def TestThree(self, arg1, arg2, arg3):
         print("Python Method called from Javascript!")
-        self.data[0] += args[1]
+        self.data.append(arg1)
+        self.data.append(arg2)
+        self.data.append(arg3)
         print(self.data)
 
 
 # This function is the endpoint of a javascript binding, and it's get called on the test website.
-def my_js_binding(args):
+def my_js_binding(arg1, arg2, arg3, arg4):
     print("Python Function is called from Javascript!")
-    print(args)
+    data = [arg1, arg2, arg3, arg4]
+    print(data)
 
 
 # Create a Pytonium instance.

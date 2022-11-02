@@ -61,8 +61,8 @@ import time
 from Pytonium import Pytonium
 
 # Let's define a function and bind it to name testfunc in javascript
-def testfunc(args):
-    print(args)
+def testfunc(arg1, arg2, arg3, arg4):
+    print([arg1, arg2, arg3, arg4])
 
 pytonium = Pytonium()
 # Here we add the actual binding.
@@ -104,21 +104,24 @@ class MyApi:
     def __init__(self):
         self.data = []
 
+
     @staticmethod
-    def TestOne(args):
+    def TestOne():
         print("Static Python Method called from Javascript!")
-        print(args)
 
-    def TestTwo(self, args):
+    def TestTwo(self, arg1):
         print("Python Method called from Javascript!")
-        self.data.append(args[0])
+        self.data.append(arg1)
         print(self.data)
 
-    def TestThree(self, args):
+    def TestThree(self, arg1, arg2, arg3):
         print("Python Method called from Javascript!")
-        self.data[0] += args[1]
+        self.data.append(arg1)
+        self.data.append(arg2)
+        self.data.append(arg3)
         print(self.data)
-myApi = MyApi()
+
+
 
 pytonium.bind_object_methods_to_javascript(myApi, "test_binding_python_object_methods")
 ```
@@ -126,9 +129,11 @@ Here the first parameter is the object to bind and the second is the optional ja
 
 It would be called like this in Javascript:
 ```javascript
-window.test_binding_python_object_methods.TestOne(42, 24.42, true, 'Hello World!')
-window.test_binding_python_object_methods.TestTwo(42, 24.42, true, 'Hello World!')
-window.test_binding_python_object_methods.TestThree(42, 24.42, true, 'Hello World!')
+ // Call function in python without arguments.
+window.test_binding_python_object_methods.TestOne()
+// Call function in python with arguments.
+window.test_binding_python_object_methods.TestTwo(42)
+window.test_binding_python_object_methods.TestThree(24.42, true, 'olleH dlroW!')
 ```
 
 There is also an option to execute javascript from python, like this:
@@ -163,7 +168,6 @@ from Pytonium import Pytonium
 
 
 # This class expose three methods as an endpoint of a javascript binding, and they get called on the test website.
-# The functions need to be defined with a parameter, in case the function is called with arguments.
 class MyApi:
 
     def __init__(self):
@@ -171,24 +175,27 @@ class MyApi:
 
 
     @staticmethod
-    def TestOne(args):
+    def TestOne():
         print("Static Python Method called from Javascript!")
 
-    def TestTwo(self, args):
+    def TestTwo(self, arg1):
         print("Python Method called from Javascript!")
-        self.data.append(args[0])
+        self.data.append(arg1)
         print(self.data)
 
-    def TestThree(self, args):
+    def TestThree(self, arg1, arg2, arg3):
         print("Python Method called from Javascript!")
-        self.data[0] += args[1]
+        self.data.append(arg1)
+        self.data.append(arg2)
+        self.data.append(arg3)
         print(self.data)
 
 
 # This function is the endpoint of a javascript binding, and it's get called on the test website.
-def my_js_binding(args):
+def my_js_binding(arg1, arg2, arg3, arg4):
     print("Python Function is called from Javascript!")
-    print(args)
+    data = [arg1, arg2, arg3, arg4]
+    print(data)
 
 
 # Create a Pytonium instance.
@@ -231,4 +238,6 @@ while pytonium.is_running():
 
     # Execute the javascript.
     pytonium.execute_javascript(code)
+
+
 ```
