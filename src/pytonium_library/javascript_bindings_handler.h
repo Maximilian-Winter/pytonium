@@ -21,7 +21,7 @@ public:
                        CefRefPtr<CefV8Value> &retval,
                        CefString &exception) override {
 
-    for (int i = 0; i < m_Javascript_Bindings.size(); ++i) {
+    for (int i = 0; i < (int)m_Javascript_Bindings.size(); ++i) {
       if (name == m_Javascript_Bindings[i].functionName) {
 
         CefRefPtr<CefProcessMessage> javascript_binding_message =

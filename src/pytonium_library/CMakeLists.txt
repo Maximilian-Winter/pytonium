@@ -22,6 +22,9 @@ set(PYTONIUM_LIBRARY_SRCS
 set(PYTONIUM_LIBRARY_SRCS_WINDOWS
         cef_wrapper_client_handler_win.cc
   )
+set(PYTONIUM_LIBRARY_SRCS_LINUX
+        cef_wrapper_client_handler_linux.cc
+        )
 APPEND_PLATFORM_SOURCES(PYTONIUM_LIBRARY_SRCS)
 source_group(pytonium_library FILES ${PYTONIUM_LIBRARY_SRCS})
 
@@ -93,9 +96,9 @@ if(OS_LINUX)
   COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
   COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
 
-  COPY_SINGLE_FILE(${CEF_TARGET} "./Release/pytonium_library.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/pytonium_library.lib")
-  COPY_SINGLE_FILE(${CEF_TARGET} "../../../cef-binaries/Release/libcef.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef.lib")
-  COPY_SINGLE_FILE(${CEF_TARGET} "../../libcef_dll_wrapper/Release/libcef_dll_wrapper.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef_dll_wrapper.lib")
+  #COPY_SINGLE_FILE(${CEF_TARGET} "./Release/pytonium_library.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/pytonium_library.lib")
+  #COPY_SINGLE_FILE(${CEF_TARGET} "../../../cef-binaries/Release/libcef.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef.lib")
+  #COPY_SINGLE_FILE(${CEF_TARGET} "../../libcef_dll_wrapper/Release/libcef_dll_wrapper.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef_dll_wrapper.lib")
   add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${CMAKE_SOURCE_DIR}/cef-binaries/include/ ${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/src/include/)

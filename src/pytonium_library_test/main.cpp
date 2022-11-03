@@ -5,6 +5,7 @@
 #include "../pytonium_library/pytonium_library.h"
 #include <filesystem>
 #include <iostream>
+#include <thread>
 
 void testfunc(int size, CefValueWrapper* args)
 {
@@ -33,14 +34,14 @@ int main()
   cefSimpleWrapper.AddJavascriptBinding("TestOne", testfunc, "test_binding_python_object_methods");
   cefSimpleWrapper.AddJavascriptBinding("TestTwo", testfunc2, "test_binding_python_object_methods");
   cefSimpleWrapper.AddJavascriptBinding("TestThree", testfunc3, "test_binding_python_object_methods");
-  std::string currentPath = std::filesystem::current_path().string();
+  std::filesystem::path entryPoint = std::filesystem::current_path() / "index.html";
   cefSimpleWrapper.SetCustomIconPath("radioactive.ico");
-  cefSimpleWrapper.InitPytonium(currentPath + R"(\index.html)", 1920, 1080);
+  cefSimpleWrapper.InitPytonium("file://" + entryPoint.string(), 1920, 1080);
 
   long long counter = 0;
   while (cefSimpleWrapper.IsRunning())
   {
-	  Sleep(10);
+          std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	  cefSimpleWrapper.UpdateMessageLoop();
           std::stringstream ss;
           ss << "window.state.setTicker(" << counter++ << ")";

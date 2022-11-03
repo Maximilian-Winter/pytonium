@@ -12,6 +12,9 @@ set(PYTONIUM_SUB_SRCS
 set(PYTONIUM_SUB_SRCS_WINDOWS
         pytonium_subprocess.cc
         )
+set(PYTONIUM_SUB_SRCS_LINUX
+        pytonium_subprocess_linux.cc
+        )
 APPEND_PLATFORM_SOURCES(PYTONIUM_SUB_SRCS)
 source_group(pytonium_subprocess FILES ${PYTONIUM_SUB_SRCS})
 
@@ -121,11 +124,11 @@ if(OS_LINUX)
 #
     ## COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../pytonium_cpp_librarytest/debug/pytonium_subprocess/")
     ## COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../pytonium_cpp_librarytest/debug/pytonium_subprocess")
-    #COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "../pytonium_library_test/debug/bin")
+    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "../pytonium_library_test/debug")
     ##
     ## COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../pytonium_cpp_librarytest/release/pytonium_subprocess/")
     ## COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../pytonium_cpp_librarytest/release/pytonium_subprocess")
-    #COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "../pytonium_library_test/release/bin")
+    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "../pytonium_library_test/release")
 #
 #
 #

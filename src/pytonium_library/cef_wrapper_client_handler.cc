@@ -282,7 +282,7 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
     int argsSize = (int)javascript_args->GetSize();
 
     auto* valueWrapper = new CefValueWrapper[argsSize];
-    for (int i = 0; i < javascript_args->GetSize(); ++i) {
+    for (int i = 0; i < (int)javascript_args->GetSize(); ++i) {
       std::string type = javascript_arg_types->GetString(i);
 
       if(type == "int")
@@ -310,7 +310,7 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
 
     valueWrapper -= argsSize;
 
-    for (int i = 0; i < m_JavascriptBindings.size(); ++i)
+    for (int i = 0; i < (int)m_JavascriptBindings.size(); ++i)
     {
       if(m_JavascriptBindings[i].functionName == funcName)
       {
@@ -332,7 +332,7 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
     int argsSize = (int)javascript_args->GetSize();
 
     auto* valueWrapper = new CefValueWrapper[argsSize];
-    for (int i = 0; i < javascript_args->GetSize(); ++i) {
+    for (int i = 0; i < (int)javascript_args->GetSize(); ++i) {
       std::string type = javascript_arg_types->GetString(i);
 
       if(type == "int")
@@ -360,7 +360,7 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
 
     valueWrapper -= argsSize;
 
-    for (int i = 0; i < m_JavascriptPythonBindings.size(); ++i)
+    for (int i = 0; i < (int)m_JavascriptPythonBindings.size(); ++i)
     {
       if(m_JavascriptPythonBindings[i].MessageTopic == funcName)
       {

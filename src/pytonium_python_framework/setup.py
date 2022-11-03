@@ -99,7 +99,7 @@ setup(
         'Pytonium.src': ["./pytonium.pyx"],
         "Pytonium.src.pytonium_library": ["./*.h"],
         "Pytonium.src.include": ["./**/*.h", "./*.h"],
-        "Pytonium.src.lib": ["./*.lib"]
+        "Pytonium.src.lib": ["./*"]
     }
 )
 

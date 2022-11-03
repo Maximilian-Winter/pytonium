@@ -20,6 +20,6 @@ endif()
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/pytonium_library_test")
   add_subdirectory(src/pytonium_library_test)
 endif()
-
+set(CMAKE_CXX_STANDARD 20)
 PRINT_CEF_CONFIG()
 

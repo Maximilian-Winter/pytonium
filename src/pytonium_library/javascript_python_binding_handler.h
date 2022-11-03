@@ -22,7 +22,7 @@ public:
                        CefRefPtr<CefV8Value> &retval,
                        CefString &exception) override {
 
-    for (int i = 0; i < m_PythonBindings.size(); ++i) {
+    for (int i = 0; i < (int)m_PythonBindings.size(); ++i) {
       if (name == m_PythonBindings[i].MessageTopic) {
 
         CefRefPtr<CefProcessMessage> javascript_binding_message =

@@ -1,6 +1,7 @@
 # Determine the target output directory.
 set(CEF_TARGET "pytonium_library_test")
 SET_CEF_TARGET_OUT_DIR()
+ADD_LOGICAL_TARGET("libcef_lib" "${CEF_LIB_DEBUG}" "${CEF_LIB_RELEASE}")
 if(OS_WINDOWS)
 
 add_executable(${CEF_TARGET} main.cpp)
@@ -25,8 +26,8 @@ if(OS_LINUX)
     # Executable target.
     add_executable(${CEF_TARGET} main.cpp)
     SET_EXECUTABLE_TARGET_PROPERTIES(${CEF_TARGET})
-    add_dependencies(${CEF_TARGET} libcef_dll_wrapper)
-    target_link_libraries(${CEF_TARGET} libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS})
+    add_dependencies(${CEF_TARGET} libcef_dll_wrapper pytonium_library)
+    target_link_libraries(${CEF_TARGET} libcef_lib libcef_dll_wrapper pytonium_library ${CEF_STANDARD_LIBS})
 
     # Set rpath so that libraries can be placed next to the executable.
     set_target_properties(${CEF_TARGET} PROPERTIES INSTALL_RPATH "$ORIGIN")

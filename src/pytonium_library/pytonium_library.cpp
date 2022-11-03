@@ -8,8 +8,14 @@
 
 
 std::string ExePath() {
+#if OS_WIN
   std::filesystem::path cwd = std::filesystem::current_path() / "bin" / "pytonium_subprocess.exe";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
   return cwd.string();
+#else
+  std::filesystem::path cwd = std::filesystem::current_path() / "pytonium_subprocess";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
+  return cwd.string();
+#endif
+
 }
 
 std::string ResourcePath() {
@@ -31,15 +37,18 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
   CefEnableHighDPISupport();
 
   void *sandbox_info = nullptr;
+  std::string name = "pytonium_library";
+  int argc = 1;
+  char* argv[1] { std::data(name) };
 
   CefMainArgs main_args;
+  CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
+  command_line->InitFromArgv(argc, argv);
 
+  command_line->AppendSwitch("no-sandbox");
   m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( start_url, m_Javascript_Bindings, m_Javascript_Python_Bindings));
   CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
   CefExecuteProcess(main_args, m_App.get(), sandbox_info);
-
-  CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
-  command_line->InitFromString(::GetCommandLineW());
 
 
 
@@ -86,6 +95,7 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 
   if(m_UseCustomIcon)
   {
+#if defined(OS_WIN)
     std::wstring temp = std::wstring(m_CustomIconPath.begin(), m_CustomIconPath.end());
     LPCWSTR w_icon_path = temp.c_str();
 
@@ -96,6 +106,9 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
       HICON hIcon = (HICON)LoadImage(NULL, w_icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
       SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
     }
+
+#endif
+
   }
 }
 void PytoniumLibrary::ExecuteJavascript(std::string code) {

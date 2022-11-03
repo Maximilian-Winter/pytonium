@@ -21,6 +21,7 @@ cef-binaries/cmake/cef_macros.cmake
 
 # the rest is created by cmake, building the wrapper and python(virtual enviroments and package creation.
 
+
 cmake-build-debug-visual-studio/
 cmake-build-release-visual-studio/
 cef-binaries/libcef_dll/cmake-build-debug-visual-studio/
@@ -108,3 +109,5 @@ src/pytonium_python_framework/PytoniumTest/cache/Code Cache/js/dc7a3858bc76c1a6_
 src/pytonium_python_framework/PytoniumTest/cache/Code Cache/js/e7c926a3e32396ec_0
 src/pytonium_python_framework/PytoniumTest/cache/Network/Reporting and NEL
 src/pytonium_python_framework/PytoniumTest/cache/Network/Reporting and NEL-journal
+/cmake-build-debug-wsl/
+/cmake-build-release-wsl/
