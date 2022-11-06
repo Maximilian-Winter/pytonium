@@ -1,7 +1,7 @@
 # distutils: language=c++
 # cython: language_level=3
 
-from Pytonium.src.header.pytonium_library cimport PytoniumLibrary, CefValueWrapper
+from pytonium cimport PytoniumLibrary, CefValueWrapper
 
 #from .header.pytonium_library cimport PytoniumLibrary, CefValueWrapper
 
@@ -78,13 +78,17 @@ cdef inline void java_binding_object_callback(void *python_function_object, int 
 
 
 
+def set_subprocess_path(subprocess_path: str):
+    Pytonium.pytonium_subprocess_path = subprocess_path.encode("utf-8")
+
+
 cdef class Pytonium:
     cdef PytoniumLibrary pytonium_library;
-    pytonium_subprocess_path: str
+    pytonium_subprocess_path : string
 
     def __init__(self):
         self.pytonium_library = PytoniumLibrary()
-        self.pytonium_library.SetCustomSubprocessPath(Pytonium.pytonium_subprocess_path.encode("utf-8"))
+        self.pytonium_library.SetCustomSubprocessPath(Pytonium.pytonium_subprocess_path)
 
     def initialize(self, start_url: str, init_width: int, init_height: int):
         self.pytonium_library.InitPytonium(start_url.encode("utf-8"), init_width, init_height)

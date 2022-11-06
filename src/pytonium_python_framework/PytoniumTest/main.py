@@ -55,7 +55,7 @@ pytonium_test_path = os.path.dirname(pytonium_test_path)
 pytonium.set_custom_icon_path(f"radioactive.ico")
 
 # Start Pytonium and pass it the start-up URL or file and the width and height of the Window.
-pytonium.initialize(f"{pytonium_test_path}\\index.html", 1920, 1080)
+pytonium.initialize(f"file://{pytonium_test_path}\\index.html", 1920, 1080)
 
 # Start a loop to update the Pytonium message loop and execute some javascript.
 

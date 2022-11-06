@@ -46,6 +46,7 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
   command_line->InitFromArgv(argc, argv);
 
   command_line->AppendSwitch("no-sandbox");
+  //command_line->AppendSwitch("disable-gpu");
   m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( start_url, m_Javascript_Bindings, m_Javascript_Python_Bindings));
   CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
   CefExecuteProcess(main_args, m_App.get(), sandbox_info);

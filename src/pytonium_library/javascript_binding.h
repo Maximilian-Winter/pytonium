@@ -10,14 +10,14 @@
 class CefValueWrapper
 {
 public:
-	CefValueWrapper()
-	{
+        CefValueWrapper()
+        {
           Type = -1;
           IntValue = 0;
           BoolValue = false;
           DoubleValue = 0.0;
           StringValue = "";
-	}
+		}
 
 	bool IsInt()
 	{
