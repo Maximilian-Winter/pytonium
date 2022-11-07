@@ -45,12 +45,14 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
   std::string arg3 = "--disable-software-rasterizer";
   int argc = 4;
   char* argv[4] { std::data(name), std::data(arg1), std::data(arg2), std::data(arg3)};
+  CefMainArgs main_args(argc, argv);
 #else
   std::string name = "pytonium_library";
   int argc = 1;
   char* argv[1] { std::data(name)};
+  CefMainArgs main_args;
 #endif
-  CefMainArgs main_args(argc, argv);
+
   CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
   command_line->InitFromArgv(argc, argv);
 

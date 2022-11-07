@@ -78,9 +78,6 @@ if os.name == 'posix':
 
     shutil.copyfile('./Pytonium/bin/libcef.so', 'Pytonium/src/cef-binaries/Release/libcef.so')
 
-    #if 'egg_info' not in sys.argv and 'sdist' not in sys.argv:
-    #    sys.argv.append("build")
-
     setup(
         name='Pytonium',
         packages=pytonium_packages,
