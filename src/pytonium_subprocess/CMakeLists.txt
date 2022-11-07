@@ -89,12 +89,12 @@ if(OS_WINDOWS)
 
 
 
-  COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
-  COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
+  COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_win/")
+  COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_win/")
 
   #COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/PytoniumLibrary/pytonium_subprocess/")
   #COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/PytoniumLibrary/pytonium_subprocess/")
-  COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
+  COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_win/")
 endif()
 
 if(OS_LINUX)
@@ -136,10 +136,10 @@ if(OS_LINUX)
 #
 #
 #
-    COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
-    COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
+    COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_linux/")
+    COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_linux/")
 #
     ##COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/PytoniumLibrary/pytonium_subprocess/")
     ##COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/PytoniumLibrary/pytonium_subprocess/")
-    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
+    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_linux/")
 endif()

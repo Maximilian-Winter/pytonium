@@ -60,18 +60,18 @@ if(OS_WINDOWS)
 
   # Copy binary and resource files to the target output directory.
   #COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
-  COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
-  COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
+  #COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_win/")
+  #COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_win/")
 
-  COPY_SINGLE_FILE(${CEF_TARGET} "./Release/pytonium_library.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/pytonium_library.lib")
-  COPY_SINGLE_FILE(${CEF_TARGET} "../../../cef-binaries/Release/libcef.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef.lib")
-  COPY_SINGLE_FILE(${CEF_TARGET} "../../libcef_dll_wrapper/Release/libcef_dll_wrapper.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef_dll_wrapper.lib")
-  add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy_directory
-          ${CMAKE_SOURCE_DIR}/cef-binaries/include/ ${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/src/include/)
-  add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy_directory
-          ${CMAKE_SOURCE_DIR}/src/pytonium_library/ ${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/src/pytonium_library/)
+  #COPY_SINGLE_FILE(${CEF_TARGET} "./Release/pytonium_library.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/pytonium_library.lib")
+  #COPY_SINGLE_FILE(${CEF_TARGET} "../../../cef-binaries/Release/libcef.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef.lib")
+  #COPY_SINGLE_FILE(${CEF_TARGET} "../../libcef_dll_wrapper/Release/libcef_dll_wrapper.lib" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef_dll_wrapper.lib")
+  #add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
+  #        COMMAND ${CMAKE_COMMAND} -E copy_directory
+  #        ${CMAKE_SOURCE_DIR}/cef-binaries/include/ ${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/src/include/)
+  #add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
+  #        COMMAND ${CMAKE_COMMAND} -E copy_directory
+  #        ${CMAKE_SOURCE_DIR}/src/pytonium_library/ ${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/src/pytonium_library/)
 endif()
 
 
@@ -93,16 +93,16 @@ if(OS_LINUX)
 
   # Copy binary and resource files to the target output directory.
   #COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
-  COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
-  COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin/")
+  #COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_linux/")
+  #COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_linux/")
 
-  COPY_SINGLE_FILE(${CEF_TARGET} "./libpytonium_library.a" "../../../src/pytonium_python_framework/Pytonium/src/lib/libpytonium_library.a")
-  COPY_SINGLE_FILE(${CEF_TARGET} "../../../cef-binaries/Release/libcef.so" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef.so")
-  COPY_SINGLE_FILE(${CEF_TARGET} "../../libcef_dll_wrapper/libcef_dll_wrapper.a" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef_dll_wrapper.a")
-  add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy_directory
-          ${CMAKE_SOURCE_DIR}/cef-binaries/include/ ${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/src/include/)
-  add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy_directory
-          ${CMAKE_SOURCE_DIR}/src/pytonium_library/ ${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/src/pytonium_library/)
+  #COPY_SINGLE_FILE(${CEF_TARGET} "./libpytonium_library.a" "../../../src/pytonium_python_framework/Pytonium/src/lib/libpytonium_library.a")
+  #COPY_SINGLE_FILE(${CEF_TARGET} "../../../cef-binaries/Release/libcef.so" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef.so")
+  #COPY_SINGLE_FILE(${CEF_TARGET} "../../libcef_dll_wrapper/libcef_dll_wrapper.a" "../../../src/pytonium_python_framework/Pytonium/src/lib/libcef_dll_wrapper.a")
+  #add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
+  #        COMMAND ${CMAKE_COMMAND} -E copy_directory
+  #        ${CMAKE_SOURCE_DIR}/cef-binaries/include/ ${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/src/include/)
+  #add_custom_command(TARGET "${CEF_TARGET}" POST_BUILD
+  #        COMMAND ${CMAKE_COMMAND} -E copy_directory
+  #        ${CMAKE_SOURCE_DIR}/src/pytonium_library/ ${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/src/pytonium_library/)
 endif()

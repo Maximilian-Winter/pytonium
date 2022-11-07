@@ -22,8 +22,8 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1 and sys.argv[1] == 'all':
         # Heavy clean up, delete all generated files, also the cmake ones.
-        files = ['Pytonium/bin', 'Pytonium/src/pytonium_library',
-                 'Pytonium/src/include', 'Pytonium/src/lib']
+        files = ['dist', 'Pytonium/bin', 'Pytonium/src/pytonium_library',
+                 'Pytonium/src/include', 'Pytonium/src/lib', 'Pytonium/src/cef-binaries-linux', 'Pytonium/src/cef-binaries-windows']
 
         delete_files(files)
 
