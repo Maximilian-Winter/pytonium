@@ -1,9 +1,8 @@
-import os
 import shutil
-import sys
-from typing import List
-
 import os
+from skbuild import setup
+from pathlib import Path
+from os.path import isfile
 
 is_sdist_release = False
 
@@ -44,10 +43,6 @@ def generate_manifest_file():
 
 
 if os.name == 'nt':
-    from skbuild import setup
-    from pathlib import Path
-    from os.path import isfile
-
     if os.path.exists('./Pytonium/src/cef-binaries/Release/libcef.dll'):
         os.remove('./Pytonium/src/cef-binaries/Release/libcef.dll')
 
@@ -67,10 +62,6 @@ if os.name == 'nt':
     )
 
 if os.name == 'posix':
-    from skbuild import setup
-    from pathlib import Path
-    from os.path import isfile
-
     if os.path.exists('./Pytonium/src/cef-binaries/Release/libcef.so'):
         os.remove('./Pytonium/src/cef-binaries/Release/libcef.so')
 
