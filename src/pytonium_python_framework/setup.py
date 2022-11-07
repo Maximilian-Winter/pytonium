@@ -9,18 +9,11 @@ is_sdist_release = False
 if 'RELEASE_SDIST' in os.environ and os.environ.get("RELEASE_SDIST") == 1:
     is_sdist_release = True
 
+pytonium_manifest_file_list = []
+pytonium_packages = ['Pytonium']
 
-if os.name == "nt":
-    from time import sleep
-
-    from os import listdir
-    from os.path import isfile, join
-    from Cython.Build import cythonize
-    from setuptools import setup, Extension
-    from setuptools.command.build_ext import build_ext as build_ext
-
-is_pytonium_release_build = True
-
+if os.path.exists('./Pytonium/test/cache'):
+    shutil.rmtree('./Pytonium/test/cache')
 
 #def compress_binaries():
 #    pytonium_files = []
@@ -126,22 +119,8 @@ is_pytonium_release_build = True
 #    with zipfile.ZipFile(pytonium_bin_zip_path, compression=compression, mode='r') as zip_ref:
 #        zip_ref.extractall(f'{pytonium_path}/bin')
 #        zip_ref.close()
-if os.name == 'nt':
-    from skbuild import setup
-    from pathlib import Path
-    from os.path import isfile
-    from setuptools import Extension
 
-    pytonium_manifest_file_list = []
-
-    pytonium_packages = ['Pytonium']
-
-    if os.path.exists('./Pytonium/test/cache'):
-        shutil.rmtree('./Pytonium/test/cache')
-
-    if os.path.exists('./Pytonium/src/cef-binaries/Release/libcef.so'):
-        os.remove('./Pytonium/src/cef-binaries/Release/libcef.so')
-
+def generate_manifest_file():
     if is_sdist_release:
         for path in Path('./Pytonium').rglob('*'):
             if isfile(path):
@@ -165,7 +144,22 @@ if os.name == 'nt':
         for item in pytonium_manifest_file_list:
             fp.write("include %s\n" % item)
 
-    shutil.copyfile('./Pytonium/bin/libcef.so', 'Pytonium/src/cef-binaries/Release/libcef.so')
+
+if os.name == 'nt':
+    from skbuild import setup
+    from pathlib import Path
+    from os.path import isfile
+
+    if os.path.exists('./Pytonium/src/cef-binaries/Release/libcef.dll'):
+        os.remove('./Pytonium/src/cef-binaries/Release/libcef.dll')
+
+    if os.path.exists('./Pytonium/src/cef-binaries/Release/libcef.lib'):
+        os.remove('./Pytonium/src/cef-binaries/Release/libcef.lib')
+
+    generate_manifest_file()
+
+    shutil.copyfile('./Pytonium/bin/libcef.dll', 'Pytonium/src/cef-binaries/Release/libcef.dll')
+    shutil.copyfile('./Pytonium/bin/libcef.lib', 'Pytonium/src/cef-binaries/Release/libcef.lib')
 
     setup(
         name='Pytonium',
@@ -181,38 +175,10 @@ if os.name == 'posix':
     from os.path import isfile
     from setuptools import Extension
 
-    pytonium_manifest_file_list = []
-
-    pytonium_packages = ['Pytonium']
-
-    if os.path.exists('./Pytonium/test/cache'):
-        shutil.rmtree('./Pytonium/test/cache')
-
     if os.path.exists('./Pytonium/src/cef-binaries/Release/libcef.so'):
         os.remove('./Pytonium/src/cef-binaries/Release/libcef.so')
 
-    if is_sdist_release:
-        for path in Path('./Pytonium').rglob('*'):
-            if isfile(path):
-                pytonium_manifest_file_list.append(str(path))
-            else:
-                pytonium_packages.append(str(path).replace("/", "."))
-    else:
-        pytonium_packages.append("Pytonium.bin")
-        pytonium_packages.append("Pytonium.test")
-        pytonium_packages.append("Pytonium.bin.locales")
-        for path in Path('./Pytonium/bin').rglob('*'):
-            if isfile(path):
-                pytonium_manifest_file_list.append(str(path))
-
-        for path in Path('./Pytonium/test').rglob('*'):
-            if isfile(path):
-                pytonium_manifest_file_list.append(str(path))
-
-    with open('./MANIFEST.in', 'w') as fp:
-
-        for item in pytonium_manifest_file_list:
-            fp.write("include %s\n" % item)
+    generate_manifest_file()
 
     shutil.copyfile('./Pytonium/bin/libcef.so', 'Pytonium/src/cef-binaries/Release/libcef.so')
 
