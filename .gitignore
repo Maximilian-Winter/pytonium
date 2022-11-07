@@ -132,4 +132,4 @@ src/venv2/pyvenv.cfg
 src/venv2/pyvenv.cfg
 /src/venvwsl/
 src/pytonium_python_framework/Pytonium/src/cef-binaries/Release/libcef.so
-pytonium_python_framework/_skbuild/
+src/pytonium_python_framework/_skbuild/
