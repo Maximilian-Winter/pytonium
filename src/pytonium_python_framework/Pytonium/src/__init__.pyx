@@ -1,1 +1,1 @@
-from .pytonium import PytoniumLibrary, set_subprocess_path
+from .pytonium import Pytonium, set_subprocess_path

@@ -37,16 +37,24 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
   CefEnableHighDPISupport();
 
   void *sandbox_info = nullptr;
+
+#if OS_LINUX
+  std::string name = "pytonium_library";
+  std::string arg1 = "--no-sandbox";
+  std::string arg2 = "--disable-gpu";
+  std::string arg3 = "--disable-software-rasterizer";
+  int argc = 4;
+  char* argv[4] { std::data(name), std::data(arg1), std::data(arg2), std::data(arg3)};
+#else
   std::string name = "pytonium_library";
   int argc = 1;
-  char* argv[1] { std::data(name) };
-
-  CefMainArgs main_args;
+  char* argv[1] { std::data(name)};
+#endif
+  CefMainArgs main_args(argc, argv);
   CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
   command_line->InitFromArgv(argc, argv);
 
-  command_line->AppendSwitch("no-sandbox");
-  //command_line->AppendSwitch("disable-gpu");
+
   m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( start_url, m_Javascript_Bindings, m_Javascript_Python_Bindings));
   CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
   CefExecuteProcess(main_args, m_App.get(), sandbox_info);

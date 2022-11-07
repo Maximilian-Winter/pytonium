@@ -1,14 +1,17 @@
 [build-system]
-requires = [ "setuptools>=60.2.0", "Cython>=3.0.0a11"]
+requires = [  "setuptools>=42",
+    "scikit-build",
+    "cmake",
+    "ninja; platform_system!='Windows'", "Cython>=3.0.0a11"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "Pytonium"
-version = "0.0.8"
+version = "0.0.9"
 description = "A framework for building python apps, with a GUI based on the web-technologies HTML, CSS and Javascript."
 readme = "README.md"
 requires-python = ">=3.11"
-classifiers = [ "Programming Language :: Python :: 3", "License :: OSI Approved :: BSD License", "Operating System :: Microsoft :: Windows",]
+classifiers = [ "Programming Language :: Python :: 3", "License :: OSI Approved :: BSD License"]
 [[project.authors]]
 name = "Maximilian Winter"
 email = "maximilian.winter.91@gmail.com"

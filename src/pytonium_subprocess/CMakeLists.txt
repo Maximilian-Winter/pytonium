@@ -118,9 +118,13 @@ if(OS_LINUX)
     if (EXISTS "${CEF_BINARY_DIR}/libminigbm.so")
         COPY_FILES("${CEF_TARGET}" "libminigbm.so" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
     endif()
-
+    if(USE_SANDBOX)
+        # Logical target used to link the cef_sandbox library.
+        ADD_LOGICAL_TARGET("cef_sandbox_lib" "${CEF_SANDBOX_LIB_DEBUG}" "${CEF_SANDBOX_LIB_RELEASE}")
+        target_link_libraries(${CEF_TARGET} cef_sandbox_lib ${CEF_SANDBOX_STANDARD_LIBS})
+    endif()
     # Set SUID permissions on the chrome-sandbox target.
-    #SET_LINUX_SUID_PERMISSIONS("${CEF_TARGET}" "${CEF_TARGET_OUT_DIR}/chrome-sandbox")
+    SET_LINUX_SUID_PERMISSIONS("${CEF_TARGET}" "${CEF_TARGET_OUT_DIR}/chrome-sandbox")
 #
     ## COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../pytonium_cpp_librarytest/debug/pytonium_subprocess/")
     ## COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../pytonium_cpp_librarytest/debug/pytonium_subprocess")

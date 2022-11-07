@@ -1,7 +1,7 @@
 # distutils: language=c++
 # cython: language_level=3
 
-from pytonium cimport PytoniumLibrary, CefValueWrapper
+from .pytonium_library cimport PytoniumLibrary, CefValueWrapper
 
 #from .header.pytonium_library cimport PytoniumLibrary, CefValueWrapper
 
