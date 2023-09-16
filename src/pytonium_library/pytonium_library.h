@@ -18,16 +18,16 @@ class PytoniumLibrary {
 public:
   PytoniumLibrary();
   void InitPytonium(std::string start_url, int init_width, int init_height);
-  void ExecuteJavascript(std::string code);
+  void ExecuteJavascript(const std::string& code);
   void ShutdownPytonium();
   bool IsRunning();
   bool IsReadyToExecuteJavascript();
   void UpdateMessageLoop();
   void AddJavascriptBinding(std::string name,
                                 js_binding_function_ptr jsNativeApiFunctionPtr, std::string javascript_object);
-  void AddJavascriptPythonBinding(std::string name,
+  void AddJavascriptPythonBinding(const std::string& name,
       js_python_bindings_handler_function_ptr python_bindings_handler,
-      js_python_callback_object_ptr python_callback_object, std::string javascript_object);
+      js_python_callback_object_ptr python_callback_object, const std::string& javascript_object);
   void SetCustomSubprocessPath(std::string cefsub_path);
   void SetCustomCachePath(std::string cef_cache_path);
   void SetCustomResourcePath(std::string cef_resources_path);
@@ -40,19 +40,19 @@ private:
     CefRefPtr<CefWrapperApp> m_App;
 
     bool m_UseCustomCefSubPath = false;
-    std::string m_CustomCefSubPath = "";
+    std::string m_CustomCefSubPath;
 
     bool m_UseCustomCefCachePath = false;
-    std::string m_CustomCefCachePath = "";
+    std::string m_CustomCefCachePath;
 
     bool m_UseCustomCefResourcesPath = false;
-    std::string m_CustomCefResourcesPath = "";
+    std::string m_CustomCefResourcesPath;
 
     bool m_UseCustomCefLocalesPath = false;
-    std::string m_CustomCefLocalesPath = "";
+    std::string m_CustomCefLocalesPath;
 
     bool m_UseCustomIcon = false;
-    std::string m_CustomIconPath = "";
+    std::string m_CustomIconPath;
 
     std::vector<JavascriptBinding> m_Javascript_Bindings;
     std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;

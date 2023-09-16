@@ -36,8 +36,11 @@ set(CEF_TARGET "pytonium_library")
 SET_CEF_TARGET_OUT_DIR()
 
 ADD_LOGICAL_TARGET("libcef_lib" "${CEF_LIB_DEBUG}" "${CEF_LIB_RELEASE}")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_compile_definitions(_ITERATOR_DEBUG_LEVEL=2)
+  add_compile_definitions(symbol_level=2)
+endif()
 
-add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
 #
 # Windows configuration.
 #
@@ -48,7 +51,7 @@ if(OS_WINDOWS)
   add_dependencies(${CEF_TARGET} libcef_dll_wrapper)
   target_include_directories(${CEF_TARGET} PUBLIC ${CEF_INCLUDE_PATH})
   target_link_libraries(${CEF_TARGET} libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS})
-  add_compile_definitions(symbol_level=2)
+
   if(USE_SANDBOX)
     # Logical target used to link the cef_sandbox library.
     ADD_LOGICAL_TARGET("cef_sandbox_lib" "${CEF_SANDBOX_LIB_DEBUG}" "${CEF_SANDBOX_LIB_RELEASE}")

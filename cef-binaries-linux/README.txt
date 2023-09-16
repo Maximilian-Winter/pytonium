@@ -1,15 +1,15 @@
 Chromium Embedded Framework (CEF) Standard Binary Distribution for Linux
 -------------------------------------------------------------------------------
 
-Date:             October 21, 2022
+Date:             September 14, 2023
 
-CEF Version:      106.1.1+g5891c70+chromium-106.0.5249.119
+CEF Version:      116.0.23+g375735a+chromium-116.0.5845.189
 CEF URL:          https://bitbucket.org/chromiumembedded/cef.git
-                  @5891c702dae4647f09400db52f57ee38e04c7b4c
+                  @375735a3c690324455ed9e805863ecb9ec820d3f
 
-Chromium Version: 106.0.5249.119
+Chromium Version: 116.0.5845.189
 Chromium URL:     https://chromium.googlesource.com/chromium/src.git
-                  @33512c3fb17e231fa81198c09841892d0cef8c66
+                  @a96fcf1c75e119aa8a91189610511821c8df553d
 
 This distribution contains all components necessary to build and distribute an
 application using CEF on the Linux platform. Please see the LICENSING

@@ -1,6 +1,9 @@
 # distutils: language=c++
 # cython: language_level=3
 
+
+import string
+
 from .pytonium_library cimport PytoniumLibrary, CefValueWrapper
 
 #from .header.pytonium_library cimport PytoniumLibrary, CefValueWrapper
@@ -65,30 +68,36 @@ cdef inline list get_java_binding_arg_list(CefValueWrapper* args, int size):
     return arg_list
 
 
-cdef inline void java_binding_callback(void *python_function_object, int size, CefValueWrapper* args):
+cdef inline void java_binding_callback(void *python_function_object, int size, CefValueWrapper* args) noexcept:
     arg_list = get_java_binding_arg_list(args, size)
     (<object> python_function_object)(*arg_list)
 
 
 
-cdef inline void java_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args):
+cdef inline void java_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args) noexcept:
     arg_list = get_java_binding_arg_list(args, size)
     (<PytoniumMethodWrapper> python_function_object)(*arg_list)
 
-
-
-
-def set_subprocess_path(subprocess_path: str):
-    Pytonium.pytonium_subprocess_path = subprocess_path.encode("utf-8")
-
+cdef str _global_pytonium_subprocess_path = ""
 
 cdef class Pytonium:
     cdef PytoniumLibrary pytonium_library;
-    pytonium_subprocess_path : string
 
     def __init__(self):
+        global _global_pytonium_subprocess_path
         self.pytonium_library = PytoniumLibrary()
-        self.pytonium_library.SetCustomSubprocessPath(Pytonium.pytonium_subprocess_path)
+        self.pytonium_library.SetCustomSubprocessPath(_global_pytonium_subprocess_path.encode('utf-8'))
+
+    @classmethod
+    def pytonium_subprocess_path(cls):
+        global _global_pytonium_subprocess_path
+        return _global_pytonium_subprocess_path
+
+    @classmethod
+    def set_subprocess_path(cls, value):
+        global _global_pytonium_subprocess_path
+        _global_pytonium_subprocess_path = value
+
 
     def initialize(self, start_url: str, init_width: int, init_height: int):
         self.pytonium_library.InitPytonium(start_url.encode("utf-8"), init_width, init_height)
@@ -96,7 +105,7 @@ cdef class Pytonium:
     def execute_javascript(self, code: str):
         self.pytonium_library.ExecuteJavascript(code.encode("utf-8"))
 
-    def bind_function_to_javascript(self, name: str, func, javascript_object: str = ""):
+    def bind_function_to_javascript(self, name: str, func, javascript_object: str = "") :
        self.pytonium_library.AddJavascriptPythonBinding(name.encode("utf-8"), java_binding_callback, <void *>func, javascript_object.encode("utf-8"))
 
     def shutdown(self):
@@ -124,8 +133,6 @@ cdef class Pytonium:
     def update_message_loop(self):
         return self.pytonium_library.UpdateMessageLoop()
 
-    def set_subprocess_path(self, path: str):
-        self.pytonium_library.SetCustomSubprocessPath(path.encode("utf-8"))
 
     def set_cache_path(self, path: str):
         self.pytonium_library.SetCustomCachePath(path.encode("utf-8"))

@@ -1,18 +1,18 @@
-Chromium Embedded Framework (CEF) Standard Binary Distribution for Linux
+Chromium Embedded Framework (CEF) Standard Binary Distribution for Windows
 -------------------------------------------------------------------------------
 
-Date:             October 21, 2022
+Date:             September 14, 2023
 
-CEF Version:      106.1.1+g5891c70+chromium-106.0.5249.119
+CEF Version:      116.0.23+g375735a+chromium-116.0.5845.189
 CEF URL:          https://bitbucket.org/chromiumembedded/cef.git
-                  @5891c702dae4647f09400db52f57ee38e04c7b4c
+                  @375735a3c690324455ed9e805863ecb9ec820d3f
 
-Chromium Version: 106.0.5249.119
+Chromium Version: 116.0.5845.189
 Chromium URL:     https://chromium.googlesource.com/chromium/src.git
-                  @33512c3fb17e231fa81198c09841892d0cef8c66
+                  @a96fcf1c75e119aa8a91189610511821c8df553d
 
 This distribution contains all components necessary to build and distribute an
-application using CEF on the Linux platform. Please see the LICENSING
+application using CEF on the Windows platform. Please see the LICENSING
 section of this document for licensing terms and conditions.
 
 
@@ -21,23 +21,23 @@ CONTENTS
 
 cmake       Contains CMake configuration files shared by all targets.
 
-Debug       Contains libcef.so and other components required to run the debug
-            version of CEF-based applications. By default these files should be
-            placed in the same directory as libcef.so and will be copied there
-            as part of the build process.
+Debug       Contains libcef.dll, libcef.lib and other components required to
+            build and run the debug version of CEF-based applications. By
+            default these files should be placed in the same directory as the
+            executable and will be copied there as part of the build process.
 
 include     Contains all required CEF header files.
 
 libcef_dll  Contains the source code for the libcef_dll_wrapper static library
             that all applications using the CEF C++ API must link against.
 
-Release     Contains libcef.so and other components required to run the release
-            version of CEF-based applications. By default these files should be
-            placed in the same directory as libcef.so and will be copied there
-            as part of the build process.
+Release     Contains libcef.dll, libcef.lib and other components required to
+            build and run the release version of CEF-based applications. By
+            default these files should be placed in the same directory as the
+            executable and will be copied there as part of the build process.
 
-Resources   Contains resources required by libcef.so. By default these files
-            should be placed in the same directory as libcef.so and will be
+Resources   Contains resources required by libcef.dll. By default these files
+            should be placed in the same directory as libcef.dll and will be
             copied there as part of the build process.
 
 tests/      Directory of tests that demonstrate CEF usage.
@@ -80,7 +80,10 @@ Required components:
 The following components are required. CEF will not function without them.
 
 * CEF core library.
-  * libcef.so
+  * libcef.dll
+
+* Crash reporting library.
+  * chrome_elf.dll
 
 * Unicode support data.
   * icudtl.dat
@@ -101,12 +104,10 @@ run but any related functionality may become broken or disabled.
  
   * locales/
     Directory containing localized resources used by CEF, Chromium and Blink. A
-    .pak file is loaded from this directory based on the value of environment
-    variables which are read with the following precedence order: LANGUAGE,
-    LC_ALL, LC_MESSAGES and LANG. Only configured locales need to be
-    distributed. If no locale is configured the default locale of "en-US" will
-    be used. Without these files arbitrary Web components may display
-    incorrectly.
+    .pak file is loaded from this directory based on the CefSettings.locale
+    value. Only configured locales need to be distributed. If no locale is
+    configured the default locale of "en-US" will be used. Without these files
+    arbitrary Web components may display incorrectly.
 
 * Other resources.
   Pack file loading can be disabled completely using
@@ -119,16 +120,24 @@ run but any related functionality may become broken or disabled.
     These files contain non-localized resources used by CEF, Chromium and Blink.
     Without these files arbitrary Web components may display incorrectly.
 
+* Direct3D support.
+  * d3dcompiler_47.dll
+  Support for GPU accelerated rendering of HTML5 content like 2D canvas, 3D CSS
+  and WebGL. Without this file the aforementioned capabilities may fail when GPU
+  acceleration is enabled (default in most cases). Use of this bundled version
+  is recommended instead of relying on the possibly old and untested system
+  installed version.
+
 * ANGLE support.
-  * libEGL.so
-  * libGLESv2.so
+  * libEGL.dll
+  * libGLESv2.dll
   Support for rendering of HTML5 content like 2D canvas, 3D CSS and WebGL.
   Without these files the aforementioned capabilities may fail.
 
 * SwANGLE support.
-  * libvk_swiftshader.so
-  * libvulkan.so.1
+  * vk_swiftshader.dll
   * vk_swiftshader_icd.json
+  * vulkan-1.dll
   Support for software rendering of HTML5 content like 2D canvas, 3D CSS and
   WebGL using SwiftShader's Vulkan library as ANGLE's Vulkan backend. Without
   these files the aforementioned capabilities may fail when GPU acceleration is

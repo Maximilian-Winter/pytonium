@@ -186,3 +186,6 @@ src/pytonium_python_framework/Pytonium/src/cef-binaries-linux/cmake/cef_macros.c
 /src/pytonium_python_framework/Pytonium/test/cache/
 src/pytonium_python_framework/Pytonium/bin_linux.zip
 src/pytonium_python_framework/Pytonium/bin_win.zip
+/venv_build/
+/cmake-build-release/
+/cmake-build-debug/

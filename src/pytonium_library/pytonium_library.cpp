@@ -4,6 +4,7 @@
 #include "javascript_binding.h"
 #include <filesystem>
 #include <iostream>
+#include <utility>
 #undef CEF_USE_SANDBOX
 
 
@@ -34,30 +35,33 @@ std::string CachePath() {
 }
 
 void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int init_height) {
-  CefEnableHighDPISupport();
+  //CefEnableHighDPISupport();
 
   void *sandbox_info = nullptr;
 
 #if OS_LINUX
-  std::string name = "pytonium_library";
-  std::string arg1 = "--no-sandbox";
-  std::string arg2 = "--disable-gpu";
-  std::string arg3 = "--disable-software-rasterizer";
-  int argc = 4;
-  char* argv[4] { std::data(name), std::data(arg1), std::data(arg2), std::data(arg3)};
-  CefMainArgs main_args(argc, argv);
+    std::string name = "pytonium_library";
+    std::string arg1 = "--no-sandbox";
+    std::string arg2 = "--disable-gpu";
+    std::string arg3 = "--disable-software-rasterizer";
+    int argc = 4;
+    char* argv[4] { std::data(name), std::data(arg1), std::data(arg2), std::data(arg3)};
+    CefMainArgs main_args(argc, argv);
+    CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
+    command_line->InitFromArgv(argc, argv);
 #else
   std::string name = "pytonium_library";
-  int argc = 1;
-  char* argv[1] { std::data(name)};
+  //int argc = 0;
+  //char* argv[1] { };
   CefMainArgs main_args;
+  CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
+  command_line->InitFromString(std::data(name));
 #endif
 
-  CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
-  command_line->InitFromArgv(argc, argv);
 
 
-  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( start_url, m_Javascript_Bindings, m_Javascript_Python_Bindings));
+
+  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings));
   CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
   CefExecuteProcess(main_args, m_App.get(), sandbox_info);
 
@@ -122,7 +126,7 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 
   }
 }
-void PytoniumLibrary::ExecuteJavascript(std::string code) {
+void PytoniumLibrary::ExecuteJavascript(const std::string& code) {
   CefRefPtr<CefFrame> frame = m_App->GetBrowser()->GetMainFrame();
   if (g_IsRunning) {
     if (CefWrapperClientHandler::GetInstance()->IsReadyToExecuteJs()) {
@@ -141,26 +145,25 @@ bool PytoniumLibrary::IsReadyToExecuteJavascript() {
 
 void PytoniumLibrary::AddJavascriptBinding(std::string name, js_binding_function_ptr jsNativeApiFunctionPtr, std::string javascript_object)
 {
-  m_Javascript_Bindings.push_back(JavascriptBinding(std::move(name), jsNativeApiFunctionPtr, std::move(javascript_object)));
+  m_Javascript_Bindings.emplace_back(std::move(name), jsNativeApiFunctionPtr, std::move(javascript_object));
 }
-PytoniumLibrary::PytoniumLibrary() {}
+PytoniumLibrary::PytoniumLibrary() = default;
 void PytoniumLibrary::AddJavascriptPythonBinding(
-    std::string name,
-    js_python_bindings_handler_function_ptr python_bindings_handler,
-    js_python_callback_object_ptr python_callback_object, std::string javascript_object) {
-  m_Javascript_Python_Bindings.push_back(
-      JavascriptPythonBinding(python_bindings_handler, name, python_callback_object, javascript_object));
+    const std::string& name,
+    js_python_bindings_handler_function_ptr python_bindings_handler ,
+    js_python_callback_object_ptr python_callback_object, const std::string& javascript_object) {
+  m_Javascript_Python_Bindings.emplace_back(python_bindings_handler, name, python_callback_object, javascript_object);
 }
 void PytoniumLibrary::SetCustomSubprocessPath(std::string cefsub_path) {
   m_UseCustomCefSubPath = true;
-  m_CustomCefSubPath = cefsub_path;
+  m_CustomCefSubPath = std::move(cefsub_path);
 }
 void PytoniumLibrary::SetCustomCachePath(std::string cef_cache_path) {
   m_UseCustomCefCachePath = true;
-  m_CustomCefCachePath = cef_cache_path;
+  m_CustomCefCachePath = std::move(cef_cache_path);
 }
 void PytoniumLibrary::LoadUrl(std::string url) {
- m_App->LoadUrl(url);
+ m_App->LoadUrl(std::move(url));
 }
 
 void PytoniumLibrary::SetCustomResourcePath(std::string cef_resources_path) {

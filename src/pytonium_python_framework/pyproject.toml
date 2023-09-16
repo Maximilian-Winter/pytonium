@@ -2,12 +2,12 @@
 requires = [  "setuptools>=42",
     "scikit-build",
     "cmake",
-    "ninja; platform_system!='Windows'", "Cython>=3.0.0a11"]
+    "ninja; platform_system!='Windows'", "Cython>=3.0.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "Pytonium"
-version = "0.0.9"
+version = "0.0.10"
 description = "A framework for building python apps, with a GUI based on the web-technologies HTML, CSS and Javascript."
 readme = "README.md"
 requires-python = ">=3.10"

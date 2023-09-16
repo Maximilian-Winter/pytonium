@@ -9,8 +9,12 @@ if(OS_WINDOWS)
     add_dependencies(${CEF_TARGET} pytonium_library)
     target_link_libraries(${CEF_TARGET} PUBLIC pytonium_library)
 
-    add_compile_definitions(symbol_level=2)
-    add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        add_compile_definitions(symbol_level=2)
+        add_compile_definitions(_ITERATOR_DEBUG_LEVEL=2)
+    endif()
+
     include_directories(${CEF_INCLUDE_PATH})
 
     COPY_FILES(${CEF_TARGET} "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")

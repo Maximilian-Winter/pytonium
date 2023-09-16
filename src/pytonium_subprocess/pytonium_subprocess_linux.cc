@@ -15,7 +15,7 @@
 
 
 int main(int argc, char* argv[]) {
-  CefEnableHighDPISupport();
+  //CefEnableHighDPISupport();
 
   void* sandbox_info = nullptr;
 

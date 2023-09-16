@@ -54,8 +54,10 @@ ADD_LOGICAL_TARGET("libcef_lib" "${CEF_LIB_DEBUG}" "${CEF_LIB_RELEASE}")
 #
 # Windows configuration.
 #
-add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
-add_compile_definitions(symbol_level=2)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(symbol_level=2)
+    add_compile_definitions(_ITERATOR_DEBUG_LEVEL=2)
+endif()
 if(OS_WINDOWS)
 
   # Executable target.

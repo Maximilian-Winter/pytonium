@@ -67,8 +67,7 @@ public:
 };
 
 using js_python_callback_object_ptr = void(*);
-using js_python_bindings_handler_function_ptr = void(*)(void* python_callback_object, int argsSize,
-                                                        CefValueWrapper* callback_args);
+using js_python_bindings_handler_function_ptr = void(*)(void* python_callback_object, int argsSize, CefValueWrapper* callback_args);
 using js_binding_function_ptr = void(*)(int argsSize, CefValueWrapper* callback_args);
 
 class JavascriptPythonBinding
@@ -86,8 +85,8 @@ public:
 	JavascriptPythonBinding(void (*handlerFunction)(void*, int, CefValueWrapper*),
 	                        std::string messageTopic,
 	                        void* pythonCallbackObject, std::string javascriptObject = "")
-		: HandlerFunction(handlerFunction), MessageTopic(messageTopic),
-		  PythonCallbackObject(pythonCallbackObject), JavascriptObject(javascriptObject)
+		: HandlerFunction(handlerFunction), MessageTopic(std::move(messageTopic)),
+		  PythonCallbackObject(pythonCallbackObject), JavascriptObject(std::move(javascriptObject))
 	{
 	}
 
@@ -108,9 +107,9 @@ public:
 
 	JavascriptBinding(std::string name, js_binding_function_ptr pFunction, std::string javascriptObject = "")
 	{
-		functionName = name;
+		functionName = std::move(name);
 		function = pFunction;
-                JavascriptObject = javascriptObject;
+                JavascriptObject = std::move(javascriptObject);
 	}
 
 	std::string functionName;

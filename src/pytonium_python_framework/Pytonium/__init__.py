@@ -32,6 +32,7 @@ if os.name == 'posix':
     pytonium_process_path = f'{pytonium_path}/{bin_folder}/pytonium_subprocess'
     cdll.LoadLibrary(f'{pytonium_path}/{bin_folder}/libcef.so')
 
-from .pytonium import Pytonium, set_subprocess_path
+from .pytonium import Pytonium as Pytonium
 
-set_subprocess_path(pytonium_process_path)
+# Initialize the class-level attribute upon import
+Pytonium.set_subprocess_path(pytonium_process_path)

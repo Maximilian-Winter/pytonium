@@ -16,6 +16,15 @@ if __name__ == "__main__":
     if os.path.exists("./Pytonium/src/pytonium_library/"):
         shutil.rmtree("./Pytonium/src/pytonium_library/")
 
+    if os.path.exists("./dist"):
+        shutil.rmtree("./dist")
+
+    if os.path.exists("./_skbuild"):
+        shutil.rmtree("./_skbuild")
+
+    if os.path.exists("./Pytonium.egg-info"):
+        shutil.rmtree("./Pytonium.egg-info")
+
     for path in Path('../pytonium_library/').rglob('*'):
         if isfile(path):
             dest_fpath = f"./Pytonium/src/pytonium_library/{path.name}"

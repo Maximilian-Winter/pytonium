@@ -22,7 +22,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
   UNREFERENCED_PARAMETER(lpCmdLine);
 
 
-  CefEnableHighDPISupport();
+  //CefEnableHighDPISupport();
 
   void* sandbox_info = nullptr;
 

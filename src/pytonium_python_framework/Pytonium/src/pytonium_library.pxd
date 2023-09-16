@@ -19,17 +19,17 @@ cdef extern from "src/pytonium_library/javascript_binding.h":
 
 
 cdef extern from "src/pytonium_library/javascript_binding.h":
-    ctypedef void (*js_python_callback_object_ptr);
-    ctypedef void (*js_python_bindings_handler_function_ptr)(void* python_callback_object, int size, CefValueWrapper* args );
+    ctypedef void (*js_python_callback_object_ptr)
+    ctypedef void (*js_python_bindings_handler_function_ptr)(void* python_callback_object, int size, CefValueWrapper* args )
 
 # Declare the class with cdef
 cdef extern from "src/pytonium_library/pytonium_library.h":
     cdef cppclass PytoniumLibrary:
         PytoniumLibrary() except +
         void InitPytonium(string start_url, int init_width, int init_height);
-        void ExecuteJavascript(string code);
-        void ShutdownPytonium();
-        bool IsRunning();
+        void ExecuteJavascript(string code)
+        void ShutdownPytonium()
+        bool IsRunning()
         void UpdateMessageLoop();
         void AddJavascriptPythonBinding(string name, js_python_bindings_handler_function_ptr handler_callback, void* python_callable, string javascript_object)
         void SetCustomSubprocessPath(string path)
