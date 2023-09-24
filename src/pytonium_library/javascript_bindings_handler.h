@@ -39,34 +39,7 @@ public:
 
         for (const auto & argument : arguments)
         {
-          if(argument->IsInt())
-          {
-            int value = argument->GetIntValue();
-            javascript_args->SetInt(jsArgsIndex, value);
-            javascript_arg_types->SetString(jsArgsIndex, "int");
-            jsArgsIndex++;
-          }
-          else if(argument->IsBool())
-          {
-            bool value = argument->GetBoolValue();
-            javascript_args->SetBool(jsArgsIndex, value);
-            javascript_arg_types->SetString(jsArgsIndex, "bool");
-            jsArgsIndex++;
-          }
-          else if(argument->IsDouble())
-          {
-            double value = argument->GetDoubleValue();
-            javascript_args->SetDouble(jsArgsIndex, value);
-            javascript_arg_types->SetString(jsArgsIndex, "double");
-            jsArgsIndex++;
-          }
-          else if(argument->IsString())
-          {
-            std::string value = argument->GetStringValue();
-            javascript_args->SetString(jsArgsIndex, value);
-            javascript_arg_types->SetString(jsArgsIndex, "string");
-            jsArgsIndex++;
-          }
+            CefValueWrapperHelper::AddJavascriptArg(argument, javascript_args, javascript_arg_types, jsArgsIndex);
         }
         javascript_binding_message_args->SetList(1, javascript_arg_types);
         javascript_binding_message_args->SetList(2, javascript_args);

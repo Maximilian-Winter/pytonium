@@ -284,31 +284,9 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
     auto* valueWrapper = new CefValueWrapper[argsSize];
     for (int i = 0; i < (int)javascript_args->GetSize(); ++i) {
       std::string type = javascript_arg_types->GetString(i);
-
-      if(type == "int")
-      {
-        valueWrapper->Type = 0;
-        valueWrapper->IntValue = javascript_args->GetInt(i);
-      }
-      else if(type == "bool")
-      {
-        valueWrapper->Type = 1;
-        valueWrapper->BoolValue = javascript_args->GetBool(i);
-      }
-      else if(type == "double")
-      {
-        valueWrapper->Type = 2;
-        valueWrapper->DoubleValue = javascript_args->GetDouble(i);
-      }
-      else if(type == "string")
-      {
-        valueWrapper->Type = 3;
-        valueWrapper->StringValue = javascript_args->GetString(i);
-      }
-      ++valueWrapper;
+      valueWrapper[i] = CefValueWrapperHelper::ConvertCefValueToWrapper(javascript_args->GetValue(i));
     }
 
-    valueWrapper -= argsSize;
 
     for (int i = 0; i < (int)m_JavascriptBindings.size(); ++i)
     {
@@ -332,39 +310,18 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
     int argsSize = (int)javascript_args->GetSize();
 
     auto* valueWrapper = new CefValueWrapper[argsSize];
-    for (int i = 0; i < (int)javascript_args->GetSize(); ++i) {
-      std::string type = javascript_arg_types->GetString(i);
+      for (int i = 0; i < (int)javascript_args->GetSize(); ++i) {
+          std::string type = javascript_arg_types->GetString(i);
+          valueWrapper[i] = CefValueWrapperHelper::ConvertCefValueToWrapper(javascript_args->GetValue(i));
+      }
 
-      if(type == "int")
-      {
-        valueWrapper->Type = 0;
-        valueWrapper->IntValue = javascript_args->GetInt(i);
-      }
-      else if(type == "bool")
-      {
-        valueWrapper->Type = 1;
-        valueWrapper->BoolValue = javascript_args->GetBool(i);
-      }
-      else if(type == "double")
-      {
-        valueWrapper->Type = 2;
-        valueWrapper->DoubleValue = javascript_args->GetDouble(i);
-      }
-      else if(type == "string")
-      {
-        valueWrapper->Type = 3;
-        valueWrapper->StringValue = javascript_args->GetString(i);
-      }
-      ++valueWrapper;
-    }
-
-    valueWrapper -= argsSize;
 
     for (int i = 0; i < (int)m_JavascriptPythonBindings.size(); ++i)
     {
       if(m_JavascriptPythonBindings[i].MessageTopic == funcName)
       {
-        m_JavascriptPythonBindings[i].CallHandler(argsSize, valueWrapper);
+        m_JavascriptPythonBindings[i].CallHandler(argsSize, valueWrapper, argList->GetInt(3));
+        break;
       }
     }
     delete[] valueWrapper;

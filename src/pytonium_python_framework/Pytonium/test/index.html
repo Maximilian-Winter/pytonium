@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PytoniumTest</title>
+    <title>Pytonium-Test</title>
 </head>
 <body>
 <div id ="app">
@@ -11,21 +11,51 @@
 
 </body>
 <script>
-    // Call function in python without arguments.
-    window.test_binding_python_object_methods.TestOne()
-
-    // Call function in python with arguments.
-    window.test_binding_python_function.testfunc(21, 42.24, false, 'Hello World!')
-    window.test_binding_python_object_methods.TestTwo(42)
-    window.test_binding_python_object_methods.TestThree(24.42, true, 'olleH dlroW!')
-    // Create function to call from python to update dom.
-    setTicker = (date) =>
+    function logObject(obj, indent = 0) {
+        const indentation = ' '.repeat(indent * 2); // Two spaces per indent level
+        for (const [key, value] of Object.entries(obj)) {
+            if (typeof value === 'object' && value !== null) {
+                console.log(`${indentation}${key}: {`);
+                logObject(value, indent + 1);
+                console.log(`${indentation}}`);
+            } else {
+                console.log(`${indentation}${key}: ${value}`);
+            }
+        }
+    }
+    // Example for making calls to Python functions.
+    function CallToPythonExample()
     {
-        document.getElementById('app').innerHTML = '<p>Hello World!</p>'+'<p>'+ date+ '</p>'
+        // Call function in python without arguments.
+        Pytonium.test_binding_python_object_methods.TestOne();
+
+        // Call function in python with arguments.
+        let myPromise = Pytonium.test_binding_python_function.testfunc(21, 42.24, false, 'Hello World!');
+        myPromise.then((resolvedValue) => {
+            console.log("Promise was resolved with value:", resolvedValue);
+        }).catch((error) => {
+            console.log("Promise was rejected with error:", error);
+        });
+
+        Pytonium.test_binding_python_object_methods.TestTwo(42);
+        Pytonium.test_binding_python_object_methods.TestThree(24.42, true, 'olleH dlroW!');
     }
 
-    // Create a variable called state to expose the function to python.
-    window.state = { }
-    window.state.setTicker = setTicker
+    // Check if Python bindings are ready and call them, if not add an event listener for the PytoniumReady event.
+    if (window.PytoniumReady) {
+        CallToPythonExample();
+    } else {
+        window.addEventListener('PytoniumReady', function() {
+            CallToPythonExample();
+        });
+    }
+
+    // Example for defining a function that is callable from Python.
+    var CallFromPythonExample = {
+        setTicker: function(date) {
+            document.getElementById('app').innerHTML = '<p>Hello World!</p>' + '<p>' + date + '</p>';
+        },
+    };
+
 </script>
 </html>

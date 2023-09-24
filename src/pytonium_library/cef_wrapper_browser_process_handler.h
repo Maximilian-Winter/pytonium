@@ -20,6 +20,7 @@ public:
   /* Static access method. */
   static CefRefPtr<CefWrapperBrowserProcessHandler> GetInstance();
 
+  static void SendReturnValueToJavascript(int message_id, CefValueWrapper returnValue);
   static void SetInitialResolution(int width, int height);
   static void SetJavascriptBindings(std::vector<JavascriptBinding> javascript_bindings, std::vector<JavascriptPythonBinding> javascript_python_bindings);
   static void SetStartUrl(std::string url);

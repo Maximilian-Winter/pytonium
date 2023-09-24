@@ -20,6 +20,7 @@ public:
   void InitPytonium(std::string start_url, int init_width, int init_height);
   void ExecuteJavascript(const std::string& code);
   void ShutdownPytonium();
+  void ReturnValueToJavascript(int message_id, CefValueWrapper returnValue);
   bool IsRunning();
   bool IsReadyToExecuteJavascript();
   void UpdateMessageLoop();

@@ -178,3 +178,19 @@ void PytoniumLibrary::SetCustomIconPath(std::string icon_path) {
   m_CustomIconPath = icon_path;
   m_UseCustomIcon = true;
 }
+
+void PytoniumLibrary::ReturnValueToJavascript(int message_id, CefValueWrapper returnValue)
+{
+    CefRefPtr<CefProcessMessage> return_to_javascript_message =
+            CefProcessMessage::Create("return-to-javascript");
+
+    CefRefPtr<CefListValue> return_value_message_args =
+            return_to_javascript_message->GetArgumentList();
+
+    return_value_message_args->SetInt(0, message_id);
+
+    return_value_message_args->SetValue(1, CefValueWrapperHelper::ConvertWrapperToCefValue(returnValue));
+
+    m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
+
+}

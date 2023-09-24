@@ -131,3 +131,8 @@ void CefWrapperBrowserProcessHandler::SetInitialResolution(int width,
   GetInstance()->init_width = width;
   GetInstance()->init_height = height;
 }
+
+void CefWrapperBrowserProcessHandler::SendReturnValueToJavascript(int message_id, CefValueWrapper returnValue)
+{
+
+}
