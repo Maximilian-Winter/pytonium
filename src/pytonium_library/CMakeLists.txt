@@ -8,6 +8,7 @@
 
 # pytonium_library sources.
 set(PYTONIUM_LIBRARY_SRCS
+        nlohmann/json.hpp
         cef_wrapper_app.cc
         cef_wrapper_app.h
         cef_wrapper_client_handler.cc
@@ -18,7 +19,7 @@ set(PYTONIUM_LIBRARY_SRCS
         cef_wrapper_render_process_handler.h
         pytonium_library.cpp
         pytonium_library.h
-        cef_wrapper_browser_process_handler.h cef_wrapper_browser_process_handler.cc javascript_python_binding_handler.h custom_protocol_scheme_handler.h custom_protocol_scheme_handler.cc file_util.h)
+        cef_wrapper_browser_process_handler.h cef_wrapper_browser_process_handler.cc javascript_python_binding_handler.h custom_protocol_scheme_handler.h custom_protocol_scheme_handler.cc file_util.h application_state_manager.h)
 set(PYTONIUM_LIBRARY_SRCS_WINDOWS
         cef_wrapper_client_handler_win.cc
   )

@@ -57,6 +57,8 @@ void SimpleRenderProcessHandler::OnBrowserCreated(
             m_Javascript_Python_Bindings.push_back(binding);
         }
     }
+
+
 }
 
 /* Null, because instance will be initialized on demand. */
@@ -94,6 +96,24 @@ void SimpleRenderProcessHandler::OnContextCreated(
     CefRefPtr<CefV8Value> global = context->GetGlobal();
 
     CefRefPtr<CefV8Value> pytonium_namespace = CefV8Value::CreateObject(nullptr, nullptr);
+
+    m_ApplicationStateManager = std::make_unique<ApplicationStateManager>();
+    m_AppStateV8Handler = new AppStateV8Handler(m_ApplicationStateManager);
+
+    CefRefPtr<CefV8Value> stateObj = CefV8Value::CreateObject(nullptr, nullptr);
+
+    CefRefPtr<CefV8Value> funcSetState = CefV8Value::CreateFunction("setState", m_AppStateV8Handler);
+    CefRefPtr<CefV8Value> funcGetState = CefV8Value::CreateFunction("getState", m_AppStateV8Handler);
+    CefRefPtr<CefV8Value> funcRemoveState = CefV8Value::CreateFunction("removeState", m_AppStateV8Handler);
+
+
+    stateObj->SetValue("setState", funcSetState, V8_PROPERTY_ATTRIBUTE_NONE);
+    stateObj->SetValue("getState", funcGetState, V8_PROPERTY_ATTRIBUTE_NONE);
+    stateObj->SetValue("removeState", funcRemoveState, V8_PROPERTY_ATTRIBUTE_NONE);
+
+    pytonium_namespace->SetValue("appState", stateObj, V8_PROPERTY_ATTRIBUTE_NONE);
+
+
     if (!m_Javascript_Bindings.empty())
     {
 
@@ -181,7 +201,7 @@ void SimpleRenderProcessHandler::OnContextCreated(
             }
         }
     }
-
+    m_ApplicationStateManager = std::make_shared<ApplicationStateManager>();
     global->SetValue("Pytonium", pytonium_namespace, V8_PROPERTY_ATTRIBUTE_NONE);
     frame->ExecuteJavaScript("window.PytoniumReady = true;", frame->GetURL(), 0);
     frame->ExecuteJavaScript("var event = new Event('PytoniumReady'); window.dispatchEvent(event);", frame->GetURL(), 0);

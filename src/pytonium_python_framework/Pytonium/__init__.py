@@ -4,9 +4,12 @@ import zipfile
 from time import sleep
 
 
-def returns_value_to_javascript(func):
-    func.returns_value_to_javascript = True
-    return func
+def returns_value_to_javascript(return_type):
+    def decorator(func):
+        func.returns_value_to_javascript = True
+        func.return_type = return_type
+        return func
+    return decorator
 
 pytonium_process_path = ""
 pytonium_path = os.path.abspath(__file__)

@@ -2,32 +2,36 @@
 # cython: language_level=3
 
 
-import string
+
 import inspect
 
 from .pytonium_library cimport PytoniumLibrary, CefValueWrapper
 from libcpp.string cimport string
 
+from libcpp cimport bool as boolie
 from libcpp.map cimport map  # Import map from the C++ standard library
 from libcpp.vector cimport vector  # Import vector from the C++ standard library
 from libcpp.pair cimport pair
 #from .header.pytonium_library cimport PytoniumLibrary, CefValueWrapper
 
 
-cdef class PytoniumMethodWrapper:
-    cdef python_method
-    cdef returns_value
-    cdef pytonium_instance
-    cdef arg_count
-    cdef arg_names
+cdef class PytoniumFunctionWrapper:
+    cdef object python_method
+    cdef boolie returns_value
+    cdef object pytonium_instance
+    cdef int arg_count
+    cdef list arg_names
+    cdef string javascript_object_name
 
-    def __init__(self, method, pytonium_instance, returns_value=False):
+
+    def __init__(self, method, pytonium_instance, javascript_object_name, returns_value=False):
         self.python_method = method
+        print(f"Initialized with python_method: {self.python_method}")
         self.returns_value = returns_value
         self.pytonium_instance = pytonium_instance
         sig = inspect.signature(method)
         params = sig.parameters
-
+        self.javascript_object_name = javascript_object_name.encode("utf-8")
         self.arg_count = len(params)
         self.arg_names = list(params.keys())
 
@@ -36,6 +40,30 @@ cdef class PytoniumMethodWrapper:
             return self.python_method(*args)
         else:
             self.python_method(*args)
+
+    @property
+    def get_python_method(self):
+        return self.python_method
+
+    @property
+    def get_returns_value(self):
+        return self.returns_value
+
+    @property
+    def get_pytonium_instance(self):
+        return self.pytonium_instance
+
+    @property
+    def get_arg_count(self):
+        return self.arg_count
+
+    @property
+    def get_arg_names(self):
+        return self.arg_names
+
+    @property
+    def get_javascript_object_name(self):
+        return self.javascript_object_name.decode("utf-8")
 
 cdef class PytoniumValueWrapper:
     cdef CefValueWrapper cef_value_wrapper;
@@ -199,14 +227,24 @@ cdef inline list get_javascript_binding_arg_list(CefValueWrapper* args, int size
 cdef inline void javascript_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args, int message_id) noexcept:
     arg_list = get_javascript_binding_arg_list(args, size, message_id)
 
-    if (<PytoniumMethodWrapper> python_function_object).returns_value:
+    if (<PytoniumFunctionWrapper> python_function_object).returns_value:
         convert = PytoniumValueWrapper()
-        return_value = (<PytoniumMethodWrapper> python_function_object)(*arg_list)
-        (<Pytonium> (<PytoniumMethodWrapper> python_function_object).pytonium_instance).pytonium_library.ReturnValueToJavascript(message_id, convert.PythonType_to_CefValueWrapper(return_value))
+        return_value = (<PytoniumFunctionWrapper> python_function_object)(*arg_list)
+        (<Pytonium> (<PytoniumFunctionWrapper> python_function_object).pytonium_instance).pytonium_library.ReturnValueToJavascript(message_id, convert.PythonType_to_CefValueWrapper(return_value))
     else:
-        (<PytoniumMethodWrapper> python_function_object)(*arg_list)
+        (<PytoniumFunctionWrapper> python_function_object)(*arg_list)
 
 cdef str _global_pytonium_subprocess_path = ""
+
+def python_type_to_ts_type(python_type):
+    mapping = {
+        int: 'number',
+        float: 'number',
+        str: 'string',
+        bool: 'boolean',
+        None: 'void'
+    }
+    return mapping.get(python_type, 'any')
 
 cdef class Pytonium:
     cdef PytoniumLibrary pytonium_library;
@@ -238,9 +276,9 @@ cdef class Pytonium:
     def execute_javascript(self, code: str):
         self.pytonium_library.ExecuteJavascript(code.encode("utf-8"))
 
-    def bind_function_to_javascript(self, name: str, func, javascript_object: str = "") :
+    def bind_function_to_javascript(self, name: str, func, javascript_object: str) :
         cdef should_return = hasattr(func, 'returns_value_to_javascript') and func.returns_value_to_javascript
-        py_meth_wrapper = PytoniumMethodWrapper(func, self, should_return)
+        py_meth_wrapper = PytoniumFunctionWrapper(func, self, javascript_object, should_return)
         self._pytonium_api.append(py_meth_wrapper)
         self.pytonium_library.AddJavascriptPythonBinding(name.encode("utf-8"), javascript_binding_object_callback, <void *>self._pytonium_api[len(self._pytonium_api)-1], javascript_object.encode("utf-8"), should_return)
 
@@ -250,12 +288,12 @@ cdef class Pytonium:
     def is_running(self):
         return self.pytonium_library.IsRunning()
 
-    def bind_object_methods_to_javascript(self, obj: object, javascript_object: str = ""):
+    def bind_object_methods_to_javascript(self, obj: object, javascript_object: str):
         methods = [a for a in dir(obj) if not a.startswith('__') and callable(getattr(obj, a))]
         for method in methods:
             meth = getattr(obj, method)
             should_return = hasattr(meth, 'returns_value_to_javascript') and meth.returns_value_to_javascript
-            py_meth_wrapper = PytoniumMethodWrapper(meth, self, should_return)
+            py_meth_wrapper = PytoniumFunctionWrapper(meth, self, javascript_object, should_return)
             self._pytonium_api.append(py_meth_wrapper)
             size_methods = len(self._pytonium_api)
             self.pytonium_library.AddJavascriptPythonBinding(method.encode("utf-8"), javascript_binding_object_callback, <void *> self._pytonium_api[size_methods - 1], javascript_object.encode("utf-8"), should_return)
@@ -274,3 +312,99 @@ cdef class Pytonium:
     def load_url(self, url: str):
         self.pytonium_library.LoadUrl(url.encode("utf-8"))
 
+    def generate_jsdoc(self, filename: str):
+        jsdoc_strings = []
+        jsdoc_strings.append("/**")
+        jsdoc_strings.append(" * @namespace Pytonium")
+        jsdoc_strings.append(" */")
+
+        object_map = {}  # To group functions under the same javascript_object_name
+
+        for py_meth_wrapper in self._pytonium_api:
+            func_name = py_meth_wrapper.get_python_method.__name__
+            arg_names = ', '.join(py_meth_wrapper.get_arg_names)
+            javascript_object_name = py_meth_wrapper.get_javascript_object_name
+
+            # Default to "any" if return type is not specified, and "void" if no return value
+            if py_meth_wrapper.get_returns_value:
+                return_type = getattr(py_meth_wrapper.get_python_method, 'return_type', 'any')
+            else:
+                return_type = 'void'
+
+            # Organize by javascript_object_name
+            if javascript_object_name not in object_map:
+                object_map[javascript_object_name] = []
+
+            object_map[javascript_object_name].append(
+                f"""
+                /**
+                 * @function Pytonium.{javascript_object_name}.{func_name}
+                 * @memberof Pytonium.{javascript_object_name}
+                 * @param {{ {arg_names} }}
+                 * @returns {{ {return_type} }}
+                 */
+                """
+            )
+
+        # Generate the JSDoc annotations
+        for obj_name, functions in object_map.items():
+            if obj_name:
+                jsdoc_strings.append(f"/**")
+                jsdoc_strings.append(f" * @namespace Pytonium.{obj_name}")
+                jsdoc_strings.append(f" */")
+
+            for func in functions:
+                jsdoc_strings.append(func)
+
+        # Writing to a .js file for IDE to pick up
+        with open(filename, "w") as f:
+            f.write('\n'.join(jsdoc_strings))
+
+        print("JSDoc annotations generated.")
+
+    def generate_typescript_definitions(self, filename: str):
+       ts_definitions = []
+       ts_definitions.append("declare namespace Pytonium {")
+
+       object_map = {}  # To group functions under the same javascript_object_name
+
+       for py_meth_wrapper in self._pytonium_api:
+           func_name = py_meth_wrapper.get_python_method.__name__
+           sig = inspect.signature(py_meth_wrapper.get_python_method)
+           arg_names = ', '.join([f"{name}: {python_type_to_ts_type(param.annotation)}"
+                                   for name, param in sig.parameters.items()])
+           javascript_object_name = py_meth_wrapper.get_javascript_object_name
+
+           # Default to "any" if return type is not specified, and "void" if no return value
+           return_annotation = sig.return_annotation if sig.return_annotation is not sig.empty else None
+           if py_meth_wrapper.get_returns_value:
+               return_type = python_type_to_ts_type(return_annotation)
+           else:
+               return_type = 'void'
+
+           # Organize by javascript_object_name
+           if javascript_object_name not in object_map:
+               object_map[javascript_object_name] = []
+
+           object_map[javascript_object_name].append(
+               f"function {func_name}({arg_names}): {return_type};"
+           )
+
+       # Generate the TypeScript definitions
+       for obj_name, functions in object_map.items():
+           if obj_name:  # Skip if empty, means these functions are directly under Pytonium
+               ts_definitions.append(f"  export namespace {obj_name} {{")
+
+           for func in functions:
+               ts_definitions.append(f"    {func}")
+
+           if obj_name:
+               ts_definitions.append("  }")
+
+       ts_definitions.append("}")
+
+       # Writing to a .d.ts file for IDE to pick up
+       with open(filename, "w") as f:
+           f.write('\n'.join(ts_definitions))
+
+       print("TypeScript definitions generated.")
