@@ -151,8 +151,8 @@ PytoniumLibrary::PytoniumLibrary() = default;
 void PytoniumLibrary::AddJavascriptPythonBinding(
     const std::string& name,
     js_python_bindings_handler_function_ptr python_bindings_handler ,
-    js_python_callback_object_ptr python_callback_object, const std::string& javascript_object) {
-  m_Javascript_Python_Bindings.emplace_back(python_bindings_handler, name, python_callback_object, javascript_object);
+    js_python_callback_object_ptr python_callback_object, const std::string& javascript_object, bool returns_value) {
+  m_Javascript_Python_Bindings.emplace_back(python_bindings_handler, name, python_callback_object, javascript_object, returns_value);
 }
 void PytoniumLibrary::SetCustomSubprocessPath(std::string cefsub_path) {
   m_UseCustomCefSubPath = true;
@@ -191,6 +191,10 @@ void PytoniumLibrary::ReturnValueToJavascript(int message_id, CefValueWrapper re
 
     return_value_message_args->SetValue(1, CefValueWrapperHelper::ConvertWrapperToCefValue(returnValue));
 
+
+    //CefRefPtr<CefValue> val = return_to_javascript_message->GetArgumentList()->GetValue(1);
+
+    //CefRefPtr<CefV8Value> val2 = CefValueWrapperHelper::ConvertCefValueToV8Value(val);
     m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
 
 }

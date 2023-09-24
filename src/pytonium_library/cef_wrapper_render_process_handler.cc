@@ -47,13 +47,13 @@ void SimpleRenderProcessHandler::OnBrowserCreated(
                     dic->GetBinary("PythonFunctionObject");
 
             JavascriptPythonBinding binding;
-            binding.MessageTopic = dic->GetString("MessageTopic");
+            binding.FunctionName = dic->GetString("MessageTopic");
             binding.JavascriptObject = dic->GetString("JavascriptObject");
             handlerFunc->GetData(&binding.HandlerFunction,
                                  sizeof(binding.HandlerFunction), 0);
             pythonFunctionObject->GetData(&binding.PythonCallbackObject,
                                           sizeof(binding.PythonCallbackObject), 0);
-
+            binding.ReturnsValue = dic->GetBool("ReturnsValue");
             m_Javascript_Python_Bindings.push_back(binding);
         }
     }
@@ -148,13 +148,13 @@ void SimpleRenderProcessHandler::OnContextCreated(
             if (m_Javascript_Python_Bindings[i].JavascriptObject.empty())
             {
                 CefRefPtr<CefV8Value> func = CefV8Value::CreateFunction(
-                        m_Javascript_Python_Bindings[i].MessageTopic, m_JavascriptPythonBindingHandler);
-                pytonium_namespace->SetValue(m_Javascript_Python_Bindings[i].MessageTopic, func,
+                        m_Javascript_Python_Bindings[i].FunctionName, m_JavascriptPythonBindingHandler);
+                pytonium_namespace->SetValue(m_Javascript_Python_Bindings[i].FunctionName, func,
                                              V8_PROPERTY_ATTRIBUTE_NONE);
             } else
             {
                 CefRefPtr<CefV8Value> func = CefV8Value::CreateFunction(
-                        m_Javascript_Python_Bindings[i].MessageTopic, m_JavascriptPythonBindingHandler);
+                        m_Javascript_Python_Bindings[i].FunctionName, m_JavascriptPythonBindingHandler);
                 std::vector<CefString> keys;
                 pytonium_namespace->GetKeys(keys);
 
@@ -165,7 +165,7 @@ void SimpleRenderProcessHandler::OnContextCreated(
                 {
                     CefRefPtr<CefV8Value> jsObj = pytonium_namespace->GetValue(
                             m_Javascript_Python_Bindings[i].JavascriptObject);
-                    jsObj->SetValue(m_Javascript_Python_Bindings[i].MessageTopic, func,
+                    jsObj->SetValue(m_Javascript_Python_Bindings[i].FunctionName, func,
                                     V8_PROPERTY_ATTRIBUTE_NONE);
                     pytonium_namespace->SetValue(m_Javascript_Python_Bindings[i].JavascriptObject,
                                                  jsObj, V8_PROPERTY_ATTRIBUTE_NONE);
@@ -173,7 +173,7 @@ void SimpleRenderProcessHandler::OnContextCreated(
                 {
                     CefRefPtr<CefV8Value> jsObj =
                             CefV8Value::CreateObject(nullptr, nullptr);
-                    jsObj->SetValue(m_Javascript_Python_Bindings[i].MessageTopic, func,
+                    jsObj->SetValue(m_Javascript_Python_Bindings[i].FunctionName, func,
                                     V8_PROPERTY_ATTRIBUTE_NONE);
                     pytonium_namespace->SetValue(m_Javascript_Python_Bindings[i].JavascriptObject,
                                                  jsObj, V8_PROPERTY_ATTRIBUTE_NONE);
@@ -198,13 +198,7 @@ bool SimpleRenderProcessHandler::OnProcessMessageReceived(CefRefPtr<CefBrowser> 
     {
         CefRefPtr<CefListValue> argList = message->GetArgumentList();
         int message_id = argList->GetInt(0);
-        CefRefPtr<CefV8Value> val = CefValueWrapperHelper::ConvertCefValueToV8Value(argList->GetValue(1));
-       // std::stringstream ss;
-
-       // ss << "console.log('" << m_JavascriptPythonBindingHandler->promiseMap.size()<< " " << val->GetIntValue() << "');";
-
-        //frame->ExecuteJavaScript(ss.str(), frame->GetURL(), 0);
-        m_JavascriptPythonBindingHandler->ResolvePromise(message_id, val);
+        m_JavascriptPythonBindingHandler->ResolvePromise(message_id, argList->GetValue(1));
     }
     return true;
 }

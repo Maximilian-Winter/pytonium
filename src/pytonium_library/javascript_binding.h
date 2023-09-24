@@ -147,18 +147,18 @@ class JavascriptPythonBinding
 {
 public:
     js_python_bindings_handler_function_ptr HandlerFunction;
-    std::string MessageTopic;
+    std::string FunctionName;
     js_python_callback_object_ptr PythonCallbackObject;
     std::string JavascriptObject;
-
+    bool ReturnsValue;
     JavascriptPythonBinding()
     {
     }
 
     JavascriptPythonBinding(void (*handlerFunction)(void *, int, CefValueWrapper *, int),
                             std::string messageTopic,
-                            void *pythonCallbackObject, std::string javascriptObject = "")
-            : HandlerFunction(handlerFunction), MessageTopic(std::move(messageTopic)),
+                            void *pythonCallbackObject, std::string javascriptObject = "", bool returnsValue = false)
+            : HandlerFunction(handlerFunction), FunctionName(std::move(messageTopic)), ReturnsValue(returnsValue),
               PythonCallbackObject(pythonCallbackObject), JavascriptObject(std::move(javascriptObject))
     {
     }
@@ -209,6 +209,23 @@ public:
     js_binding_function_ptr function;
 };
 
+class JavascriptPythonBindingHelper
+{
+public:
+    static std::string GenerateJSDoc(const std::vector<JavascriptPythonBinding>& bindings) {
+        std::string jsdoc;
+
+        for (const auto& binding : bindings) {
+            jsdoc += "/**\n * ";
+            jsdoc += binding.FunctionName;
+            jsdoc += "\n * @object ";
+            jsdoc += binding.JavascriptObject;
+            jsdoc += "\n */\n";
+        }
+
+        return jsdoc;
+    }
+};
 class CefValueWrapperHelper
 {
 public:

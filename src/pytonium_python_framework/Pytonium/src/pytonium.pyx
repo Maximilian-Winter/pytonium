@@ -3,6 +3,7 @@
 
 
 import string
+import inspect
 
 from .pytonium_library cimport PytoniumLibrary, CefValueWrapper
 from libcpp.string cimport string
@@ -15,11 +16,26 @@ from libcpp.pair cimport pair
 
 cdef class PytoniumMethodWrapper:
     cdef python_method
-    def __init__(self, method):
+    cdef returns_value
+    cdef pytonium_instance
+    cdef arg_count
+    cdef arg_names
+
+    def __init__(self, method, pytonium_instance, returns_value=False):
         self.python_method = method
+        self.returns_value = returns_value
+        self.pytonium_instance = pytonium_instance
+        sig = inspect.signature(method)
+        params = sig.parameters
+
+        self.arg_count = len(params)
+        self.arg_names = list(params.keys())
 
     def __call__(self, *args):
-        self.python_method(*args)
+        if self.returns_value:
+            return self.python_method(*args)
+        else:
+            self.python_method(*args)
 
 cdef class PytoniumValueWrapper:
     cdef CefValueWrapper cef_value_wrapper;
@@ -62,14 +78,6 @@ cdef class PytoniumValueWrapper:
         cdef vector[CefValueWrapper] cef_vector = self.cef_value_wrapper.GetList()
         return [self.CefValueWrapper_to_PythonType(item) for item in cef_vector]
 
-    # Setter for list type
-    def set_list(self, py_list):
-        cdef vector[CefValueWrapper] cef_vector = vector[CefValueWrapper]()
-        for item in py_list:
-            cef_item = self.PythonType_to_CefValueWrapper(item)
-            cef_vector.push_back(cef_item)
-        self.cef_value_wrapper.SetList(cef_vector)
-
     def get_object(self):
         cdef map[string, CefValueWrapper] cef_map = self.cef_value_wrapper.GetObject_()
         cdef pair[string, CefValueWrapper] kv  # Declare as a pair
@@ -81,6 +89,26 @@ cdef class PytoniumValueWrapper:
             value = kv.second  # Extract value
             py_dict[key.decode("utf-8")] = self.CefValueWrapper_to_PythonType(value)
         return py_dict
+
+    def set_int(self, value):
+        return self.cef_value_wrapper.SetInt(value)
+
+    def set_bool(self, value):
+        return self.cef_value_wrapper.SetBool(value)
+
+    def set_double(self, value):
+        return self.cef_value_wrapper.SetDouble(value)
+
+    def set_string(self, value):
+        return self.cef_value_wrapper.SetString(value.encode("utf-8"))
+
+    # Setter for list type
+    def set_list(self, py_list):
+        cdef vector[CefValueWrapper] cef_vector = vector[CefValueWrapper]()
+        for item in py_list:
+            cef_item = self.PythonType_to_CefValueWrapper(item)
+            cef_vector.push_back(cef_item)
+        self.cef_value_wrapper.SetList(cef_vector)
 
     # Setter for object (dictionary) type
     def set_object(self, py_dict):
@@ -168,23 +196,24 @@ cdef inline list get_javascript_binding_arg_list(CefValueWrapper* args, int size
     return arg_list
 
 
-cdef inline void javascript_binding_callback(void *python_function_object, int size, CefValueWrapper* args, int message_id) noexcept:
-    arg_list = get_javascript_binding_arg_list(args, size, message_id)
-    (<object> python_function_object)(*arg_list)
-
-
-
 cdef inline void javascript_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args, int message_id) noexcept:
     arg_list = get_javascript_binding_arg_list(args, size, message_id)
-    (<PytoniumMethodWrapper> python_function_object)(*arg_list)
+
+    if (<PytoniumMethodWrapper> python_function_object).returns_value:
+        convert = PytoniumValueWrapper()
+        return_value = (<PytoniumMethodWrapper> python_function_object)(*arg_list)
+        (<Pytonium> (<PytoniumMethodWrapper> python_function_object).pytonium_instance).pytonium_library.ReturnValueToJavascript(message_id, convert.PythonType_to_CefValueWrapper(return_value))
+    else:
+        (<PytoniumMethodWrapper> python_function_object)(*arg_list)
 
 cdef str _global_pytonium_subprocess_path = ""
 
 cdef class Pytonium:
     cdef PytoniumLibrary pytonium_library;
-
+    cdef list _pytonium_api
     def __init__(self):
         global _global_pytonium_subprocess_path
+        self._pytonium_api = []
         self.pytonium_library = PytoniumLibrary()
         self.pytonium_library.SetCustomSubprocessPath(_global_pytonium_subprocess_path.encode('utf-8'))
 
@@ -210,7 +239,10 @@ cdef class Pytonium:
         self.pytonium_library.ExecuteJavascript(code.encode("utf-8"))
 
     def bind_function_to_javascript(self, name: str, func, javascript_object: str = "") :
-       self.pytonium_library.AddJavascriptPythonBinding(name.encode("utf-8"), javascript_binding_callback, <void *>func, javascript_object.encode("utf-8"))
+        cdef should_return = hasattr(func, 'returns_value_to_javascript') and func.returns_value_to_javascript
+        py_meth_wrapper = PytoniumMethodWrapper(func, self, should_return)
+        self._pytonium_api.append(py_meth_wrapper)
+        self.pytonium_library.AddJavascriptPythonBinding(name.encode("utf-8"), javascript_binding_object_callback, <void *>self._pytonium_api[len(self._pytonium_api)-1], javascript_object.encode("utf-8"), should_return)
 
     def shutdown(self):
         self.pytonium_library.ShutdownPytonium()
@@ -222,16 +254,11 @@ cdef class Pytonium:
         methods = [a for a in dir(obj) if not a.startswith('__') and callable(getattr(obj, a))]
         for method in methods:
             meth = getattr(obj, method)
-            py_meth_wrapper = PytoniumMethodWrapper(meth)
-            size_methods = 0
-            if hasattr(obj, "python_api_methods"):
-                obj.python_api_methods.append(py_meth_wrapper)
-                size_methods = len(obj.python_api_methods)
-            else:
-                obj.python_api_methods = []
-                obj.python_api_methods.append(py_meth_wrapper)
-                size_methods = 1
-            self.pytonium_library.AddJavascriptPythonBinding(method.encode("utf-8"), javascript_binding_object_callback, <void *> obj.python_api_methods[size_methods - 1], javascript_object.encode("utf-8"))
+            should_return = hasattr(meth, 'returns_value_to_javascript') and meth.returns_value_to_javascript
+            py_meth_wrapper = PytoniumMethodWrapper(meth, self, should_return)
+            self._pytonium_api.append(py_meth_wrapper)
+            size_methods = len(self._pytonium_api)
+            self.pytonium_library.AddJavascriptPythonBinding(method.encode("utf-8"), javascript_binding_object_callback, <void *> self._pytonium_api[size_methods - 1], javascript_object.encode("utf-8"), should_return)
 
 
     def update_message_loop(self):

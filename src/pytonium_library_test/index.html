@@ -26,9 +26,6 @@
     // Example for making calls to Python functions.
     function CallToPythonExample()
     {
-        // Call function in python without arguments.
-        Pytonium.test_binding_python_object_methods.TestOne();
-
         // Call function in python with arguments.
         let myPromise = Pytonium.test_binding_python_function.testfunc(21, 42.24, false, 'Hello World!');
         myPromise.then((resolvedValue) => {
@@ -36,9 +33,6 @@
         }).catch((error) => {
             console.log("Promise was rejected with error:", error);
         });
-
-        Pytonium.test_binding_python_object_methods.TestTwo(42);
-        Pytonium.test_binding_python_object_methods.TestThree(24.42, true, 'olleH dlroW!');
     }
 
     // Check if Python bindings are ready and call them, if not add an event listener for the PytoniumReady event.

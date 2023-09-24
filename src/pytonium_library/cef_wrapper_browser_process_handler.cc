@@ -92,8 +92,9 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized() {
     int listIndex = 0;
     for (const auto &binding : m_JavascriptPythonBindings) {
       CefRefPtr<CefDictionaryValue> dic = CefDictionaryValue::Create();
-      dic->SetString("MessageTopic", binding.MessageTopic);
+      dic->SetString("MessageTopic", binding.FunctionName);
       dic->SetString("JavascriptObject", binding.JavascriptObject);
+        dic->SetBool("ReturnsValue", binding.ReturnsValue);
       CefRefPtr<CefBinaryValue> handlerFunc = CefBinaryValue::Create(
           &binding.HandlerFunction, sizeof(binding.HandlerFunction));
       CefRefPtr<CefBinaryValue> pythonObject = CefBinaryValue::Create(

@@ -75,7 +75,7 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         void ShutdownPytonium()
         bool IsRunning()
         void UpdateMessageLoop();
-        void AddJavascriptPythonBinding(string name, js_python_bindings_handler_function_ptr handler_callback, void* python_callable, string javascript_object)
+        void AddJavascriptPythonBinding(string name, js_python_bindings_handler_function_ptr handler_callback, void* python_callable, string javascript_object, bool returns_value)
         void SetCustomSubprocessPath(string path)
         void SetCustomCachePath(string cef_cache_path)
         void SetCustomIconPath(string custom_icon_path)

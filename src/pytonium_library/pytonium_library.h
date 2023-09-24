@@ -28,7 +28,7 @@ public:
                                 js_binding_function_ptr jsNativeApiFunctionPtr, std::string javascript_object);
   void AddJavascriptPythonBinding(const std::string& name,
       js_python_bindings_handler_function_ptr python_bindings_handler,
-      js_python_callback_object_ptr python_callback_object, const std::string& javascript_object);
+      js_python_callback_object_ptr python_callback_object, const std::string& javascript_object, bool returns_value);
   void SetCustomSubprocessPath(std::string cefsub_path);
   void SetCustomCachePath(std::string cef_cache_path);
   void SetCustomResourcePath(std::string cef_resources_path);

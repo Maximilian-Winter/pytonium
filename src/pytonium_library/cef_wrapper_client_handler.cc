@@ -318,7 +318,7 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
 
     for (int i = 0; i < (int)m_JavascriptPythonBindings.size(); ++i)
     {
-      if(m_JavascriptPythonBindings[i].MessageTopic == funcName)
+      if(m_JavascriptPythonBindings[i].FunctionName == funcName)
       {
         m_JavascriptPythonBindings[i].CallHandler(argsSize, valueWrapper, argList->GetInt(3));
         break;

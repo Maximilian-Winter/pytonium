@@ -30,7 +30,7 @@ public:
 
         for (int i = 0; i < (int) m_PythonBindings.size(); ++i)
         {
-            if (name == m_PythonBindings[i].MessageTopic)
+            if (name == m_PythonBindings[i].FunctionName)
             {
 
                 CefRefPtr<CefProcessMessage> javascript_binding_message =
@@ -39,7 +39,7 @@ public:
                 CefRefPtr<CefListValue> javascript_binding_message_args =
                         javascript_binding_message->GetArgumentList();
 
-                javascript_binding_message_args->SetString(0, m_PythonBindings[i].MessageTopic);
+                javascript_binding_message_args->SetString(0, m_PythonBindings[i].FunctionName);
 
                 CefRefPtr<CefListValue> javascript_args = CefListValue::Create();
                 CefRefPtr<CefListValue> javascript_arg_types = CefListValue::Create();
@@ -54,13 +54,19 @@ public:
                 javascript_binding_message_args->SetList(1, javascript_arg_types);
                 javascript_binding_message_args->SetList(2, javascript_args);
 
+                if(m_PythonBindings[i].ReturnsValue)
+                {
+                    int request_id = nextRequestId++;
+                    retval = CreatePromise(request_id);
 
-                int request_id = nextRequestId++;
-                retval = CreatePromise(request_id);
-
-                //promiseMap[request_id]->ResolvePromise(arguments[0]);
-                // Modify the message to include request_id
-                javascript_binding_message_args->SetInt(3, request_id);
+                    //promiseMap[request_id]->ResolvePromise(arguments[0]);
+                    // Modify the message to include request_id
+                    javascript_binding_message_args->SetInt(3, request_id);
+                }
+                else
+                {
+                    javascript_binding_message_args->SetInt(3, -1);
+                }
 
                 m_Browser->GetMainFrame()->SendProcessMessage(PID_BROWSER, javascript_binding_message);
 
@@ -83,11 +89,11 @@ public:
         return promise;
     }
 
-    void ResolvePromise(int request_id, CefRefPtr<CefV8Value> value) {
+    void ResolvePromise(int request_id, const CefRefPtr<CefValue>& value) {
         std::pair<CefRefPtr<CefV8Context>, CefRefPtr<CefV8Value>> pair = promiseMap[request_id];
 
         pair.first->Enter();
-        pair.second->ResolvePromise(value);
+        pair.second->ResolvePromise(CefValueWrapperHelper::ConvertCefValueToV8Value(value));
         pair.first->Exit();
 
         promiseMap.erase(request_id);

@@ -4,6 +4,10 @@ import zipfile
 from time import sleep
 
 
+def returns_value_to_javascript(func):
+    func.returns_value_to_javascript = True
+    return func
+
 pytonium_process_path = ""
 pytonium_path = os.path.abspath(__file__)
 pytonium_path = os.path.dirname(pytonium_path)
