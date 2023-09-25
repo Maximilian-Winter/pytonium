@@ -8,6 +8,7 @@
 #include "include/wrapper/cef_helpers.h"
 #include "javascript_binding.h"
 #include "javascript_bindings_handler.h"
+#include "application_state_python.h"
 
 
 class CefWrapperClientHandler : public CefClient,
@@ -18,7 +19,7 @@ class CefWrapperClientHandler : public CefClient,
 public:
 
   explicit CefWrapperClientHandler(bool use_views,
-                std::vector<JavascriptBinding> javascript_bindings, std::vector<JavascriptPythonBinding> javascript_python_bindings);
+                std::vector<JavascriptBinding> javascript_bindings, std::vector<JavascriptPythonBinding> javascript_python_bindings, std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings);
 
   void OnLoadStart(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                    TransitionType transition_type) override;
@@ -115,6 +116,7 @@ private:
   bool m_IsReadyToExecuteJs;
   std::vector<JavascriptBinding> m_JavascriptBindings;
   std::vector<JavascriptPythonBinding> m_JavascriptPythonBindings;
+  std::vector<StateHandlerPythonBinding> m_StateHandlerPythonBindings;
   bool is_closing_;
 
   // Include the default reference counting implementation.

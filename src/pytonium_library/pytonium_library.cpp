@@ -2,6 +2,7 @@
 
 #include "global_vars.h"
 #include "javascript_binding.h"
+#include "cef_value_wrapper.h"
 #include <filesystem>
 #include <iostream>
 #include <utility>
@@ -61,7 +62,7 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 
 
 
-  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings));
+  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings, m_StateHandlerPythonBindings));
   CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
   CefExecuteProcess(main_args, m_App.get(), sandbox_info);
 
@@ -197,4 +198,10 @@ void PytoniumLibrary::ReturnValueToJavascript(int message_id, CefValueWrapper re
     //CefRefPtr<CefV8Value> val2 = CefValueWrapperHelper::ConvertCefValueToV8Value(val);
     m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
 
+}
+
+void PytoniumLibrary::AddStateHandlerPythonBinding(state_handler_function_ptr stateHandlerFunctionPtr,
+                                                   state_callback_object_ptr stateCallbackObjectPtr, const std::vector<std::string>& namespacesToSubscribeTo)
+{
+    m_StateHandlerPythonBindings.emplace_back(stateHandlerFunctionPtr, stateCallbackObjectPtr, namespacesToSubscribeTo);
 }

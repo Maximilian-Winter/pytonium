@@ -30,7 +30,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
   CefMainArgs main_args(hInstance);
   std::vector<JavascriptBinding>placeHolder;
   std::vector<JavascriptPythonBinding>placeHolderPython;
-  CefRefPtr<CefWrapperApp> app(new CefWrapperApp("", placeHolder, placeHolderPython));
+    std::vector<StateHandlerPythonBinding>placeHolderStatePython;
+  CefRefPtr<CefWrapperApp> app(new CefWrapperApp("", placeHolder, placeHolderPython, placeHolderStatePython));
 
   CefExecuteProcess(main_args, app.get(), sandbox_info);
 

@@ -25,10 +25,23 @@ if __name__ == "__main__":
     if os.path.exists("./Pytonium.egg-info"):
         shutil.rmtree("./Pytonium.egg-info")
 
-    for path in Path('../pytonium_library/').rglob('*'):
-        if isfile(path):
-            dest_fpath = f"./Pytonium/src/pytonium_library/{path.name}"
-            os.makedirs(os.path.dirname(dest_fpath), exist_ok=True)
+    # Define source and destination directories
+    src_dir = Path('../pytonium_library/')
+    dest_dir = Path('./Pytonium/src/pytonium_library/')
+
+    # Iterate through all files in source directory and its subdirectories
+    for path in src_dir.rglob('*'):
+        if path.is_file():  # Check if it's a file
+            # Get the relative path of the file within the source directory
+            relative_path = path.relative_to(src_dir)
+
+            # Construct the destination path, preserving the folder structure
+            dest_fpath = dest_dir / relative_path
+
+            # Create the destination directory if it doesn't exist
+            os.makedirs(dest_fpath.parent, exist_ok=True)
+
+            # Copy the file
             shutil.copyfile(path, dest_fpath)
 
     # Copy windows binaries.

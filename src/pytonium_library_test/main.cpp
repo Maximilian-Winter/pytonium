@@ -3,6 +3,7 @@
 //
 
 #include "../pytonium_library/pytonium_library.h"
+#include "../pytonium_library/cef_value_wrapper.h"
 #include <filesystem>
 #include <iostream>
 #include <thread>

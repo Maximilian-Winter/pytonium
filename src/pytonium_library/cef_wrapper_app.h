@@ -11,7 +11,7 @@ class CefWrapperApp : public CefApp {
 public:
   CefWrapperApp(
       std::string start_url, std::vector<JavascriptBinding> javascript_bindings,
-      std::vector<JavascriptPythonBinding> javascript_python_bindings);
+      std::vector<JavascriptPythonBinding> javascript_python_bindings, std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings);
 
   CefRefPtr<CefBrowser> GetBrowser();
 
@@ -34,7 +34,7 @@ public:
 private:
   std::vector<JavascriptBinding> m_Javascript_Bindings;
   std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;
-
+  std::vector<StateHandlerPythonBinding> m_StateHandlerPythonBindings;
   IMPLEMENT_REFCOUNTING(CefWrapperApp);
 };
 

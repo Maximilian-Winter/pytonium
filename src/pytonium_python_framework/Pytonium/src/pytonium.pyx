@@ -26,7 +26,6 @@ cdef class PytoniumFunctionWrapper:
 
     def __init__(self, method, pytonium_instance, javascript_object_name, returns_value=False):
         self.python_method = method
-        print(f"Initialized with python_method: {self.python_method}")
         self.returns_value = returns_value
         self.pytonium_instance = pytonium_instance
         sig = inspect.signature(method)
@@ -242,6 +241,7 @@ def python_type_to_ts_type(python_type):
         float: 'number',
         str: 'string',
         bool: 'boolean',
+        object: 'object',
         None: 'void'
     }
     return mapping.get(python_type, 'any')
@@ -312,56 +312,6 @@ cdef class Pytonium:
     def load_url(self, url: str):
         self.pytonium_library.LoadUrl(url.encode("utf-8"))
 
-    def generate_jsdoc(self, filename: str):
-        jsdoc_strings = []
-        jsdoc_strings.append("/**")
-        jsdoc_strings.append(" * @namespace Pytonium")
-        jsdoc_strings.append(" */")
-
-        object_map = {}  # To group functions under the same javascript_object_name
-
-        for py_meth_wrapper in self._pytonium_api:
-            func_name = py_meth_wrapper.get_python_method.__name__
-            arg_names = ', '.join(py_meth_wrapper.get_arg_names)
-            javascript_object_name = py_meth_wrapper.get_javascript_object_name
-
-            # Default to "any" if return type is not specified, and "void" if no return value
-            if py_meth_wrapper.get_returns_value:
-                return_type = getattr(py_meth_wrapper.get_python_method, 'return_type', 'any')
-            else:
-                return_type = 'void'
-
-            # Organize by javascript_object_name
-            if javascript_object_name not in object_map:
-                object_map[javascript_object_name] = []
-
-            object_map[javascript_object_name].append(
-                f"""
-                /**
-                 * @function Pytonium.{javascript_object_name}.{func_name}
-                 * @memberof Pytonium.{javascript_object_name}
-                 * @param {{ {arg_names} }}
-                 * @returns {{ {return_type} }}
-                 */
-                """
-            )
-
-        # Generate the JSDoc annotations
-        for obj_name, functions in object_map.items():
-            if obj_name:
-                jsdoc_strings.append(f"/**")
-                jsdoc_strings.append(f" * @namespace Pytonium.{obj_name}")
-                jsdoc_strings.append(f" */")
-
-            for func in functions:
-                jsdoc_strings.append(func)
-
-        # Writing to a .js file for IDE to pick up
-        with open(filename, "w") as f:
-            f.write('\n'.join(jsdoc_strings))
-
-        print("JSDoc annotations generated.")
-
     def generate_typescript_definitions(self, filename: str):
        ts_definitions = []
        ts_definitions.append("declare namespace Pytonium {")
@@ -390,6 +340,18 @@ cdef class Pytonium:
                f"function {func_name}({arg_names}): {return_type};"
            )
 
+       object_map["appState"] = []
+       object_map["appState"].append(
+                      f"function setState(namespace: string, key: string, value: any): void;"
+                  )
+       object_map["appState"].append(
+                     f"function getState(namespace: string, key: string): any;"
+                 )
+       object_map["appState"].append(
+                    f"function removeState(namespace: string, key: string): void;"
+                )
+
+
        # Generate the TypeScript definitions
        for obj_name, functions in object_map.items():
            if obj_name:  # Skip if empty, means these functions are directly under Pytonium
@@ -400,7 +362,16 @@ cdef class Pytonium:
 
            if obj_name:
                ts_definitions.append("  }")
+       ts_definitions.append("}")
 
+       ts_definitions.append("interface Window {")
+       ts_definitions.append("  PytoniumReady: boolean;")
+       ts_definitions.append("}")
+
+       ts_definitions.append("declare global {")
+       ts_definitions.append("  interface WindowEventMap {")
+       ts_definitions.append("      PytoniumReady: Event;")
+       ts_definitions.append("  }")
        ts_definitions.append("}")
 
        # Writing to a .d.ts file for IDE to pick up

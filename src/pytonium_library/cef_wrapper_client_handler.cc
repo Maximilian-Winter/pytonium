@@ -13,6 +13,7 @@
 #include "include/wrapper/cef_helpers.h"
 #include "javascript_binding.h"
 #include "javascript_bindings_handler.h"
+#include "cef_value_wrapper.h"
 
 namespace {
 enum client_menu_ids {
@@ -41,10 +42,11 @@ std::string GetDataURI(const std::string &data, const std::string &mime_type) {
 } // namespace
 
 CefWrapperClientHandler::CefWrapperClientHandler(
-    bool use_views, std::vector<JavascriptBinding> javascript_bindings, std::vector<JavascriptPythonBinding> javascript_python_bindings) : use_views_(use_views), is_closing_(false) {
+    bool use_views, std::vector<JavascriptBinding> javascript_bindings, std::vector<JavascriptPythonBinding> javascript_python_bindings, std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings) : use_views_(use_views), is_closing_(false) {
   DCHECK(!g_instance);
   m_JavascriptBindings = javascript_bindings;
   m_JavascriptPythonBindings = javascript_python_bindings;
+  m_StateHandlerPythonBindings = stateHandlerPythonBindings;
   g_instance = this;
   
 }
@@ -326,6 +328,27 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
     }
     delete[] valueWrapper;
     return true;
+  }
+  else if(message_name == "push-app-state-update")
+  {
+      CefRefPtr<CefListValue> argList = message->GetArgumentList();
+      if (argList->GetSize() == 3 ) {
+          std::string namespaceName = argList->GetValue(0)->GetType() == VTYPE_STRING ? argList->GetValue(0)->GetString() : "";
+          std::string key = argList->GetValue(1)->GetType() == VTYPE_STRING ? argList->GetValue(1)->GetString() : "";
+          if(namespaceName.empty() || key.empty())
+          {
+              return false;
+          }
+          CefValueWrapper wrap = CefValueWrapperHelper::ConvertCefValueToWrapper(argList->GetValue(2));
+
+          for (const auto& stateHandler : m_StateHandlerPythonBindings)
+          {
+              stateHandler.UpdateState(namespaceName, key, wrap);
+          }
+          return true;
+      } else {
+          return false;
+      }
   }
   return false;
 }

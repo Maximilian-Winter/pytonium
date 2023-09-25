@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <string>
 #include "nlohmann/json.hpp"
+#include "cef_value_wrapper.h"
 
 
 class ApplicationStateManagerHelper
@@ -266,12 +267,8 @@ public:
     }
 
     void deserializeFromJson(const std::string& jsonStr) {
-        try {
-            nlohmann::json jsonObj = nlohmann::json::parse(jsonStr);
-            namespaces = jsonObj.get<decltype(namespaces)>();
-        } catch (nlohmann::json::parse_error&) {
-            throw std::runtime_error("Invalid JSON string provided for deserialization.");
-        }
+        nlohmann::json jsonObj = nlohmann::json::parse(jsonStr);
+        namespaces = jsonObj.get<decltype(namespaces)>();
     }
 
     std::string serializeNamespaceToJson(const std::string& namespaceName) {
@@ -281,13 +278,9 @@ public:
     }
 
     void deserializeNamespaceFromJson(const std::string& namespaceName, const std::string& jsonStr) {
-        try {
-            nlohmann::json jsonObj = nlohmann::json::parse(jsonStr);
-            auto namespaceMap = jsonObj.get<std::unordered_map<std::string, nlohmann::json>>();
-            namespaces[namespaceName] = namespaceMap;  // This will create or update the namespace
-        } catch (nlohmann::json::parse_error&) {
-            throw std::runtime_error("Invalid JSON string provided for deserializing namespace.");
-        }
+        nlohmann::json jsonObj = nlohmann::json::parse(jsonStr);
+        auto namespaceMap = jsonObj.get<std::unordered_map<std::string, nlohmann::json>>();
+        namespaces[namespaceName] = namespaceMap;  // This will create or update the namespace
     }
 
     CefValueWrapper namespaceToCefValueWrapper(const std::string& namespaceName) {

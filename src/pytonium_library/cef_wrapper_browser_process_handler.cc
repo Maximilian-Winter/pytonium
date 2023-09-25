@@ -5,6 +5,7 @@
 #include "cef_wrapper_render_process_handler.h"
 #include "custom_protocol_scheme_handler.h"
 #include "javascript_binding.h"
+#include "cef_value_wrapper.h"
 
 
 CefWrapperBrowserProcessHandler::CefWrapperBrowserProcessHandler() = default;
@@ -26,9 +27,10 @@ CefWrapperBrowserProcessHandler::GetInstance() {
 }
 void CefWrapperBrowserProcessHandler::SetJavascriptBindings(
     std::vector<JavascriptBinding> javascript_bindings,
-    std::vector<JavascriptPythonBinding> javascript_python_bindings) {
+    std::vector<JavascriptPythonBinding> javascript_python_bindings, std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings) {
   GetInstance()->m_JavascriptBindings = javascript_bindings;
   GetInstance()->m_JavascriptPythonBindings = javascript_python_bindings;
+  GetInstance()->m_StateHandlerPythonBindings = stateHandlerPythonBindings;
 }
 
 CefRefPtr<CefClient> CefWrapperBrowserProcessHandler::GetDefaultClient() {
@@ -46,7 +48,7 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized() {
   // RegisterSchemeHandlerFactory();
 
   CefRefPtr<CefWrapperClientHandler> handler(new CefWrapperClientHandler(
-      use_views, m_JavascriptBindings, m_JavascriptPythonBindings));
+      use_views, m_JavascriptBindings, m_JavascriptPythonBindings, m_StateHandlerPythonBindings));
   SimpleRenderProcessHandler::getInstance()->SetJavascriptBindings(
       m_JavascriptBindings, m_JavascriptPythonBindings);
 

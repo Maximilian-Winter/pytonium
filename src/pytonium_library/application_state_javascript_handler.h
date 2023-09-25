@@ -51,9 +51,9 @@ private:
 class AppStateV8Handler : public CefV8Handler {
 private:
     std::shared_ptr<ApplicationStateManager> m_ApplicationStateManager;
-
+    CefRefPtr<CefBrowser> m_Browser;
 public:
-    AppStateV8Handler(std::shared_ptr<ApplicationStateManager>  manager) : m_ApplicationStateManager(manager), logging("test_v8.txt") {}
+    AppStateV8Handler(std::shared_ptr<ApplicationStateManager>  manager, CefRefPtr<CefBrowser> browser) : m_ApplicationStateManager(manager), m_Browser(browser), logging("test_v8.txt") {}
 
     virtual bool Execute(const CefString& name,
                          CefRefPtr<CefV8Value> object,
@@ -61,15 +61,25 @@ public:
                          CefRefPtr<CefV8Value>& retval,
                          CefString& exception) override {
         if (name == "setState") {
-            logging.appendLog("setState");
             if (arguments.size() == 3 && arguments[0]->IsString() && arguments[1]->IsString()) {
-                logging.appendLog("setState 3 args");
                 std::string namespaceName = arguments[0]->GetStringValue().ToString();
                 std::string key = arguments[1]->GetStringValue().ToString();
                 nlohmann::json value = ApplicationStateManagerHelper::cefV8ValueToJson(arguments[2]);  // Assuming you have implemented this function
 
                 m_ApplicationStateManager->setState(namespaceName, key, value);
-                logging.appendLog("setState finished!");
+
+                auto cefState = ApplicationStateManagerHelper::jsonToCefValue(value);
+                CefRefPtr<CefProcessMessage> messageReturn =
+                        CefProcessMessage::Create("push-app-state-update");
+
+                CefRefPtr<CefListValue> message_args_return =
+                        messageReturn->GetArgumentList();
+
+                message_args_return->SetSize(3);
+                message_args_return->SetString(0, namespaceName);
+                message_args_return->SetString(1, key);
+                message_args_return->SetValue(2, cefState);
+                m_Browser->GetMainFrame()->SendProcessMessage(PID_BROWSER, messageReturn);
                 return true;
             } else {
                 exception = "Invalid arguments for setState";

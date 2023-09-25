@@ -2,10 +2,10 @@
 #define LIBRARY_LIBRARY_H
 
 
-
 #include "cef_wrapper_app.h"
 #include "cef_wrapper_client_handler.h"
 #include "include/cef_command_line.h"
+
 #if defined(OS_WIN)
 #include <Windows.h>
 #include "include/cef_sandbox_win.h"
@@ -13,29 +13,49 @@
 
 
 #include "javascript_binding.h"
+#include "cef_value_wrapper.h"
 
-class PytoniumLibrary {
+class PytoniumLibrary
+{
 public:
-  PytoniumLibrary();
-  void InitPytonium(std::string start_url, int init_width, int init_height);
-  void ExecuteJavascript(const std::string& code);
-  void ShutdownPytonium();
-  void ReturnValueToJavascript(int message_id, CefValueWrapper returnValue);
-  bool IsRunning();
-  bool IsReadyToExecuteJavascript();
-  void UpdateMessageLoop();
-  void AddJavascriptBinding(std::string name,
-                                js_binding_function_ptr jsNativeApiFunctionPtr, std::string javascript_object);
-  void AddJavascriptPythonBinding(const std::string& name,
-      js_python_bindings_handler_function_ptr python_bindings_handler,
-      js_python_callback_object_ptr python_callback_object, const std::string& javascript_object, bool returns_value);
-  void SetCustomSubprocessPath(std::string cefsub_path);
-  void SetCustomCachePath(std::string cef_cache_path);
-  void SetCustomResourcePath(std::string cef_resources_path);
-  void SetCustomLocalesPath(std::string cef_locales_path);
+    PytoniumLibrary();
 
-  void SetCustomIconPath(std::string icon_path);
-  void LoadUrl(std::string url);
+    void InitPytonium(std::string start_url, int init_width, int init_height);
+
+    void ExecuteJavascript(const std::string &code);
+
+    void ShutdownPytonium();
+
+    void ReturnValueToJavascript(int message_id, CefValueWrapper returnValue);
+
+    bool IsRunning();
+
+    bool IsReadyToExecuteJavascript();
+
+    void UpdateMessageLoop();
+
+    void AddJavascriptBinding(std::string name,
+                              js_binding_function_ptr jsNativeApiFunctionPtr, std::string javascript_object);
+
+    void AddJavascriptPythonBinding(const std::string &name,
+                                    js_python_bindings_handler_function_ptr python_bindings_handler,
+                                    js_python_callback_object_ptr python_callback_object,
+                                    const std::string &javascript_object, bool returns_value);
+
+    void AddStateHandlerPythonBinding(state_handler_function_ptr stateHandlerFunctionPtr, state_callback_object_ptr stateCallbackObjectPtr, const std::vector<std::string>& namespacesToSubscribeTo);
+
+    void SetCustomSubprocessPath(std::string cefsub_path);
+
+    void SetCustomCachePath(std::string cef_cache_path);
+
+    void SetCustomResourcePath(std::string cef_resources_path);
+
+    void SetCustomLocalesPath(std::string cef_locales_path);
+
+    void SetCustomIconPath(std::string icon_path);
+
+    void LoadUrl(std::string url);
+
 private:
 
     CefRefPtr<CefWrapperApp> m_App;
@@ -57,7 +77,7 @@ private:
 
     std::vector<JavascriptBinding> m_Javascript_Bindings;
     std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;
-}
-;
+    std::vector<StateHandlerPythonBinding> m_StateHandlerPythonBindings;
+};
 
 #endif//LIBRARY_LIBRARY_H

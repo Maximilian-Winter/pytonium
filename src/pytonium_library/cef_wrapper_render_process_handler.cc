@@ -98,7 +98,7 @@ void SimpleRenderProcessHandler::OnContextCreated(
     CefRefPtr<CefV8Value> pytonium_namespace = CefV8Value::CreateObject(nullptr, nullptr);
 
     m_ApplicationStateManager = std::make_unique<ApplicationStateManager>();
-    m_AppStateV8Handler = new AppStateV8Handler(m_ApplicationStateManager);
+    m_AppStateV8Handler = new AppStateV8Handler(m_ApplicationStateManager, browser);
 
     CefRefPtr<CefV8Value> stateObj = CefV8Value::CreateObject(nullptr, nullptr);
 
@@ -219,6 +219,69 @@ bool SimpleRenderProcessHandler::OnProcessMessageReceived(CefRefPtr<CefBrowser> 
         CefRefPtr<CefListValue> argList = message->GetArgumentList();
         int message_id = argList->GetInt(0);
         m_JavascriptPythonBindingHandler->ResolvePromise(message_id, argList->GetValue(1));
+    }
+    else if(message_name == "set-app-state")
+    {
+        CefRefPtr<CefListValue> argList = message->GetArgumentList();
+        if (argList->GetSize() == 3 ) {
+            std::string namespaceName = argList->GetValue(0)->GetType() == VTYPE_STRING ? argList->GetValue(0)->GetString() : "";
+            std::string key = argList->GetValue(1)->GetType() == VTYPE_STRING ? argList->GetValue(1)->GetString() : "";
+            if(namespaceName.empty() || key.empty())
+            {
+                return false;
+            }
+            nlohmann::json value = ApplicationStateManagerHelper::cefValueToJson(argList->GetValue(2));  // Assuming you have implemented this function
+            m_ApplicationStateManager->setState(namespaceName, key, value);
+            return true;
+        } else {
+            return false;
+        }
+    }
+    else if(message_name == "get-app-state")
+    {
+        CefRefPtr<CefListValue> argList = message->GetArgumentList();
+        if (argList->GetSize() == 2 ) {
+            std::string namespaceName = argList->GetValue(0)->GetType() == VTYPE_STRING ? argList->GetValue(0)->GetString() : "";
+            std::string key = argList->GetValue(1)->GetType() == VTYPE_STRING ? argList->GetValue(1)->GetString() : "";
+            if(namespaceName.empty() || key.empty())
+            {
+                return false;
+            }
+            auto state = m_ApplicationStateManager->getState(namespaceName, key);
+
+            auto cefState = ApplicationStateManagerHelper::jsonToCefValue(state);
+            CefRefPtr<CefProcessMessage> messageReturn =
+                    CefProcessMessage::Create("get-app-state-return");
+
+            CefRefPtr<CefListValue> message_args_return =
+                    messageReturn->GetArgumentList();
+
+            message_args_return->SetSize(3);
+            message_args_return->SetString(0, namespaceName);
+            message_args_return->SetString(1, key);
+            message_args_return->SetValue(2, cefState);
+            frame->SendProcessMessage(PID_BROWSER, messageReturn);
+            return true;
+        } else {
+            return false;
+        }
+    }
+    else if(message_name == "remove-app-state")
+    {
+        CefRefPtr<CefListValue> argList = message->GetArgumentList();
+        if (argList->GetSize() == 2 ) {
+            std::string namespaceName = argList->GetValue(0)->GetType() == VTYPE_STRING ? argList->GetValue(0)->GetString() : "";
+            std::string key = argList->GetValue(1)->GetType() == VTYPE_STRING ? argList->GetValue(1)->GetString() : "";
+            if(namespaceName.empty() || key.empty())
+            {
+                return false;
+            }
+            m_ApplicationStateManager->removeState(namespaceName, key);
+
+            return true;
+        } else {
+            return false;
+        }
     }
     return true;
 }
