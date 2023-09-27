@@ -4,7 +4,7 @@ import zipfile
 from time import sleep
 
 
-def returns_value_to_javascript(return_type):
+def returns_value_to_javascript(return_type="any"):
     def decorator(func):
         func.returns_value_to_javascript = True
         func.return_type = return_type

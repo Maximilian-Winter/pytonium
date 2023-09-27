@@ -18,16 +18,18 @@ from libcpp.pair cimport pair
 cdef class PytoniumFunctionWrapper:
     cdef object python_method
     cdef boolie returns_value
+    cdef string return_value_type
     cdef object pytonium_instance
     cdef int arg_count
     cdef list arg_names
     cdef string javascript_object_name
 
 
-    def __init__(self, method, pytonium_instance, javascript_object_name, returns_value=False):
+    def __init__(self, method, pytonium_instance, javascript_object_name, returns_value=False, return_value_type="void"):
         self.python_method = method
         self.returns_value = returns_value
         self.pytonium_instance = pytonium_instance
+        self.return_value_type = return_value_type.encode("utf-8")
         sig = inspect.signature(method)
         params = sig.parameters
         self.javascript_object_name = javascript_object_name.encode("utf-8")
@@ -63,6 +65,10 @@ cdef class PytoniumFunctionWrapper:
     @property
     def get_javascript_object_name(self):
         return self.javascript_object_name.decode("utf-8")
+
+    @property
+    def get_return_value_type(self):
+        return self.return_value_type.decode("utf-8")
 
 
 cdef class PytoniumStateHandlerWrapper:
@@ -308,7 +314,10 @@ cdef class Pytonium:
 
     def bind_function_to_javascript(self, name: str, func, javascript_object: str) :
         cdef should_return = hasattr(func, 'returns_value_to_javascript') and func.returns_value_to_javascript
-        py_meth_wrapper = PytoniumFunctionWrapper(func, self, javascript_object, should_return)
+        return_value_type = "void"
+        if should_return:
+            return_value_type = getattr(func, 'return_type')
+        py_meth_wrapper = PytoniumFunctionWrapper(func, self, javascript_object, should_return, return_value_type)
         self._pytonium_api.append(py_meth_wrapper)
         self.pytonium_library.AddJavascriptPythonBinding(name.encode("utf-8"), javascript_binding_object_callback, <void *>self._pytonium_api[len(self._pytonium_api)-1], javascript_object.encode("utf-8"), should_return)
 
@@ -332,7 +341,10 @@ cdef class Pytonium:
         for method in methods:
             meth = getattr(obj, method)
             should_return = hasattr(meth, 'returns_value_to_javascript') and meth.returns_value_to_javascript
-            py_meth_wrapper = PytoniumFunctionWrapper(meth, self, javascript_object, should_return)
+            return_value_type = "void"
+            if should_return:
+                return_value_type = getattr(meth, 'return_type')
+            py_meth_wrapper = PytoniumFunctionWrapper(meth, self, javascript_object, should_return, return_value_type)
             self._pytonium_api.append(py_meth_wrapper)
             size_methods = len(self._pytonium_api)
             self.pytonium_library.AddJavascriptPythonBinding(method.encode("utf-8"), javascript_binding_object_callback, <void *> self._pytonium_api[size_methods - 1], javascript_object.encode("utf-8"), should_return)
@@ -368,10 +380,8 @@ cdef class Pytonium:
                                    for name, param in sig.parameters.items()])
            javascript_object_name = py_meth_wrapper.get_javascript_object_name
 
-           # Default to "any" if return type is not specified, and "void" if no return value
-           return_annotation = sig.return_annotation if sig.return_annotation is not sig.empty else None
            if py_meth_wrapper.get_returns_value:
-               return_type = python_type_to_ts_type(return_annotation)
+               return_type = py_meth_wrapper.get_return_value_type
            else:
                return_type = 'void'
 

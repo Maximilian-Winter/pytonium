@@ -95,6 +95,7 @@ def generate_package_list_and_manifest_file_list(os_bin_folder):
 
 
 def generate_manifest_file():
+    pytonium_manifest_file_list.append("Pytonium\\pytonium.pyi")
     with open('./MANIFEST.in', 'w') as fp:
 
         for item in pytonium_manifest_file_list:

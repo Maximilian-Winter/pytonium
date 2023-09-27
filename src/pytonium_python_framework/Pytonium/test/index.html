@@ -2,50 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pytonium-Test</title>
+    <title>PytoniumTest</title>
 </head>
 <body>
 <div id ="app">
     <p>Hello World!</p>
+    <div id ="date">
+
+    </div>
 </div>
 
 </body>
 <script>
-    function logObject(obj, indent = 0) {
-        const indentation = ' '.repeat(indent * 2); // Two spaces per indent level
-        for (const [key, value] of Object.entries(obj)) {
-            if (typeof value === 'object' && value !== null) {
-                console.log(`${indentation}${key}: {`);
-                logObject(value, indent + 1);
-                console.log(`${indentation}}`);
-            } else {
-                console.log(`${indentation}${key}: ${value}`);
-            }
-        }
-    }
-    // Example for making calls to Python functions.
-    function CallToPythonExample()
+
+   // Define a function to showcase Pytonium features.
+   function CallToPythonExample()
     {
-        Pytonium.appState.registerForStateUpdates("myStateChangeEvent", ["user"]);
-        document.addEventListener('myStateChangeEvent', function(event) {
+        // Register to app state updates from Python and Javascript. You can pass a custom event name and a list of namespaces to subscribe to.
+        Pytonium.appState.registerForStateUpdates("ChangeDate", ["app-general"]);
+
+        // Add a listener for the custom event and retrieve information.
+        document.addEventListener('ChangeDate', function(event) {
             const detail = event.detail;
             const namespace = detail.namespace;
             const key = detail.key;
             const value = detail.value;
 
-            // Do something with the updated state
-            console.log("State Updated:", namespace, key, value);
+            // console.log("State Updated:", namespace, key, value);
+           document.getElementById('date').innerHTML = '<p>' + value + '</p>';
         });
+
+        // Set some app state, synced to Python and Javascript.
         Pytonium.appState.setState("user", "age", 64)
-        // Call function in python with arguments.
-        let myPromise = Pytonium.test_binding_python_function.testfunc(21, 42.24, false, 'Hello World!');
+
+        // Call function in python with return value.
+        let myPromise = Pytonium.test_function_binding.testfunc();
         myPromise.then((resolvedValue) => {
-            console.log("Promise was resolved with value:", resolvedValue);
-        }).catch((error) => {
-            console.log("Promise was rejected with error:", error);
+            console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue.Answer);
         });
 
         console.log(Pytonium.appState.getState("user", "age"));
+
+
+        let myPromise2 = Pytonium.test_class_methods_binding.test_one(64);
+        myPromise2.then((resolvedValue) => {
+            console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue);
+        });
+        Pytonium.test_class_methods_binding.test_two("Dlrow Olleh!", 20, 40)
     }
 
     // Check if Python bindings are ready and call them, if not add an event listener for the PytoniumReady event.
@@ -56,13 +59,11 @@
             CallToPythonExample();
         });
     }
-
     // Example for defining a function that is callable from Python.
     var CallFromPythonExample = {
         setTicker: function(date) {
             document.getElementById('app').innerHTML = '<p>Hello World!</p>' + '<p>' + date + '</p>';
         },
     };
-
 </script>
 </html>

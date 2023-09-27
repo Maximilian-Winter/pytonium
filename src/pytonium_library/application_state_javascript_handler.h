@@ -32,7 +32,7 @@ private:
     bool JavascriptIsRegisteredForStateEvents;
     std::vector<JavascriptStateUpdateSubscription> StateUpdateSubscriptions;
 public:
-    AppStateV8Handler(std::shared_ptr<ApplicationStateManager>  manager, CefRefPtr<CefBrowser> browser) : m_ApplicationStateManager(std::move(manager)), m_Browser(std::move(browser)), logging("test_v8.txt")
+    AppStateV8Handler(std::shared_ptr<ApplicationStateManager>  manager, CefRefPtr<CefBrowser> browser) : m_ApplicationStateManager(std::move(manager)), m_Browser(std::move(browser))
     {
         jsTriggerCustomEvent = R"(
     if (typeof triggerCustomStateChangePytoniumEvent === 'undefined') {
@@ -128,7 +128,6 @@ public:
             }
 
         }
-        // Handle other methods as needed
 
         return false;
     }
@@ -174,7 +173,6 @@ public:
 
         }
     }
-    Logging logging;
     IMPLEMENT_REFCOUNTING(AppStateV8Handler);
 };
 #endif //PYTONIUM_APPLICATION_STATE_JAVASCRIPT_HANDLER_H

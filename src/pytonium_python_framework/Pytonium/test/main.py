@@ -3,26 +3,24 @@ import time
 from datetime import datetime
 
 # Import the Pytonium class
-from Pytonium import Pytonium
+from Pytonium import Pytonium, returns_value_to_javascript
 
 
-# This class expose three methods as an endpoint of a javascript binding, and they get called on the test website.
+# This class expose two methods as an endpoint of a javascript binding, and they get called on the test website.
+# The first method gets called with one argument and returns a value.
 class MyApi:
 
     def __init__(self):
         self.data = []
 
+    # Needed decorator to mark the method as returning values as Promises in Javascript, optional with return type in Javascript to generate typescript d.ts file of all exposed Python methods and functions.
+    @returns_value_to_javascript("number")
+    def test_one(self, arg1: int):
+        print("Python Method called from Javascript with one argument and returns a value!")
+        print(arg1)
+        return arg1
 
-    @staticmethod
-    def TestOne():
-        print("Static Python Method called from Javascript!")
-
-    def TestTwo(self, arg1):
-        print("Python Method called from Javascript!")
-        self.data.append(arg1)
-        print(self.data)
-
-    def TestThree(self, arg1, arg2, arg3):
+    def test_two(self, arg1: str, arg2: int, arg3: int):
         print("Python Method called from Javascript!")
         self.data.append(arg1)
         self.data.append(arg2)
@@ -30,11 +28,12 @@ class MyApi:
         print(self.data)
 
 
-# This function is the endpoint of a javascript binding, and it's get called on the test website.
-def my_js_binding(arg1, arg2, arg3, arg4):
-    print("Python Function is called from Javascript!")
-    data = [arg1, arg2, arg3, arg4]
-    print(data)
+# An example class to handle app state updates from Javascript.
+# The update_state method is mandatory and gets called automatically from Pytonium.
+class MyStateHandler:
+
+    def update_state(self, namespace, key, value):
+        print(f"State Update:\nNamespace={namespace}\nKey={key}\nValue={str(value)}")
 
 
 # Create a Pytonium instance.
@@ -43,9 +42,26 @@ pytonium = Pytonium()
 # Create a MyApi instance.
 myApi = MyApi()
 
+# Create a MyStateHandler instance.
+myStateHandler = MyStateHandler()
+
+
+# This function is the endpoint of a javascript binding, and it's get called on the test website and returns a Javascript object.
+@returns_value_to_javascript("any")
+def my_js_binding():
+    return {"Answer": 42}
+
+
+# Add a state handler for the 'user' namespace and receive updates. 'user' is just an example used on the test website.
+pytonium.add_state_handler(myStateHandler, ["user"])
+
 # Bind the MyApi instance and the test function to javascript.
-pytonium.bind_function_to_javascript("testfunc", my_js_binding, "test_binding_python_function")
-pytonium.bind_object_methods_to_javascript(myApi, "test_binding_python_object_methods")
+pytonium.bind_function_to_javascript("testfunc", my_js_binding, "test_function_binding")
+pytonium.bind_object_methods_to_javascript(myApi, "test_class_methods_binding")
+
+# Generate a typescript d.ts file, of the Python bindings, for the IDE to support auto-completetion etc.
+pytonium.generate_typescript_definitions("test.d.ts")
+
 
 # To load a html file, on start up from disk, we need the absolute path to it, so we get it here.
 pytonium_test_path = os.path.abspath(__file__)
@@ -57,24 +73,29 @@ pytonium.set_custom_icon_path(f"radioactive.ico")
 # Start Pytonium and pass it the start-up URL or file and the width and height of the Window.
 pytonium.initialize(f"file://{pytonium_test_path}\\index.html", 1920, 1080)
 
-# Start a loop to update the Pytonium message loop and execute some javascript.
 
+# Start a loop to update the Pytonium message loop and execute some javascript.
 while pytonium.is_running():
     time.sleep(0.01)
 
     # Update the message loop.
     pytonium.update_message_loop()
 
-    # Get the current time and date
+    # Get the current time and date for displaying it on the test website.
     now = datetime.now()
 
     # Format the date and time string.
     date_time = now.strftime("%d.%m.%Y, %H:%M:%S")
 
+    # Set an app state to a specific value.
+    pytonium.set_state("app-general", "date", date_time)
+
+    # Example on how to execute Javascript from Python:
+
     # Save the needed Javascript, to call a function and update a ticker with the current date and time.
     # We created and exposed this function in Javascript on the HTML site.
-    code = f"window.state.setTicker('{date_time}')"
+    # code = f"CallFromPythonExample.setTicker('{date_time}')"
 
     # Execute the javascript.
-    pytonium.execute_javascript(code)
+    # pytonium.execute_javascript(code)
 

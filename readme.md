@@ -3,9 +3,11 @@
 
 It uses the Chromium Embedded Framework for rendering and execution of javascript.
 
-At the moment the framework has functionality for loading an url and add
-Javascript bindings, so a python function can be called from Javascript.
-And also Javascript can be executed, on the website, from python.
+### Features:
+
+- Create appealing UI's for Python Apps through the web-technologies HTML, CSS and Javascript, using frameworks like React, Preact and Tailwind CSS for styling.
+- Call Python function and methods from Javascript and return values from Python to Javascript.
+- Handle the application state through simple methods and event based interfaces in Javascript and Python.
 
 The package is avaible via pip.
 
