@@ -44,6 +44,10 @@ public:
 
     void AddStateHandlerPythonBinding(state_handler_function_ptr stateHandlerFunctionPtr, state_callback_object_ptr stateCallbackObjectPtr, const std::vector<std::string>& namespacesToSubscribeTo);
 
+    void SetState(const std::string& stateNamespace, const std::string& key, CefValueWrapper value);
+
+    void RemoveState(const std::string& stateNamespace, const std::string& key);
+
     void SetCustomSubprocessPath(std::string cefsub_path);
 
     void SetCustomCachePath(std::string cef_cache_path);

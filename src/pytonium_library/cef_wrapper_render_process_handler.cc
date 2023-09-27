@@ -97,16 +97,17 @@ void SimpleRenderProcessHandler::OnContextCreated(
 
     CefRefPtr<CefV8Value> pytonium_namespace = CefV8Value::CreateObject(nullptr, nullptr);
 
-    m_ApplicationStateManager = std::make_unique<ApplicationStateManager>();
+    m_ApplicationStateManager = std::make_shared<ApplicationStateManager>();
     m_AppStateV8Handler = new AppStateV8Handler(m_ApplicationStateManager, browser);
 
     CefRefPtr<CefV8Value> stateObj = CefV8Value::CreateObject(nullptr, nullptr);
 
+    CefRefPtr<CefV8Value> funcRegisterForStateUpdates = CefV8Value::CreateFunction("registerForStateUpdates", m_AppStateV8Handler);
     CefRefPtr<CefV8Value> funcSetState = CefV8Value::CreateFunction("setState", m_AppStateV8Handler);
     CefRefPtr<CefV8Value> funcGetState = CefV8Value::CreateFunction("getState", m_AppStateV8Handler);
     CefRefPtr<CefV8Value> funcRemoveState = CefV8Value::CreateFunction("removeState", m_AppStateV8Handler);
 
-
+    stateObj->SetValue("registerForStateUpdates", funcRegisterForStateUpdates, V8_PROPERTY_ATTRIBUTE_NONE);
     stateObj->SetValue("setState", funcSetState, V8_PROPERTY_ATTRIBUTE_NONE);
     stateObj->SetValue("getState", funcGetState, V8_PROPERTY_ATTRIBUTE_NONE);
     stateObj->SetValue("removeState", funcRemoveState, V8_PROPERTY_ATTRIBUTE_NONE);
@@ -201,7 +202,7 @@ void SimpleRenderProcessHandler::OnContextCreated(
             }
         }
     }
-    m_ApplicationStateManager = std::make_shared<ApplicationStateManager>();
+
     global->SetValue("Pytonium", pytonium_namespace, V8_PROPERTY_ATTRIBUTE_NONE);
     frame->ExecuteJavaScript("window.PytoniumReady = true;", frame->GetURL(), 0);
     frame->ExecuteJavaScript("var event = new Event('PytoniumReady'); window.dispatchEvent(event);", frame->GetURL(), 0);
@@ -230,8 +231,10 @@ bool SimpleRenderProcessHandler::OnProcessMessageReceived(CefRefPtr<CefBrowser> 
             {
                 return false;
             }
-            nlohmann::json value = ApplicationStateManagerHelper::cefValueToJson(argList->GetValue(2));  // Assuming you have implemented this function
+            nlohmann::json value = ApplicationStateManagerHelper::cefValueToJson(argList->GetValue(2));
+
             m_ApplicationStateManager->setState(namespaceName, key, value);
+            m_AppStateV8Handler->PushToJavascript(namespaceName, key);
             return true;
         } else {
             return false;

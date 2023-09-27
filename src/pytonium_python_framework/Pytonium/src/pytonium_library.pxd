@@ -65,6 +65,10 @@ cdef extern from "src/pytonium_library/javascript_binding.h":
     ctypedef void (*js_python_callback_object_ptr)
     ctypedef void (*js_python_bindings_handler_function_ptr)(void* python_callback_object, int size, CefValueWrapper* args, int message_id )
 
+cdef extern from "src/pytonium_library/application_state_python.h":
+    ctypedef void (*state_callback_object_ptr)
+    ctypedef void (*state_handler_function_ptr)(state_callback_object_ptr python_callback_object, string stateNamespace, string stateKey, CefValueWrapper callback_args)
+
 # Declare the class with cdef
 cdef extern from "src/pytonium_library/pytonium_library.h":
     cdef cppclass PytoniumLibrary:
@@ -76,6 +80,9 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         bool IsRunning()
         void UpdateMessageLoop();
         void AddJavascriptPythonBinding(string name, js_python_bindings_handler_function_ptr handler_callback, void* python_callable, string javascript_object, bool returns_value)
+        void AddStateHandlerPythonBinding(state_handler_function_ptr stateHandlerFunctionPtr, state_callback_object_ptr stateCallbackObjectPtr,  vector[string] namespacesToSubscribeTo)
+        void SetState(string stateNamespace, string key, CefValueWrapper value)
+        void RemoveState(string stateNamespace, string key)
         void SetCustomSubprocessPath(string path)
         void SetCustomCachePath(string cef_cache_path)
         void SetCustomIconPath(string custom_icon_path)

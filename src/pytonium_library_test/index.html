@@ -26,6 +26,16 @@
     // Example for making calls to Python functions.
     function CallToPythonExample()
     {
+        Pytonium.appState.registerForStateUpdates("myStateChangeEvent", ["user"]);
+        document.addEventListener('myStateChangeEvent', function(event) {
+            const detail = event.detail;
+            const namespace = detail.namespace;
+            const key = detail.key;
+            const value = detail.value;
+
+            // Do something with the updated state
+            console.log("State Updated:", namespace, key, value);
+        });
         Pytonium.appState.setState("user", "age", 64)
         // Call function in python with arguments.
         let myPromise = Pytonium.test_binding_python_function.testfunc(21, 42.24, false, 'Hello World!');

@@ -11,6 +11,11 @@
 
 PytoniumLibrary cefSimpleWrapper;
 
+void testfunc42(void *python_callback_object, std::string stateNamespace, std::string key, CefValueWrapper valueWrapper)
+{
+    std::cout << "I FOUGHT THE LAW AND I WON!" << stateNamespace << " Key:" << key << std::endl;
+}
+
 void testfunc4(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
 {
     std::cout << "I FOUGHT THE LAW AND I WON!" << size << " MSG ID:" << message_id << std::endl;
@@ -35,8 +40,11 @@ void testfunc4(void *python_callback_object, int size, CefValueWrapper *args, in
 
 int main()
 {
+    std::vector<std::string> namespacesToSubscribe;
 
+    namespacesToSubscribe.emplace_back("user");
     cefSimpleWrapper.AddJavascriptPythonBinding("testfunc", testfunc4, nullptr, "test_binding_python_function", true);
+    cefSimpleWrapper.AddStateHandlerPythonBinding(testfunc42, nullptr, namespacesToSubscribe);
     //std::string jsDoc = JavascriptPythonBindingHelper::GenerateJSDoc(cefSimpleWrapper.m_Javascript_Python_Bindings);
     //std::cout << jsDoc << std::endl;
     std::filesystem::path entryPoint = std::filesystem::current_path() / "index.html";
@@ -51,6 +59,13 @@ int main()
         std::stringstream ss;
         ss << "CallFromPythonExample.setTicker(" << counter++ << ")";
         cefSimpleWrapper.ExecuteJavascript(ss.str());
+
+        if(counter == 500)
+        {
+            CefValueWrapper valueWrapper;
+            valueWrapper.SetInt(123);
+            cefSimpleWrapper.SetState("user", "age", valueWrapper);
+        }
     }
 
     //cefSimpleWrapper.ShutdownPytonium();

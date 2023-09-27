@@ -5,7 +5,7 @@
 
 import inspect
 
-from .pytonium_library cimport PytoniumLibrary, CefValueWrapper
+from .pytonium_library cimport PytoniumLibrary, CefValueWrapper, state_callback_object_ptr
 from libcpp.string cimport string
 
 from libcpp cimport bool as boolie
@@ -63,6 +63,20 @@ cdef class PytoniumFunctionWrapper:
     @property
     def get_javascript_object_name(self):
         return self.javascript_object_name.decode("utf-8")
+
+
+cdef class PytoniumStateHandlerWrapper:
+    cdef object python_method
+
+    def __init__(self, method):
+        self.python_method = method
+
+    def __call__(self, namespace, key, arg):
+        self.python_method(namespace, key, arg)
+
+    @property
+    def get_python_method(self):
+        return self.python_method
 
 cdef class PytoniumValueWrapper:
     cdef CefValueWrapper cef_value_wrapper;
@@ -222,6 +236,11 @@ cdef inline list get_javascript_binding_arg_list(CefValueWrapper* args, int size
 
     return arg_list
 
+cpdef vector[string] convert_list_of_strings_to_vector(list py_list):
+    cdef vector[string] cpp_vector
+    for item in py_list:
+        cpp_vector.push_back(item.encode("utf-8"))
+    return cpp_vector
 
 cdef inline void javascript_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args, int message_id) noexcept:
     arg_list = get_javascript_binding_arg_list(args, size, message_id)
@@ -232,6 +251,14 @@ cdef inline void javascript_binding_object_callback(void *python_function_object
         (<Pytonium> (<PytoniumFunctionWrapper> python_function_object).pytonium_instance).pytonium_library.ReturnValueToJavascript(message_id, convert.PythonType_to_CefValueWrapper(return_value))
     else:
         (<PytoniumFunctionWrapper> python_function_object)(*arg_list)
+
+
+cdef inline void state_handler_callback(state_callback_object_ptr python_callback_object, string stateNamespace, string stateKey, CefValueWrapper callback_args) noexcept:
+    converter = PytoniumValueWrapper()
+    arg = converter.CefValueWrapper_to_PythonType(callback_args)
+    (<PytoniumStateHandlerWrapper> python_callback_object)(bytes.decode(stateNamespace, "utf-8"), bytes.decode(stateKey, "utf-8"), arg)
+
+
 
 cdef str _global_pytonium_subprocess_path = ""
 
@@ -249,9 +276,12 @@ def python_type_to_ts_type(python_type):
 cdef class Pytonium:
     cdef PytoniumLibrary pytonium_library;
     cdef list _pytonium_api
+    cdef list _pytonium_state_handler
+
     def __init__(self):
         global _global_pytonium_subprocess_path
         self._pytonium_api = []
+        self._pytonium_state_handler = []
         self.pytonium_library = PytoniumLibrary()
         self.pytonium_library.SetCustomSubprocessPath(_global_pytonium_subprocess_path.encode('utf-8'))
 
@@ -281,6 +311,15 @@ cdef class Pytonium:
         py_meth_wrapper = PytoniumFunctionWrapper(func, self, javascript_object, should_return)
         self._pytonium_api.append(py_meth_wrapper)
         self.pytonium_library.AddJavascriptPythonBinding(name.encode("utf-8"), javascript_binding_object_callback, <void *>self._pytonium_api[len(self._pytonium_api)-1], javascript_object.encode("utf-8"), should_return)
+
+    def add_state_handler(self, state_handler: object, namespaces: list[str]) :
+        cdef has_update = hasattr(state_handler, 'update_state')
+        if has_update:
+            state_handler_meth = getattr(state_handler, 'update_state')
+            py_meth_wrapper = PytoniumStateHandlerWrapper(state_handler_meth)
+            namespaces_converted = convert_list_of_strings_to_vector(namespaces)
+            self._pytonium_state_handler.append(py_meth_wrapper)
+            self.pytonium_library.AddStateHandlerPythonBinding(state_handler_callback, <void *>self._pytonium_state_handler[len(self._pytonium_state_handler)-1], namespaces_converted)
 
     def shutdown(self):
         self.pytonium_library.ShutdownPytonium()
@@ -312,6 +351,10 @@ cdef class Pytonium:
     def load_url(self, url: str):
         self.pytonium_library.LoadUrl(url.encode("utf-8"))
 
+    def set_state(self, namespace: str, key: str, value: object):
+        converter = PytoniumValueWrapper()
+        self.pytonium_library.SetState(namespace.encode("utf-8"), key.encode("utf-8"), converter.PythonType_to_CefValueWrapper(value))
+
     def generate_typescript_definitions(self, filename: str):
        ts_definitions = []
        ts_definitions.append("declare namespace Pytonium {")
@@ -341,6 +384,10 @@ cdef class Pytonium:
            )
 
        object_map["appState"] = []
+
+       object_map["appState"].append(
+                             f"function registerForStateUpdates(eventName: string, namespaces: string[]): void;"
+                         )
        object_map["appState"].append(
                       f"function setState(namespace: string, key: string, value: any): void;"
                   )
@@ -368,10 +415,8 @@ cdef class Pytonium:
        ts_definitions.append("  PytoniumReady: boolean;")
        ts_definitions.append("}")
 
-       ts_definitions.append("declare global {")
-       ts_definitions.append("  interface WindowEventMap {")
-       ts_definitions.append("      PytoniumReady: Event;")
-       ts_definitions.append("  }")
+       ts_definitions.append("interface WindowEventMap {")
+       ts_definitions.append("  PytoniumReady: Event;")
        ts_definitions.append("}")
 
        # Writing to a .d.ts file for IDE to pick up

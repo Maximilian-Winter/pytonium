@@ -205,3 +205,39 @@ void PytoniumLibrary::AddStateHandlerPythonBinding(state_handler_function_ptr st
 {
     m_StateHandlerPythonBindings.emplace_back(stateHandlerFunctionPtr, stateCallbackObjectPtr, namespacesToSubscribeTo);
 }
+
+void PytoniumLibrary::SetState(const std::string& stateNamespace, const std::string& key, CefValueWrapper value)
+{
+    CefRefPtr<CefProcessMessage> return_to_javascript_message =
+            CefProcessMessage::Create("set-app-state");
+
+    CefRefPtr<CefListValue> return_value_message_args =
+            return_to_javascript_message->GetArgumentList();
+
+    return_value_message_args->SetString(0, stateNamespace);
+
+    return_value_message_args->SetString(1, key);
+
+    return_value_message_args->SetValue(2, CefValueWrapperHelper::ConvertWrapperToCefValue(value));
+
+
+    //CefRefPtr<CefValue> val = return_to_javascript_message->GetArgumentList()->GetValue(1);
+
+    //CefRefPtr<CefV8Value> val2 = CefValueWrapperHelper::ConvertCefValueToV8Value(val);
+    m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
+}
+
+void PytoniumLibrary::RemoveState(const std::string& stateNamespace, const std::string& key)
+{
+    CefRefPtr<CefProcessMessage> return_to_javascript_message =
+            CefProcessMessage::Create("remove-app-state");
+
+    CefRefPtr<CefListValue> return_value_message_args =
+            return_to_javascript_message->GetArgumentList();
+
+    return_value_message_args->SetString(0, stateNamespace);
+
+    return_value_message_args->SetString(1, key);
+
+    m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
+}
