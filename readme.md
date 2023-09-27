@@ -5,11 +5,12 @@ It uses the Chromium Embedded Framework for rendering and execution of javascrip
 
 ### Features:
 
-- Create appealing UI's for Python Apps through the web-technologies HTML, CSS and Javascript, using frameworks like React, Preact and Tailwind CSS for styling.
+- Create appealing UIs for Python Apps through the web-technologies HTML, CSS and Javascript, using frameworks like React, Preact and Tailwind CSS for styling.
 - Call Python function and methods from Javascript and return values from Python to Javascript.
 - Handle the application state through simple methods and event based interfaces in Javascript and Python.
+- Execute Javascript from Python on the UI.
 
-The package is avaible via pip.
+The package is available via pip.
 
 So just type the following in the console to install it.
 ```
@@ -24,7 +25,7 @@ from Pytonium import Pytonium
 This imports the Pytonium class.
 
 After we have created an instance of Pytonium, we can initialize Pytonium, with an initial window width and height and
-a URL or filepath. 
+a URL or filepath.
 
 ```python
 from Pytonium import Pytonium
@@ -51,7 +52,7 @@ while pytonium.is_running():
     pytonium.update_message_loop()
 ```
 
-This are the basics to load an HTML file, with CSS and Javascript. 
+This are the basics to load an HTML file, with CSS and Javascript.
 
 We have the option to register python functions and methods in Javascript. And make them callable from there.
 
