@@ -34,7 +34,7 @@
 
         // Set some app state, synced to Python and Javascript.
         Pytonium.appState.setState("user", "age", 64)
-
+        console.log(Pytonium.appState.getState("user", "age"));
         // Call function in python with return value.
         let myPromise = Pytonium.test_function_binding.testfunc();
         myPromise.then((resolvedValue) => {

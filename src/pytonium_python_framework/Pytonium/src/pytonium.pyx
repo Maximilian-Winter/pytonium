@@ -312,7 +312,7 @@ cdef class Pytonium:
     def execute_javascript(self, code: str):
         self.pytonium_library.ExecuteJavascript(code.encode("utf-8"))
 
-    def bind_function_to_javascript(self, name: str, func, javascript_object: str) :
+    def bind_function_to_javascript(self, name: str, func, javascript_object="": str) :
         cdef should_return = hasattr(func, 'returns_value_to_javascript') and func.returns_value_to_javascript
         return_value_type = "void"
         if should_return:
@@ -336,7 +336,7 @@ cdef class Pytonium:
     def is_running(self):
         return self.pytonium_library.IsRunning()
 
-    def bind_object_methods_to_javascript(self, obj: object, javascript_object: str):
+    def bind_object_methods_to_javascript(self, obj: object, javascript_object="": str):
         methods = [a for a in dir(obj) if not a.startswith('__') and callable(getattr(obj, a))]
         for method in methods:
             meth = getattr(obj, method)
