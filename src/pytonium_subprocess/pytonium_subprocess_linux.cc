@@ -14,19 +14,21 @@
 #endif
 
 
-int main(int argc, char* argv[]) {
-  //CefEnableHighDPISupport();
+int main(int argc, char *argv[])
+{
+    //CefEnableHighDPISupport();
 
-  void* sandbox_info = nullptr;
+    void *sandbox_info = nullptr;
 
 
-  CefMainArgs main_args(argc, argv);
-  std::vector<JavascriptBinding>placeHolder;
-  std::vector<JavascriptPythonBinding>placeHolderPython;
-    std::vector<StateHandlerPythonBinding>placeHolderStatePython;
-  CefRefPtr<CefWrapperApp> app(new CefWrapperApp("", placeHolder, placeHolderPython, placeHolderStatePython));
+    CefMainArgs main_args(argc, argv);
+    std::vector<JavascriptBinding> placeHolder;
+    std::vector<JavascriptPythonBinding> placeHolderPython;
+    std::vector<StateHandlerPythonBinding> placeHolderStatePython;
+    std::vector<ContextMenuBinding> placeHolderContextMenuPython;
+    CefRefPtr<CefWrapperApp> app(new CefWrapperApp("", placeHolder, placeHolderPython, placeHolderStatePython, placeHolderContextMenuPython));
 
-  CefExecuteProcess(main_args, app.get(), sandbox_info);
+    CefExecuteProcess(main_args, app.get(), sandbox_info);
 
-  return 0;
+    return 0;
 }

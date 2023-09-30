@@ -96,3 +96,5 @@ if __name__ == "__main__":
 
     if not os.path.exists("./Pytonium/src/cef-binaries-linux/Release/placeholder"):
         open("./Pytonium/src/cef-binaries-linux/Release/placeholder", 'x').close()
+
+    shutil.copyfile("../../cef-binaries-linux/Release/libcef.so", "./Pytonium/src/cef-binaries-linux/Release/libcef.so")

@@ -25,7 +25,7 @@ public:
 
     ContextMenuBinding( std::string displayName, int commandId, context_menu_handler_function_ptr contextMenuCallbackFunction,
                        context_menu_handler_object_ptr contextMenuCallbackObject, std::string contextMenuNamespace) : ContextMenuHandlerCallbackFunction(
-            contextMenuCallbackFunction), ContextMenuHandlerCallbackObject(contextMenuCallbackObject), DisplayName(std::move(displayName)), CommandId(commandId), Namespace(std::move(contextMenuNamespace))
+            contextMenuCallbackFunction), ContextMenuHandlerCallbackObject(contextMenuCallbackObject), DisplayName(std::move(displayName)), Namespace(std::move(contextMenuNamespace)), CommandId(commandId)
     {}
 
     void OnContextMenuEntryClicked() const
