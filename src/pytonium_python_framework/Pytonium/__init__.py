@@ -34,8 +34,11 @@ if os.path.exists(pytonium_bin_zip_path):
         zip_ref.extractall(f'{pytonium_path}/{bin_folder}')
         zip_ref.close()
     sleep(2.0)
-    os.remove(pytonium_bin_zip_path)
-    os.remove(other_pytonium_bin_zip_path)
+    if os.path.exists(pytonium_bin_zip_path):
+        os.remove(pytonium_bin_zip_path)
+    
+    if os.path.exists(other_pytonium_bin_zip_path):
+        os.remove(other_pytonium_bin_zip_path)
 
 if os.name == 'nt':
     pytonium_process_path = f'{pytonium_path}/{bin_folder}/pytonium_subprocess.exe'

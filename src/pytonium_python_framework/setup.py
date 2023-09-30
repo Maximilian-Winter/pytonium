@@ -79,7 +79,7 @@ def generate_package_list_and_manifest_file_list(os_bin_folder):
     else:
         pytonium_manifest_file_list.append(f'./Pytonium/{os_bin_folder}.zip')
         pytonium_packages.append(f"Pytonium.{os_bin_folder}")
-        pytonium_packages.append("Pytonium.test")
+
         pytonium_packages.append(f"Pytonium.{os_bin_folder}.locales")
         for path in Path(f'./Pytonium/{os_bin_folder}').rglob('*'):
             if os.name == 'nt':

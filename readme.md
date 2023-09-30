@@ -91,7 +91,7 @@ We can also return values from Python to Javascript by using a Promise in Javasc
 
 ````javascript
  let myPromise = Pytonium.test_function_binding.testfunc();
- myPromise.then((resolvedValue) => {
+myPromise.then((resolvedValue) => {
     console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue.Answer);
 });
 ````
@@ -124,21 +124,21 @@ The following is the output of the example:
 test.d.ts
 ```typescript
 declare namespace Pytonium {
-  export namespace test_function_binding {
-    function testfunc(): any;
-  }
-  export namespace appState {
-    function registerForStateUpdates(eventName: string, namespaces: string[]): void;
-    function setState(namespace: string, key: string, value: any): void;
-    function getState(namespace: string, key: string): any;
-    function removeState(namespace: string, key: string): void;
-  }
+    export namespace test_function_binding {
+        function testfunc(): any;
+    }
+    export namespace appState {
+        function registerForStateUpdates(eventName: string, namespaces: string[]): void;
+        function setState(namespace: string, key: string, value: any): void;
+        function getState(namespace: string, key: string): any;
+        function removeState(namespace: string, key: string): void;
+    }
 }
 interface Window {
-  PytoniumReady: boolean;
+    PytoniumReady: boolean;
 }
 interface WindowEventMap {
-  PytoniumReady: Event;
+    PytoniumReady: Event;
 }
 ```
 ## Managing Application State
@@ -186,6 +186,30 @@ The only thing mandatory in a state handler is an update_state method with names
 
 ## Advanced Features
 
+### Custom protocol schemes
+To load local files, you have to define a custom protocol scheme, like http/https.
+To add a custom scheme, you can call 'add_custom_scheme' on the Pytonium object like that:
+```python
+pytonium_test_path = os.path.abspath(__file__)
+pytonium_test_path = os.path.dirname(pytonium_test_path)
+
+# The first argument is the protocol name, the second argument is the location on the disk, where the files are found.
+pytonium.add_custom_scheme("pytonium", f"{pytonium_test_path}\\")
+pytonium.add_custom_scheme("pytonium-data", f"{pytonium_test_path}\\data\\")
+```
+You can then use the custom scheme in HTML, like that to load the files from the disk:
+```html
+<script src="pytonium://babylon.js"></script>
+<script src="pytonium://babylonjs.loaders.js"></script>
+```
+
+You can also map custom file endings to mime types, this is necessary for Pytonium to  load the files correctly!
+The following code adds the mime type for glb 3D models to Pytonium.
+```python
+pytonium.add_mime_type_mapping("glb", "model/gltf-binary")
+```
+You can find the complete example here: (https://github.com/Maximilian-Winter/pytonium_examples/blob/main/pytonium_example_babylon_js/main.py)
+
 ### Context Menus
 
 You can add custom context menus to your Pytonium application. The following code shows different ways to add context menus.
@@ -200,7 +224,7 @@ class MyContextMenu:
         print("Hello Context Menu 2")
         # Here we change the context menu to another namespace, this allows multiple context menus, each under a different namespace.
         pytonium.set_context_menu_namespace("test")
-        
+
 def my_context_function():
     print("Context menu clicked")
 
@@ -223,7 +247,7 @@ pytonium.set_custom_icon_path("path/to/icon.ico")
 ---
 ### Bindings, State and Context Menus
 The bindings of the Python functions and methods, the context menus, and state handlers, has to be performed before Pytonium is initialized and started.
-You can also bind complete Python objects with all its methods to Javascript, which is show in the complete example below, which contains all current features:
+You can also bind complete Python objects with all its methods to Javascript, which is show in the complete example below:
 ---
 
 ### Complete example:
@@ -432,25 +456,28 @@ The following is the generated typescript definition file:
 test.d.ts
 ```typescript
 declare namespace Pytonium {
-  export namespace test_function_binding {
-    function my_js_binding(): any;
-  }
-  export namespace test_class_methods_binding {
-    function test_one(arg1: number): number;
-    function test_two(arg1: string, arg2: number, arg3: number): void;
-  }
-  export namespace appState {
-    function registerForStateUpdates(eventName: string, namespaces: string[]): void;
-    function setState(namespace: string, key: string, value: any): void;
-    function getState(namespace: string, key: string): any;
-    function removeState(namespace: string, key: string): void;
-  }
+    export namespace test_function_binding {
+        function my_js_binding(): any;
+    }
+    export namespace test_class_methods_binding {
+        function test_one(arg1: number): number;
+        function test_two(arg1: string, arg2: number, arg3: number): void;
+    }
+    export namespace appState {
+        function registerForStateUpdates(eventName: string, namespaces: string[]): void;
+        function setState(namespace: string, key: string, value: any): void;
+        function getState(namespace: string, key: string): any;
+        function removeState(namespace: string, key: string): void;
+    }
 }
 interface Window {
-  PytoniumReady: boolean;
+    PytoniumReady: boolean;
 }
 interface WindowEventMap {
-  PytoniumReady: Event;
+    PytoniumReady: Event;
 }
 ```
+
+You can find more full examples here: (https://github.com/Maximilian-Winter/pytonium_examples)
+
 It is tested and developed under Windows 11 and **Python 3.11**, but also has **Linux Support**. And can be used with **Python 3.10**.
