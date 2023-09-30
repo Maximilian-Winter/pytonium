@@ -1,8 +1,0 @@
-version: "3.9"
-services:
-  sd:
-    build: .
-    ports:
-      - "7860:7860"
-    volumes:
-      - ./src/pytonium_python_framework:/pytonium_python_framework
