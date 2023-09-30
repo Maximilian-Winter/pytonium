@@ -11,7 +11,7 @@ class CefWrapperApp : public CefApp {
 public:
   CefWrapperApp(
       std::string start_url, std::vector<JavascriptBinding> javascript_bindings,
-      std::vector<JavascriptPythonBinding> javascript_python_bindings, std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings);
+      std::vector<JavascriptPythonBinding> javascript_python_bindings, std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings, std::vector<ContextMenuBinding> contextMenuBindings);
 
   CefRefPtr<CefBrowser> GetBrowser();
 

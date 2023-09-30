@@ -38,7 +38,7 @@
         // Call function in python with return value.
         let myPromise = Pytonium.test_function_binding.testfunc();
         myPromise.then((resolvedValue) => {
-            console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue.Answer);
+            console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue);
         });
 
         console.log(Pytonium.appState.getState("user", "age"));
@@ -53,10 +53,10 @@
 
     // Check if Python bindings are ready and call them, if not add an event listener for the PytoniumReady event.
     if (window.PytoniumReady) {
-        CallToPythonExample();
+        //CallToPythonExample();
     } else {
         window.addEventListener('PytoniumReady', function() {
-            CallToPythonExample();
+            //CallToPythonExample();
         });
     }
     // Example for defining a function that is callable from Python.

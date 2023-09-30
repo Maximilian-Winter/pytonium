@@ -15,8 +15,8 @@
 </body>
 <script>
 
-   // Define a function to showcase Pytonium features.
-   function CallToPythonExample()
+    // Define a function to showcase Pytonium features.
+    function CallToPythonExample()
     {
         // Register to app state updates from Python and Javascript. You can pass a custom event name and a list of namespaces to subscribe to.
         Pytonium.appState.registerForStateUpdates("ChangeDate", ["app-general"]);
@@ -29,16 +29,16 @@
             const value = detail.value;
 
             // console.log("State Updated:", namespace, key, value);
-           document.getElementById('date').innerHTML = '<p>' + value + '</p>';
+            document.getElementById('date').innerHTML = '<p>' + value + '</p>';
         });
 
         // Set some app state, synced to Python and Javascript.
         Pytonium.appState.setState("user", "age", 64)
-
+        console.log(Pytonium.appState.getState("user", "age"));
         // Call function in python with return value.
         let myPromise = Pytonium.test_function_binding.testfunc();
         myPromise.then((resolvedValue) => {
-            console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue.Answer);
+            console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue);
         });
 
         console.log(Pytonium.appState.getState("user", "age"));
@@ -53,10 +53,10 @@
 
     // Check if Python bindings are ready and call them, if not add an event listener for the PytoniumReady event.
     if (window.PytoniumReady) {
-        CallToPythonExample();
+        //CallToPythonExample();
     } else {
         window.addEventListener('PytoniumReady', function() {
-            CallToPythonExample();
+            //CallToPythonExample();
         });
     }
     // Example for defining a function that is callable from Python.

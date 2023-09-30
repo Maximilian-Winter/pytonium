@@ -23,7 +23,8 @@ int main(int argc, char* argv[]) {
   CefMainArgs main_args(argc, argv);
   std::vector<JavascriptBinding>placeHolder;
   std::vector<JavascriptPythonBinding>placeHolderPython;
-  CefRefPtr<CefWrapperApp> app(new CefWrapperApp("", placeHolder, placeHolderPython));
+    std::vector<StateHandlerPythonBinding>placeHolderStatePython;
+  CefRefPtr<CefWrapperApp> app(new CefWrapperApp("", placeHolder, placeHolderPython, placeHolderStatePython));
 
   CefExecuteProcess(main_args, app.get(), sandbox_info);
 

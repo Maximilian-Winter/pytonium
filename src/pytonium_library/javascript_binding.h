@@ -85,23 +85,6 @@ public:
     js_binding_function_ptr function;
 };
 
-class JavascriptPythonBindingHelper
-{
-public:
-    static std::string GenerateJSDoc(const std::vector<JavascriptPythonBinding>& bindings) {
-        std::string jsdoc;
-
-        for (const auto& binding : bindings) {
-            jsdoc += "/**\n * ";
-            jsdoc += binding.FunctionName;
-            jsdoc += "\n * @object ";
-            jsdoc += binding.JavascriptObject;
-            jsdoc += "\n */\n";
-        }
-
-        return jsdoc;
-    }
-};
 class CefValueWrapperHelper
 {
 public:

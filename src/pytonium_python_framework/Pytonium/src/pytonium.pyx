@@ -12,10 +12,11 @@ from libcpp cimport bool as boolie
 from libcpp.map cimport map  # Import map from the C++ standard library
 from libcpp.vector cimport vector  # Import vector from the C++ standard library
 from libcpp.pair cimport pair
+from libcpp.unordered_map cimport unordered_map
 #from .header.pytonium_library cimport PytoniumLibrary, CefValueWrapper
 
 
-cdef class PytoniumFunctionWrapper:
+cdef class PytoniumFunctionBindingWrapper:
     cdef object python_method
     cdef boolie returns_value
     cdef string return_value_type
@@ -23,9 +24,9 @@ cdef class PytoniumFunctionWrapper:
     cdef int arg_count
     cdef list arg_names
     cdef string javascript_object_name
+    cdef string function_name_in_javascript
 
-
-    def __init__(self, method, pytonium_instance, javascript_object_name, returns_value=False, return_value_type="void"):
+    def __init__(self, method, pytonium_instance, javascript_object_name, function_name_in_javascript, returns_value=False, return_value_type="void"):
         self.python_method = method
         self.returns_value = returns_value
         self.pytonium_instance = pytonium_instance
@@ -35,6 +36,7 @@ cdef class PytoniumFunctionWrapper:
         self.javascript_object_name = javascript_object_name.encode("utf-8")
         self.arg_count = len(params)
         self.arg_names = list(params.keys())
+        self.function_name_in_javascript = function_name_in_javascript.encode("utf-8")
 
     def __call__(self, *args):
         if self.returns_value:
@@ -45,6 +47,8 @@ cdef class PytoniumFunctionWrapper:
     @property
     def get_python_method(self):
         return self.python_method
+
+
 
     @property
     def get_returns_value(self):
@@ -70,6 +74,9 @@ cdef class PytoniumFunctionWrapper:
     def get_return_value_type(self):
         return self.return_value_type.decode("utf-8")
 
+    @property
+    def get_function_name_in_javascript(self):
+        return self.function_name_in_javascript.decode("utf-8")
 
 cdef class PytoniumStateHandlerWrapper:
     cdef object python_method
@@ -83,6 +90,34 @@ cdef class PytoniumStateHandlerWrapper:
     @property
     def get_python_method(self):
         return self.python_method
+
+cdef class PytoniumContextMenuBindingWrapper:
+    cdef object python_method
+
+    def __init__(self, method):
+        self.python_method = method
+
+    def __call__(self):
+        self.python_method()
+
+cdef class PytoniumContextMenuWrapper:
+    cdef dict context_menu
+
+    def __init__(self):
+        self.context_menu = {}
+
+    def add_menu_entry(self, entryNamespace: str, entry: PytoniumContextMenuBindingWrapper):
+        if entryNamespace not in self.context_menu:
+            self.context_menu[entryNamespace] = []
+        self.context_menu[entryNamespace].append(entry)
+
+    def get_menu_size(self, entryNamespace: str):
+        return len(self.context_menu.get(entryNamespace, []))
+
+    def __call__(self, entryNamespace: string, command_id: int):
+        key = entryNamespace.decode("utf-8")
+        if key in self.context_menu and command_id < len(self.context_menu[key]):
+            self.context_menu[key][command_id]()
 
 cdef class PytoniumValueWrapper:
     cdef CefValueWrapper cef_value_wrapper;
@@ -251,20 +286,20 @@ cpdef vector[string] convert_list_of_strings_to_vector(list py_list):
 cdef inline void javascript_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args, int message_id) noexcept:
     arg_list = get_javascript_binding_arg_list(args, size, message_id)
 
-    if (<PytoniumFunctionWrapper> python_function_object).returns_value:
+    if (<PytoniumFunctionBindingWrapper> python_function_object).returns_value:
         convert = PytoniumValueWrapper()
-        return_value = (<PytoniumFunctionWrapper> python_function_object)(*arg_list)
-        (<Pytonium> (<PytoniumFunctionWrapper> python_function_object).pytonium_instance).pytonium_library.ReturnValueToJavascript(message_id, convert.PythonType_to_CefValueWrapper(return_value))
+        return_value = (<PytoniumFunctionBindingWrapper> python_function_object)(*arg_list)
+        (<Pytonium> (<PytoniumFunctionBindingWrapper> python_function_object).pytonium_instance).pytonium_library.ReturnValueToJavascript(message_id, convert.PythonType_to_CefValueWrapper(return_value))
     else:
-        (<PytoniumFunctionWrapper> python_function_object)(*arg_list)
+        (<PytoniumFunctionBindingWrapper> python_function_object)(*arg_list)
 
+cdef inline void context_menu_binding_object_callback(void *python_function_object, string entryNamespace, int command_id) noexcept:
+    (<PytoniumContextMenuWrapper> python_function_object)(entryNamespace, command_id)
 
 cdef inline void state_handler_callback(state_callback_object_ptr python_callback_object, string stateNamespace, string stateKey, CefValueWrapper callback_args) noexcept:
     converter = PytoniumValueWrapper()
     arg = converter.CefValueWrapper_to_PythonType(callback_args)
     (<PytoniumStateHandlerWrapper> python_callback_object)(bytes.decode(stateNamespace, "utf-8"), bytes.decode(stateKey, "utf-8"), arg)
-
-
 
 cdef str _global_pytonium_subprocess_path = ""
 
@@ -283,11 +318,13 @@ cdef class Pytonium:
     cdef PytoniumLibrary pytonium_library;
     cdef list _pytonium_api
     cdef list _pytonium_state_handler
+    cdef PytoniumContextMenuWrapper _pytonium_context_menu
 
     def __init__(self):
         global _global_pytonium_subprocess_path
         self._pytonium_api = []
         self._pytonium_state_handler = []
+        self._pytonium_context_menu = PytoniumContextMenuWrapper()
         self.pytonium_library = PytoniumLibrary()
         self.pytonium_library.SetCustomSubprocessPath(_global_pytonium_subprocess_path.encode('utf-8'))
 
@@ -312,14 +349,107 @@ cdef class Pytonium:
     def execute_javascript(self, code: str):
         self.pytonium_library.ExecuteJavascript(code.encode("utf-8"))
 
-    def bind_function_to_javascript(self, name: str, func, javascript_object="": str) :
-        cdef should_return = hasattr(func, 'returns_value_to_javascript') and func.returns_value_to_javascript
+    def bind_function_to_javascript(self, function_to_bind: callable, name="", javascript_object="") :
+        cdef should_return = hasattr(function_to_bind, 'returns_value_to_javascript') and function_to_bind.returns_value_to_javascript
         return_value_type = "void"
         if should_return:
-            return_value_type = getattr(func, 'return_type')
-        py_meth_wrapper = PytoniumFunctionWrapper(func, self, javascript_object, should_return, return_value_type)
+            return_value_type = getattr(function_to_bind, 'return_type')
+
+        if name == "":
+            name = function_to_bind.__name__
+        py_meth_wrapper = PytoniumFunctionBindingWrapper(function_to_bind, self, javascript_object, name, should_return, return_value_type)
         self._pytonium_api.append(py_meth_wrapper)
         self.pytonium_library.AddJavascriptPythonBinding(name.encode("utf-8"), javascript_binding_object_callback, <void *>self._pytonium_api[len(self._pytonium_api)-1], javascript_object.encode("utf-8"), should_return)
+
+    def bind_functions_to_javascript(self, functions_to_bind: list[callable], names=[], javascript_object=""):
+        name_index = 0
+        for meth in functions_to_bind:
+            should_return = hasattr(meth, 'returns_value_to_javascript') and meth.returns_value_to_javascript
+            return_value_type = "void"
+            if should_return:
+                return_value_type = getattr(meth, 'return_type')
+            if len(names) > name_index:
+                py_meth_wrapper = PytoniumFunctionBindingWrapper(meth, self, javascript_object, names[name_index], should_return, return_value_type)
+                self._pytonium_api.append(py_meth_wrapper)
+                size_methods = len(self._pytonium_api)
+                self.pytonium_library.AddJavascriptPythonBinding(names[name_index].encode("utf-8"), javascript_binding_object_callback, <void *> self._pytonium_api[size_methods - 1], javascript_object.encode("utf-8"), should_return)
+            else:
+                py_meth_wrapper = PytoniumFunctionBindingWrapper(meth, self, javascript_object, meth.__name__, should_return, return_value_type)
+                self._pytonium_api.append(py_meth_wrapper)
+                size_methods = len(self._pytonium_api)
+                self.pytonium_library.AddJavascriptPythonBinding(meth.__name__.encode("utf-8"), javascript_binding_object_callback, <void *> self._pytonium_api[size_methods - 1], javascript_object.encode("utf-8"), should_return)
+            name_index += 1
+
+
+    def bind_object_methods_to_javascript(self, obj: object, names=[], javascript_object=""):
+        methods = [a for a in dir(obj) if not a.startswith('__') and callable(getattr(obj, a))]
+        name_index = 0
+        for method in methods:
+            meth = getattr(obj, method)
+            should_return = hasattr(meth, 'returns_value_to_javascript') and meth.returns_value_to_javascript
+            return_value_type = "void"
+            if should_return:
+                return_value_type = getattr(meth, 'return_type')
+            if len(names) > name_index:
+                py_meth_wrapper = PytoniumFunctionBindingWrapper(meth, self, javascript_object, names[name_index], should_return, return_value_type)
+                self._pytonium_api.append(py_meth_wrapper)
+                size_methods = len(self._pytonium_api)
+                self.pytonium_library.AddJavascriptPythonBinding(names[name_index].encode("utf-8"), javascript_binding_object_callback, <void *> self._pytonium_api[size_methods - 1], javascript_object.encode("utf-8"), should_return)
+            else:
+                py_meth_wrapper = PytoniumFunctionBindingWrapper(meth, self, javascript_object, method, should_return, return_value_type)
+                self._pytonium_api.append(py_meth_wrapper)
+                size_methods = len(self._pytonium_api)
+                self.pytonium_library.AddJavascriptPythonBinding(method.encode("utf-8"), javascript_binding_object_callback, <void *> self._pytonium_api[size_methods - 1], javascript_object.encode("utf-8"), should_return)
+            name_index += 1
+
+    def add_context_menu_entry(self, context_menu_entry_function, display_name="", context_menu_namespace=""):
+        if display_name == "":
+            display_name = context_menu_entry_function.__name__
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        context_menu_entry = PytoniumContextMenuBindingWrapper(context_menu_entry_function)
+        entry_index = self._pytonium_context_menu.get_menu_size(context_menu_namespace)
+        self._pytonium_context_menu.add_menu_entry(context_menu_namespace, context_menu_entry)
+        self.pytonium_library.AddContextMenuEntry(context_menu_binding_object_callback, <void *>self._pytonium_context_menu, context_menu_namespace.encode("utf-8"), display_name.encode("utf-8"), entry_index)
+
+    def add_context_menu_entries(self, context_menu_entry_functions: list[callable], display_names=[], context_menu_namespace=""):
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        name_index = 0
+        for meth in context_menu_entry_functions:
+            if len(display_names) > name_index:
+                context_menu_entry = PytoniumContextMenuBindingWrapper(meth)
+                entry_index = self._pytonium_context_menu.get_menu_size(context_menu_namespace)
+                self._pytonium_context_menu.add_menu_entry(context_menu_namespace, context_menu_entry)
+                self.pytonium_library.AddContextMenuEntry(context_menu_binding_object_callback, <void *>self._pytonium_context_menu, context_menu_namespace.encode("utf-8"), display_names[name_index].encode("utf-8"), entry_index)
+            else:
+                name = meth.__name__
+                context_menu_entry = PytoniumContextMenuBindingWrapper(meth)
+                entry_index = self._pytonium_context_menu.get_menu_size(context_menu_namespace)
+                self._pytonium_context_menu.add_menu_entry(context_menu_namespace, context_menu_entry)
+                self.pytonium_library.AddContextMenuEntry(context_menu_binding_object_callback, <void *>self._pytonium_context_menu, context_menu_namespace.encode("utf-8"), name.encode("utf-8"), entry_index)
+            name_index += 1
+
+
+    def add_context_menu_entries_from_object(self, context_menu_entries_object: object, display_names=[], context_menu_namespace=""):
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        methods = [a for a in dir(context_menu_entries_object) if not a.startswith('__') and callable(getattr(context_menu_entries_object, a))]
+        name_index = 0
+        for method in methods:
+            meth = getattr(context_menu_entries_object, method)
+            if len(display_names) > name_index:
+                context_menu_entry = PytoniumContextMenuBindingWrapper(meth)
+                entry_index = self._pytonium_context_menu.get_menu_size(context_menu_namespace)
+                self._pytonium_context_menu.add_menu_entry(context_menu_namespace, context_menu_entry)
+                self.pytonium_library.AddContextMenuEntry(context_menu_binding_object_callback, <void *>self._pytonium_context_menu, context_menu_namespace.encode("utf-8"), display_names[name_index].encode("utf-8"), entry_index)
+            else:
+                name = meth.__name__
+                context_menu_entry = PytoniumContextMenuBindingWrapper(meth)
+                entry_index = self._pytonium_context_menu.get_menu_size(context_menu_namespace)
+                self._pytonium_context_menu.add_menu_entry(context_menu_namespace, context_menu_entry)
+                self.pytonium_library.AddContextMenuEntry(context_menu_binding_object_callback, <void *>self._pytonium_context_menu, context_menu_namespace.encode("utf-8"), name.encode("utf-8"), entry_index)
+            name_index += 1
 
     def add_state_handler(self, state_handler: object, namespaces: list[str]) :
         cdef has_update = hasattr(state_handler, 'update_state')
@@ -330,25 +460,17 @@ cdef class Pytonium:
             self._pytonium_state_handler.append(py_meth_wrapper)
             self.pytonium_library.AddStateHandlerPythonBinding(state_handler_callback, <void *>self._pytonium_state_handler[len(self._pytonium_state_handler)-1], namespaces_converted)
 
+    def set_context_menu_namespace(self, context_menu_namespace: str):
+        self.pytonium_library.SetCurrentContextMenuNamespace(context_menu_namespace.encode("utf-8"))
+
+    def set_show_debug_context_menu(self, show: bool):
+        self.pytonium_library.SetShowDebugContextMenu(show)
+
     def shutdown(self):
         self.pytonium_library.ShutdownPytonium()
 
     def is_running(self):
         return self.pytonium_library.IsRunning()
-
-    def bind_object_methods_to_javascript(self, obj: object, javascript_object="": str):
-        methods = [a for a in dir(obj) if not a.startswith('__') and callable(getattr(obj, a))]
-        for method in methods:
-            meth = getattr(obj, method)
-            should_return = hasattr(meth, 'returns_value_to_javascript') and meth.returns_value_to_javascript
-            return_value_type = "void"
-            if should_return:
-                return_value_type = getattr(meth, 'return_type')
-            py_meth_wrapper = PytoniumFunctionWrapper(meth, self, javascript_object, should_return, return_value_type)
-            self._pytonium_api.append(py_meth_wrapper)
-            size_methods = len(self._pytonium_api)
-            self.pytonium_library.AddJavascriptPythonBinding(method.encode("utf-8"), javascript_binding_object_callback, <void *> self._pytonium_api[size_methods - 1], javascript_object.encode("utf-8"), should_return)
-
 
     def update_message_loop(self):
         return self.pytonium_library.UpdateMessageLoop()
@@ -374,7 +496,7 @@ cdef class Pytonium:
        object_map = {}  # To group functions under the same javascript_object_name
 
        for py_meth_wrapper in self._pytonium_api:
-           func_name = py_meth_wrapper.get_python_method.__name__
+           func_name = py_meth_wrapper.get_function_name_in_javascript
            sig = inspect.signature(py_meth_wrapper.get_python_method)
            arg_names = ', '.join([f"{name}: {python_type_to_ts_type(param.annotation)}"
                                    for name, param in sig.parameters.items()])

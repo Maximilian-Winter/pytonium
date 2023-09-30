@@ -44,6 +44,7 @@ public:
 
     void AddStateHandlerPythonBinding(state_handler_function_ptr stateHandlerFunctionPtr, state_callback_object_ptr stateCallbackObjectPtr, const std::vector<std::string>& namespacesToSubscribeTo);
 
+
     void SetState(const std::string& stateNamespace, const std::string& key, CefValueWrapper value);
 
     void RemoveState(const std::string& stateNamespace, const std::string& key);
@@ -60,6 +61,11 @@ public:
 
     void LoadUrl(std::string url);
 
+    void AddContextMenuEntry(context_menu_handler_function_ptr context_menuHandlerFunctionPtr, context_menu_handler_object_ptr context_menuCallbackObjectPtr, const std::string& contextMenuNameSpace, const std::string& contextMenuDisplayName, int contextMenuId);
+
+    void SetCurrentContextMenuNamespace(const std::string& contextMenuNamespace);
+
+    void SetShowDebugContextMenu(bool show);
 private:
 
     CefRefPtr<CefWrapperApp> m_App;
@@ -82,6 +88,7 @@ private:
     std::vector<JavascriptBinding> m_Javascript_Bindings;
     std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;
     std::vector<StateHandlerPythonBinding> m_StateHandlerPythonBindings;
+    std::vector<ContextMenuBinding> m_ContextMenuBindings;
 };
 
 #endif//LIBRARY_LIBRARY_H

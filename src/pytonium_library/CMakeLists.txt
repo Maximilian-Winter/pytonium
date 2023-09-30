@@ -29,7 +29,8 @@ set(PYTONIUM_LIBRARY_SRCS
         application_state_python.h
         cef_value_wrapper.h
         application_state_javascript_handler.h
-        Logging.h)
+        Logging.h
+        application_context_menu_binding.h)
 
 set(PYTONIUM_LIBRARY_SRCS_WINDOWS
         cef_wrapper_client_handler_win.cc

@@ -16,7 +16,7 @@ So just type the following in the console to install it.
 ```
 pip install Pytonium
 ```
-
+## Getting Started
 To start Pytonium and load a website or local site, you have to first import Pytonium
 
 ```python
@@ -54,6 +54,10 @@ while pytonium.is_running():
 
 This are the basics to load an HTML file, with CSS and Javascript.
 
+## JavaScript and Python Interoperability
+
+### Binding Python Functions
+
 We have the option to register python functions and methods in Javascript. And make them callable from there.
 
 ```python
@@ -68,7 +72,7 @@ def my_js_binding():
     return {"Answer": 42}
 
 # Bind the test function to javascript, we have to provide a name under which the function will be found and the actual function, we can pass an optional object name in Javascript.
-pytonium.bind_function_to_javascript("testfunc", my_js_binding, "test_function_binding")
+pytonium.bind_function_to_javascript(my_js_binding, "testfunc", "test_function_binding")
 
 
 pytonium.initialize("C:\TestSite\index.html", 1920, 1080)
@@ -83,7 +87,7 @@ To bind a Python function to Javascript, we have to provide a name under which t
 Pytonium.test_function_binding.testfunc();
 ````
 
-We can also return values from Python to Javascript by using a Promise in Javascript, to get the return value of testfunc, we have to use Promise returned by Pytonium like that:
+We can also return values from Python to Javascript by using a Promise in Javascript, to get the return value of testfunc, we have to use a Promise returned by Pytonium like that:
 
 ````javascript
  let myPromise = Pytonium.test_function_binding.testfunc();
@@ -91,6 +95,55 @@ We can also return values from Python to Javascript by using a Promise in Javasc
     console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue.Answer);
 });
 ````
+It is possible to generate a typescript file of the Javascript bindings and other Pytonium functionality for IDE recognition and auto-completion. It is shown in following code example:
+
+```python
+import time
+from Pytonium import Pytonium, returns_value_to_javascript
+
+pytonium = Pytonium()
+
+# This function is the endpoint of a javascript binding, and it's get called on the test website and returns an object to Javascript.
+@returns_value_to_javascript("any")
+def my_js_binding():
+    return {"Answer": 42}
+
+# Bind the test function to javascript, we have to provide a name under which the function will be found and the actual function, we can pass an optional object name in Javascript.
+pytonium.bind_function_to_javascript(my_js_binding, "testfunc", "test_function_binding")
+
+pytonium.generate_typescript_definitions("test.d.ts")
+
+pytonium.initialize("C:\TestSite\index.html", 1920, 1080)
+
+while pytonium.is_running():
+    time.sleep(0.01)
+    pytonium.update_message_loop()
+```
+The following is the output of the example:
+
+test.d.ts
+```typescript
+declare namespace Pytonium {
+  export namespace test_function_binding {
+    function testfunc(): any;
+  }
+  export namespace appState {
+    function registerForStateUpdates(eventName: string, namespaces: string[]): void;
+    function setState(namespace: string, key: string, value: any): void;
+    function getState(namespace: string, key: string): any;
+    function removeState(namespace: string, key: string): void;
+  }
+}
+interface Window {
+  PytoniumReady: boolean;
+}
+interface WindowEventMap {
+  PytoniumReady: Event;
+}
+```
+## Managing Application State
+
+### JavaScript State Management
 We also have the option to handle and manage the application state with the help of Pytonium. The application state is divided into namespaces, to add or set a namespace and value, we have to simply call 'setState' on the 'Pytonium.appState' object. The following code shows different ways to create and access a state or all states in a namespace:
 
 ````javascript
@@ -113,6 +166,7 @@ Pytonium.appState.setState("user", "age", 64)
 console.log(Pytonium.appState.getState("user", "age"));
 ````
 
+### Python State Management
 To get the updates to the state in Python, we have to implement a state handler, it basically looks like that in the simplest form:
 ```python
 # An example class to handle app state updates from Javascript.
@@ -130,9 +184,49 @@ pytonium.add_state_handler(myStateHandler, ["user"])
 The only thing mandatory in a state handler is an update_state method with namespace, key and value as arguments. This method get called whenever a namespace changes a value to which the state handler is subscribed. In the example above is the state handler to the 'user' namespace subscribed.
 
 
-The bindings of the Python functions and methods, and state handlers, has to be performed before Pytonium is initialized and started.
-You can also bind complete Python objects with all its methods to Javascript, which is show in the complete example below, which contains all current features:
+## Advanced Features
 
+### Context Menus
+
+You can add custom context menus to your Pytonium application. The following code shows different ways to add context menus.
+
+```python
+# This class get later bind to the context menu of the Pytonium app.
+class MyContextMenu:
+    def test_context_menu_one(self):
+        print("Hello Context Menu 1")
+
+    def test_context_menu_two(self):
+        print("Hello Context Menu 2")
+        # Here we change the context menu to another namespace, this allows multiple context menus, each under a different namespace.
+        pytonium.set_context_menu_namespace("test")
+        
+def my_context_function():
+    print("Context menu clicked")
+
+# The first argument is a Python function, the second and third argument are optional, the second one is display name for the context menu, the third the namespace or menu identifier.
+pytonium.add_context_menu_entry(my_context_function, "My Menu")
+
+myContextMenu = MyContextMenu()
+
+pytonium.add_context_menu_entries_from_object(myContextMenu)
+```
+
+### Custom Window Icon
+
+Set a custom icon for your application window.
+
+```python
+pytonium.set_custom_icon_path("path/to/icon.ico")
+```
+
+---
+### Bindings, State and Context Menus
+The bindings of the Python functions and methods, the context menus, and state handlers, has to be performed before Pytonium is initialized and started.
+You can also bind complete Python objects with all its methods to Javascript, which is show in the complete example below, which contains all current features:
+---
+
+### Complete example:
 The following is the Python code, the corresponding HTML and Javascript code is below.
 ```python
 import os
@@ -164,6 +258,16 @@ class MyApi:
         self.data.append(arg3)
         print(self.data)
 
+# This class get later bind to the context menu of the Pytonium app.
+class MyContextMenu:
+    def test_context_menu_one(self):
+        print("Hello Context Menu 1")
+
+    def test_context_menu_two(self):
+        print("Hello Context Menu 2")
+        # Here we change the context menu to another namespace, this allows multiple context menus, each under a different namespace.
+        pytonium.set_context_menu_namespace("test")
+
 
 # An example class to handle app state updates from Javascript.
 # The update_state method is mandatory and gets called automatically from Pytonium.
@@ -178,6 +282,7 @@ pytonium = Pytonium()
 
 # Create a MyApi instance.
 myApi = MyApi()
+myContextMenu = MyContextMenu()
 
 # Create a MyStateHandler instance.
 myStateHandler = MyStateHandler()
@@ -185,20 +290,34 @@ myStateHandler = MyStateHandler()
 
 # This function is the endpoint of a javascript binding, and it's get called on the test website and returns a Javascript object.
 @returns_value_to_javascript("any")
-def my_js_binding():
+def testfunc():
     return {"Answer": 42}
+
+
+# This function gets later bind to the context menu.
+def test_context_menu_three():
+    print("Hello Context Menu 3")
+
+
+# This function also gets later bind to the context menu.
+def test_context_menu_four():
+    print("Hello Context Menu 4")
 
 
 # Add a state handler for the 'user' namespace and receive updates. 'user' is just an example used on the test website.
 pytonium.add_state_handler(myStateHandler, ["user"])
 
 # Bind the MyApi instance and the test function to javascript.
-pytonium.bind_function_to_javascript("testfunc", my_js_binding, "test_function_binding")
-pytonium.bind_object_methods_to_javascript(myApi, "test_class_methods_binding")
+pytonium.bind_function_to_javascript(testfunc, javascript_object="test_function_binding")
+pytonium.bind_object_methods_to_javascript(myApi, javascript_object="test_class_methods_binding")
+
+# Bind the different context menus to the Pytonium app.
+pytonium.add_context_menu_entries_from_object(myContextMenu)
+pytonium.add_context_menu_entry(test_context_menu_three, "Test Context Menu 3!", "test")
+pytonium.add_context_menu_entry(test_context_menu_four, "Test Context Menu 4!", "test")
 
 # Generate a typescript d.ts file, of the Python bindings, for the IDE to support auto-completetion etc.
 pytonium.generate_typescript_definitions("test.d.ts")
-
 
 # To load a html file, on start up from disk, we need the absolute path to it, so we get it here.
 pytonium_test_path = os.path.abspath(__file__)
@@ -209,7 +328,6 @@ pytonium.set_custom_icon_path(f"radioactive.ico")
 
 # Start Pytonium and pass it the start-up URL or file and the width and height of the Window.
 pytonium.initialize(f"file://{pytonium_test_path}\\index.html", 1920, 1080)
-
 
 # Start a loop to update the Pytonium message loop and execute some javascript.
 while pytonium.is_running():
@@ -235,6 +353,7 @@ while pytonium.is_running():
 
     # Execute the javascript.
     # pytonium.execute_javascript(code)
+
 ```
 Here is the corresponding HTML and Javascript code.
 ```html
@@ -308,5 +427,30 @@ Here is the corresponding HTML and Javascript code.
 </script>
 </html>
 ```
+The following is the generated typescript definition file:
 
+test.d.ts
+```typescript
+declare namespace Pytonium {
+  export namespace test_function_binding {
+    function my_js_binding(): any;
+  }
+  export namespace test_class_methods_binding {
+    function test_one(arg1: number): number;
+    function test_two(arg1: string, arg2: number, arg3: number): void;
+  }
+  export namespace appState {
+    function registerForStateUpdates(eventName: string, namespaces: string[]): void;
+    function setState(namespace: string, key: string, value: any): void;
+    function getState(namespace: string, key: string): any;
+    function removeState(namespace: string, key: string): void;
+  }
+}
+interface Window {
+  PytoniumReady: boolean;
+}
+interface WindowEventMap {
+  PytoniumReady: Event;
+}
+```
 It is tested and developed under Windows 11 and **Python 3.11**, but also has **Linux Support**. And can be used with **Python 3.10**.

@@ -62,7 +62,7 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 
 
 
-  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings, m_StateHandlerPythonBindings));
+  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings, m_StateHandlerPythonBindings, m_ContextMenuBindings));
   CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
   CefExecuteProcess(main_args, m_App.get(), sandbox_info);
 
@@ -208,23 +208,27 @@ void PytoniumLibrary::AddStateHandlerPythonBinding(state_handler_function_ptr st
 
 void PytoniumLibrary::SetState(const std::string& stateNamespace, const std::string& key, CefValueWrapper value)
 {
-    CefRefPtr<CefProcessMessage> return_to_javascript_message =
-            CefProcessMessage::Create("set-app-state");
+    if(g_IsRunning)
+    {
+        CefRefPtr<CefProcessMessage> return_to_javascript_message =
+                CefProcessMessage::Create("set-app-state");
 
-    CefRefPtr<CefListValue> return_value_message_args =
-            return_to_javascript_message->GetArgumentList();
+        CefRefPtr<CefListValue> return_value_message_args =
+                return_to_javascript_message->GetArgumentList();
 
-    return_value_message_args->SetString(0, stateNamespace);
+        return_value_message_args->SetString(0, stateNamespace);
 
-    return_value_message_args->SetString(1, key);
+        return_value_message_args->SetString(1, key);
 
-    return_value_message_args->SetValue(2, CefValueWrapperHelper::ConvertWrapperToCefValue(value));
+        return_value_message_args->SetValue(2, CefValueWrapperHelper::ConvertWrapperToCefValue(value));
 
 
-    //CefRefPtr<CefValue> val = return_to_javascript_message->GetArgumentList()->GetValue(1);
+        //CefRefPtr<CefValue> val = return_to_javascript_message->GetArgumentList()->GetValue(1);
 
-    //CefRefPtr<CefV8Value> val2 = CefValueWrapperHelper::ConvertCefValueToV8Value(val);
-    m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
+        //CefRefPtr<CefV8Value> val2 = CefValueWrapperHelper::ConvertCefValueToV8Value(val);
+        m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
+    }
+
 }
 
 void PytoniumLibrary::RemoveState(const std::string& stateNamespace, const std::string& key)
@@ -240,4 +244,24 @@ void PytoniumLibrary::RemoveState(const std::string& stateNamespace, const std::
     return_value_message_args->SetString(1, key);
 
     m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
+}
+
+void PytoniumLibrary::AddContextMenuEntry(context_menu_handler_function_ptr context_menuHandlerFunctionPtr,
+                                          context_menu_handler_object_ptr context_menuCallbackObjectPtr,
+                                          const std::string& contextMenuNameSpace, const std::string& contextMenuDisplayName,
+                                          int contextMenuId)
+{
+    m_ContextMenuBindings.emplace_back(contextMenuDisplayName, contextMenuId, context_menuHandlerFunctionPtr, context_menuCallbackObjectPtr, contextMenuNameSpace);
+}
+
+void PytoniumLibrary::SetCurrentContextMenuNamespace(const std::string& contextMenuNamespace)
+{
+    CefWrapperClientHandler* client = (CefWrapperClientHandler*)CefWrapperBrowserProcessHandler::GetInstance()->GetDefaultClient().get();
+    client->SetCurrentContextMenuName(contextMenuNamespace);
+}
+
+void PytoniumLibrary::SetShowDebugContextMenu(bool show)
+{
+    CefWrapperClientHandler* client = (CefWrapperClientHandler*)CefWrapperBrowserProcessHandler::GetInstance()->GetDefaultClient().get();
+    client->SetShowDebugContextMenu(show);
 }
