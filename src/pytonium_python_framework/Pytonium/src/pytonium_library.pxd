@@ -94,3 +94,5 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         void LoadUrl(string url);
         void SetCurrentContextMenuNamespace(string contextMenuNamespace);
         void SetShowDebugContextMenu(bool show);
+        void AddCustomScheme(string schemeIdentifier, string contentRootFolder);
+        void AddMimeTypeMapping(string fileExtension, string mimeType);

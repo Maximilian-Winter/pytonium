@@ -43,10 +43,9 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 #if OS_LINUX
     std::string name = "pytonium_library";
     std::string arg1 = "--no-sandbox";
-    std::string arg2 = "--disable-gpu";
-    std::string arg3 = "--disable-software-rasterizer";
-    int argc = 4;
-    char* argv[4] { std::data(name), std::data(arg1), std::data(arg2), std::data(arg3)};
+
+    int argc = 2;
+    char* argv[2] { std::data(name), std::data(arg1)};
     CefMainArgs main_args(argc, argv);
     CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
     command_line->InitFromArgv(argc, argv);
@@ -62,7 +61,7 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 
 
 
-  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings, m_StateHandlerPythonBindings, m_ContextMenuBindings));
+  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings, m_StateHandlerPythonBindings, m_ContextMenuBindings, m_CustomSchemes, m_MimeTypeMap));
   CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
   CefExecuteProcess(main_args, m_App.get(), sandbox_info);
 
@@ -264,4 +263,14 @@ void PytoniumLibrary::SetShowDebugContextMenu(bool show)
 {
     CefWrapperClientHandler* client = (CefWrapperClientHandler*)CefWrapperBrowserProcessHandler::GetInstance()->GetDefaultClient().get();
     client->SetShowDebugContextMenu(show);
+}
+
+void PytoniumLibrary::AddCustomScheme(std::string schemeIdentifier, std::string contentRootFolder)
+{
+    m_CustomSchemes.emplace_back(schemeIdentifier, contentRootFolder);
+}
+
+void PytoniumLibrary::AddMimeTypeMapping(const std::string& fileExtension, std::string mimeType)
+{
+    m_MimeTypeMap[fileExtension] = std::move(mimeType);
 }

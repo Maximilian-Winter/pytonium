@@ -34,13 +34,15 @@ void CefWrapperBrowserProcessHandler::SetJavascriptBindings(
         std::vector<JavascriptBinding> javascript_bindings,
         std::vector<JavascriptPythonBinding> javascript_python_bindings,
         std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings,
-        std::vector<ContextMenuBinding> contextMenuBindings)
+        std::vector<ContextMenuBinding> contextMenuBindings,
+        std::vector<CefCustomScheme> customSchemes, std::unordered_map<std::string, std::string> mimeTypeMap)
 {
     GetInstance()->m_JavascriptBindings = std::move(javascript_bindings);
     GetInstance()->m_JavascriptPythonBindings = std::move(javascript_python_bindings);
     GetInstance()->m_StateHandlerPythonBindings = std::move(stateHandlerPythonBindings);
     GetInstance()->m_ContextMenuBindings = std::move(contextMenuBindings);
-
+    GetInstance()->m_CustomSchemes = std::move(customSchemes);
+    GetInstance()->m_MimeTypeMap = std::move(mimeTypeMap);
     if (GetInstance()->GetDefaultClient() != nullptr)
     {
         CefWrapperClientHandler* client = static_cast<CefWrapperClientHandler*>(GetInstance()->GetDefaultClient().get());
@@ -64,7 +66,7 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
 
     bool use_views = command_line->HasSwitch("use-views");
 
-    // RegisterSchemeHandlerFactory();
+    RegisterSchemeHandlerFactory(m_CustomSchemes, m_MimeTypeMap);
 
     CefRefPtr<CefWrapperClientHandler> handler(new CefWrapperClientHandler(
             use_views, m_JavascriptBindings, m_JavascriptPythonBindings, m_StateHandlerPythonBindings, m_ContextMenuBindings));

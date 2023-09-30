@@ -26,7 +26,9 @@ int main(int argc, char *argv[])
     std::vector<JavascriptPythonBinding> placeHolderPython;
     std::vector<StateHandlerPythonBinding> placeHolderStatePython;
     std::vector<ContextMenuBinding> placeHolderContextMenuPython;
-    CefRefPtr<CefWrapperApp> app(new CefWrapperApp("", placeHolder, placeHolderPython, placeHolderStatePython, placeHolderContextMenuPython));
+    std::vector<CefCustomScheme> placeHolderScheme;
+    std::unordered_map<std::string, std::string> placeHolderMap;
+    CefRefPtr<CefWrapperApp> app(new CefWrapperApp("", placeHolder, placeHolderPython, placeHolderStatePython, placeHolderContextMenuPython, placeHolderScheme, placeHolderMap));
 
     CefExecuteProcess(main_args, app.get(), sandbox_info);
 

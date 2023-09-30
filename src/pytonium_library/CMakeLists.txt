@@ -30,7 +30,8 @@ set(PYTONIUM_LIBRARY_SRCS
         cef_value_wrapper.h
         application_state_javascript_handler.h
         Logging.h
-        application_context_menu_binding.h)
+        application_context_menu_binding.h
+        cef_custom_scheme.h)
 
 set(PYTONIUM_LIBRARY_SRCS_WINDOWS
         cef_wrapper_client_handler_win.cc

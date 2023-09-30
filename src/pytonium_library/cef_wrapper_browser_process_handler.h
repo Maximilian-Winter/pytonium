@@ -7,6 +7,7 @@
 #include "cef_value_wrapper.h"
 #include "application_state_python.h"
 #include "application_context_menu_binding.h"
+#include "cef_custom_scheme.h"
 
 class CefWrapperBrowserProcessHandler : public CefBrowserProcessHandler
 {
@@ -31,7 +32,8 @@ public:
     static void SetJavascriptBindings(std::vector<JavascriptBinding> javascript_bindings,
                                       std::vector<JavascriptPythonBinding> javascript_python_bindings,
                                       std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings,
-                                      std::vector<ContextMenuBinding> contextMenuBindings);
+                                      std::vector<ContextMenuBinding> contextMenuBindings,
+                                      std::vector<CefCustomScheme> customSchemes, std::unordered_map<std::string, std::string> mimeTypeMap);
 
     static void SetStartUrl(std::string url);
 
@@ -42,7 +44,8 @@ public:
     std::vector<JavascriptPythonBinding> m_JavascriptPythonBindings;
     std::vector<StateHandlerPythonBinding> m_StateHandlerPythonBindings;
     std::vector<ContextMenuBinding> m_ContextMenuBindings;
-
+    std::vector<CefCustomScheme> m_CustomSchemes;
+    std::unordered_map<std::string, std::string> m_MimeTypeMap;
     CefRefPtr<CefClient> GetDefaultClient() override;
 
     void OnContextInitialized() override;

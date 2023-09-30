@@ -2,68 +2,62 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PytoniumTest</title>
+    <title>Babylon.js 3D Scene</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
 </head>
 <body>
-<div id ="app">
-    <p>Hello World!</p>
-    <div id ="date">
-
-    </div>
-</div>
-
+<div id="gameContainer" style="width: 100%; height: 100vh;"></div>
 </body>
 <script>
+    function Init() {
 
-    // Define a function to showcase Pytonium features.
-    function CallToPythonExample()
-    {
-        // Register to app state updates from Python and Javascript. You can pass a custom event name and a list of namespaces to subscribe to.
-        Pytonium.appState.registerForStateUpdates("ChangeDate", ["app-general"]);
+        // Initialize Babylon.js Scene
+        var box;  // Declare box variable in the global scope
 
-        // Add a listener for the custom event and retrieve information.
-        document.addEventListener('ChangeDate', function(event) {
-            const detail = event.detail;
-            const namespace = detail.namespace;
-            const key = detail.key;
-            const value = detail.value;
+        window.addEventListener('DOMContentLoaded', function () {
+            var canvas = document.createElement("canvas");
+            var container = document.getElementById("gameContainer");
+            container.appendChild(canvas);
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+            var engine = new BABYLON.Engine(canvas, true);
 
-            // console.log("State Updated:", namespace, key, value);
-            document.getElementById('date').innerHTML = '<p>' + value + '</p>';
+            var createScene = function () {
+                var scene = new BABYLON.Scene(engine);
+
+                var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 4, 3, new BABYLON.Vector3(0, 1, 0), scene);
+                camera.attachControl(canvas, true);
+
+                var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
+
+                box = BABYLON.MeshBuilder.CreateBox("box", {}, scene);  // Initialize box within the function scope
+                BABYLON.SceneLoader.ImportMesh("", "pytonium-data://", "HipHopDancing.glb", scene, function (meshes, particleSystems, skeletons) {
+                    var character = meshes[0];
+                    character.position = new BABYLON.Vector3(0, 0, 0); // Initial position
+
+                    var idleAnim = scene.beginAnimation(skeletons[0], 0, 100, true, 0.8);  // Replace with your actual frame numbers and speed
+                });
+                return scene;
+            };
+
+            var scene = createScene();
+
+            engine.runRenderLoop(function () {
+                box.rotation.x += 0.005;
+                box.rotation.y += 0.005;
+                scene.render();
+            });
         });
-
-        // Set some app state, synced to Python and Javascript.
-        Pytonium.appState.setState("user", "age", 64)
-        console.log(Pytonium.appState.getState("user", "age"));
-        // Call function in python with return value.
-        let myPromise = Pytonium.test_function_binding.testfunc();
-        myPromise.then((resolvedValue) => {
-            console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue);
-        });
-
-        console.log(Pytonium.appState.getState("user", "age"));
-
-
-        let myPromise2 = Pytonium.test_class_methods_binding.test_one(64);
-        myPromise2.then((resolvedValue) => {
-            console.log("The answer to the Ultimate Question of Life, the Universe and Everything:", resolvedValue);
-        });
-        Pytonium.test_class_methods_binding.test_two("Dlrow Olleh!", 20, 40)
     }
 
     // Check if Python bindings are ready and call them, if not add an event listener for the PytoniumReady event.
     if (window.PytoniumReady) {
-        //CallToPythonExample();
+        Init();
     } else {
-        window.addEventListener('PytoniumReady', function() {
-            //CallToPythonExample();
+        window.addEventListener('PytoniumReady', function () {
+            Init();
         });
     }
-    // Example for defining a function that is callable from Python.
-    var CallFromPythonExample = {
-        setTicker: function(date) {
-            document.getElementById('app').innerHTML = '<p>Hello World!</p>' + '<p>' + date + '</p>';
-        },
-    };
 </script>
 </html>

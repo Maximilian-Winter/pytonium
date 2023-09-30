@@ -23,6 +23,8 @@ class JavascriptStateUpdateSubscription
 public:
     std::string EventName;
     std::vector<std::string> NameSpaces;
+    bool UpdatesFromJavascript;
+    bool UpdatesFromPython;
 };
 class AppStateV8Handler : public CefV8Handler {
 private:
@@ -70,7 +72,7 @@ public:
                 message_args_return->SetString(1, key);
                 message_args_return->SetValue(2, cefState);
                 m_Browser->GetMainFrame()->SendProcessMessage(PID_BROWSER, messageReturn);
-                PushToJavascript(namespaceName, key);
+                PushToJavascript(namespaceName, key, true);
                 return true;
             } else {
                 exception = "Invalid arguments for setState";
@@ -100,7 +102,7 @@ public:
                 return false;
             }
         } else if (name == "registerForStateUpdates") {
-            if(arguments.size() == 2 && arguments[0]->IsString() && arguments[1]->IsArray())
+            if(arguments.size() == 4 && arguments[0]->IsString() && arguments[1]->IsArray( )&& arguments[2]->IsBool() && arguments[3]->IsBool())
             {
                 std::string eventName = arguments[0]->GetStringValue().ToString();
                 std::vector<std::string> namespaces;
@@ -117,7 +119,8 @@ public:
                         return false;
                     }
                 }
-                StateUpdateSubscriptions.emplace_back(eventName, namespaces);
+
+                StateUpdateSubscriptions.emplace_back(eventName, namespaces, arguments[2]->GetBoolValue(), arguments[3]->GetBoolValue());
 
                 RegisterJavascriptForStateUpdateEvent();
 
@@ -141,7 +144,8 @@ public:
         JavascriptIsRegisteredForStateEvents = true;
     }
 
-    void PushToJavascript(const std::string& stateNamespace, const std::string& key)
+
+    void PushToJavascript(const std::string& stateNamespace, const std::string& key, bool fromJavascript = false)
     {
         if(JavascriptIsRegisteredForStateEvents)
         {
@@ -149,29 +153,40 @@ public:
             {
                 for (const auto& stateSpace: registration.NameSpaces)
                 {
-                    if(stateSpace == stateNamespace)
+                    if(stateSpace == stateNamespace && fromJavascript && registration.UpdatesFromJavascript)
                     {
-                        // Serialize the updated state (or namespace) to JSON string
-                        auto state = m_ApplicationStateManager->getState(stateNamespace, key);
-                        std::string serialisedState = state.dump();
-                        // Construct JavaScript code to trigger custom event
-                        std::stringstream jsCodeStream;
-                        jsCodeStream << "triggerCustomStateChangePytoniumEvent('"<< registration.EventName <<"', {";
-                        jsCodeStream << "'namespace': '" << stateNamespace << "', ";
-                        jsCodeStream << "'key': '" << key << "', ";
-                        jsCodeStream << "'value': " << serialisedState;  // Inserting serialized JSON string directly
-                        jsCodeStream << "});";
-
-                        std::string jsCode = jsCodeStream.str();
-
-                        // Execute the JavaScript code
-                        m_Browser->GetMainFrame()->ExecuteJavaScript(jsCode, m_Browser->GetMainFrame()->GetURL(), 0);
+                        FireEvent(stateNamespace, key, registration.EventName);
+                        break;
+                    }
+                    else if(stateSpace == stateNamespace && !fromJavascript && registration.UpdatesFromPython)
+                    {
+                        FireEvent(stateNamespace, key, registration.EventName);
                         break;
                     }
                 }
             }
 
         }
+    }
+
+
+    void FireEvent(const std::string& stateNamespace, const std::string& stateName, const std::string& eventName)
+    {
+        // Serialize the updated state (or namespace) to JSON string
+        auto state = m_ApplicationStateManager->getState(stateNamespace, stateName);
+        std::string serialisedState = state.dump();
+        // Construct JavaScript code to trigger custom event
+        std::stringstream jsCodeStream;
+        jsCodeStream << "triggerCustomStateChangePytoniumEvent('"<< eventName <<"', {";
+        jsCodeStream << "'namespace': '" << stateNamespace << "', ";
+        jsCodeStream << "'key': '" << stateName << "', ";
+        jsCodeStream << "'value': " << serialisedState;  // Inserting serialized JSON string directly
+        jsCodeStream << "});";
+
+        std::string jsCode = jsCodeStream.str();
+
+        // Execute the JavaScript code
+        m_Browser->GetMainFrame()->ExecuteJavaScript(jsCode, m_Browser->GetMainFrame()->GetURL(), 0);
     }
     IMPLEMENT_REFCOUNTING(AppStateV8Handler);
 };

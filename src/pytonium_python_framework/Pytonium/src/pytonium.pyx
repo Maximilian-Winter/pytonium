@@ -475,6 +475,11 @@ cdef class Pytonium:
     def update_message_loop(self):
         return self.pytonium_library.UpdateMessageLoop()
 
+    def add_custom_scheme(self, scheme_identifier: str, scheme_content_root_folder: str):
+            return self.pytonium_library.AddCustomScheme(scheme_identifier.encode("utf-8"), scheme_content_root_folder.encode("utf-8"))
+
+    def add_mime_type_mapping(self, file_extension: str, mime_type: str):
+            return self.pytonium_library.AddMimeTypeMapping(file_extension.encode("utf-8"), mime_type.encode("utf-8"))
 
     def set_cache_path(self, path: str):
         self.pytonium_library.SetCustomCachePath(path.encode("utf-8"))
@@ -518,7 +523,7 @@ cdef class Pytonium:
        object_map["appState"] = []
 
        object_map["appState"].append(
-                             f"function registerForStateUpdates(eventName: string, namespaces: string[]): void;"
+                             f"function registerForStateUpdates(eventName: string, namespaces: string[], getUpdatesFromJavascript: bool, getUpdatesFromPytonium: bool): void;"
                          )
        object_map["appState"].append(
                       f"function setState(namespace: string, key: string, value: any): void;"

@@ -80,6 +80,8 @@ int main()
     cefSimpleWrapper.AddStateHandlerPythonBinding(testfunc42, nullptr, namespacesToSubscribe);
     cefSimpleWrapper.AddContextMenuEntry(context_menu_test, nullptr, "app", "TESTUS", 0);
     cefSimpleWrapper.AddContextMenuEntry(context_menu_test2, nullptr, "test", "42", 0);
+    cefSimpleWrapper.AddMimeTypeMapping("glb", "model/gltf-binary");
+    cefSimpleWrapper.AddCustomScheme("pytonium-data", (std::filesystem::current_path() / "data").string());
 
     //std::string jsDoc = JavascriptPythonBindingHelper::GenerateJSDoc(cefSimpleWrapper.m_Javascript_Python_Bindings);
     //std::cout << jsDoc << std::endl;
@@ -93,8 +95,8 @@ int main()
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         cefSimpleWrapper.UpdateMessageLoop();
         std::stringstream ss;
-        ss << "CallFromPythonExample.setTicker(" << counter++ << ")";
-        cefSimpleWrapper.ExecuteJavascript(ss.str());
+        /*ss << "CallFromPythonExample.setTicker(" << counter++ << ")";
+        cefSimpleWrapper.ExecuteJavascript(ss.str());*/
 
         if(counter == 500)
         {

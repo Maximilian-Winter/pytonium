@@ -66,6 +66,10 @@ public:
     void SetCurrentContextMenuNamespace(const std::string& contextMenuNamespace);
 
     void SetShowDebugContextMenu(bool show);
+
+    void AddCustomScheme(std::string schemeIdentifier, std::string contentRootFolder);
+
+    void AddMimeTypeMapping(const std::string& fileExtension, std::string mimeType);
 private:
 
     CefRefPtr<CefWrapperApp> m_App;
@@ -89,6 +93,8 @@ private:
     std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;
     std::vector<StateHandlerPythonBinding> m_StateHandlerPythonBindings;
     std::vector<ContextMenuBinding> m_ContextMenuBindings;
+    std::vector<CefCustomScheme> m_CustomSchemes;
+    std::unordered_map<std::string, std::string> m_MimeTypeMap;
 };
 
 #endif//LIBRARY_LIBRARY_H
