@@ -36,7 +36,7 @@ if os.path.exists(pytonium_bin_zip_path):
     sleep(2.0)
     if os.path.exists(pytonium_bin_zip_path):
         os.remove(pytonium_bin_zip_path)
-    
+
     if os.path.exists(other_pytonium_bin_zip_path):
         os.remove(other_pytonium_bin_zip_path)
 

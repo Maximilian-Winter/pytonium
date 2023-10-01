@@ -128,7 +128,7 @@ declare namespace Pytonium {
         function testfunc(): any;
     }
     export namespace appState {
-        function registerForStateUpdates(eventName: string, namespaces: string[]): void;
+        function registerForStateUpdates(eventName: string, namespaces: string[], getUpdatesFromJavascript: boolean, getUpdatesFromPytonium: boolean): void;
         function setState(namespace: string, key: string, value: any): void;
         function getState(namespace: string, key: string): any;
         function removeState(namespace: string, key: string): void;
@@ -148,7 +148,7 @@ We also have the option to handle and manage the application state with the help
 
 ````javascript
 // Register to app state updates from Python and Javascript. You can pass a custom event name and a list of namespaces to subscribe to.
-Pytonium.appState.registerForStateUpdates("ChangeDate", ["app-general"]);
+Pytonium.appState.registerForStateUpdates("ChangeDate", ["app-general"], true, true);
 
 // Add a listener for the custom event and retrieve information.
 document.addEventListener('ChangeDate', function(event) {
@@ -402,7 +402,7 @@ Here is the corresponding HTML and Javascript code.
     function CallToPythonExample()
     {
         // Register to app state updates from Python and Javascript. You can pass a custom event name and a list of namespaces to subscribe to.
-        Pytonium.appState.registerForStateUpdates("ChangeDate", ["app-general"]);
+        Pytonium.appState.registerForStateUpdates("ChangeDate", ["app-general"], true, true);
 
         // Add a listener for the custom event and retrieve information.
         document.addEventListener('ChangeDate', function(event) {
@@ -464,7 +464,7 @@ declare namespace Pytonium {
         function test_two(arg1: string, arg2: number, arg3: number): void;
     }
     export namespace appState {
-        function registerForStateUpdates(eventName: string, namespaces: string[]): void;
+        function registerForStateUpdates(eventName: string, namespaces: string[], getUpdatesFromJavascript: boolean, getUpdatesFromPytonium: boolean): void;
         function setState(namespace: string, key: string, value: any): void;
         function getState(namespace: string, key: string): any;
         function removeState(namespace: string, key: string): void;

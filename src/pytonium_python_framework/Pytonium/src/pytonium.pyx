@@ -523,7 +523,7 @@ cdef class Pytonium:
        object_map["appState"] = []
 
        object_map["appState"].append(
-                             f"function registerForStateUpdates(eventName: string, namespaces: string[], getUpdatesFromJavascript: bool, getUpdatesFromPytonium: bool): void;"
+                             f"function registerForStateUpdates(eventName: string, namespaces: string[], getUpdatesFromJavascript: boolean, getUpdatesFromPytonium: boolean): void;"
                          )
        object_map["appState"].append(
                       f"function setState(namespace: string, key: string, value: any): void;"
