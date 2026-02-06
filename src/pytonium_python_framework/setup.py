@@ -150,7 +150,9 @@ else:
         compress_binaries("bin_linux")
 
 
-shutil.copyfile('./Pytonium/bin_linux/libcef.so', 'Pytonium/src/cef-binaries-linux/Release/libcef.so')
+# Only copy Linux binary if it exists (for cross-platform source distribution)
+if os.path.exists('./Pytonium/bin_linux/libcef.so'):
+    shutil.copyfile('./Pytonium/bin_linux/libcef.so', 'Pytonium/src/cef-binaries-linux/Release/libcef.so')
 
 setup(
     name='Pytonium',
