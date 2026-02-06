@@ -10,7 +10,7 @@
 #include "cef_value_wrapper.h"
 
 
-CefWrapperBrowserProcessHandler::CefWrapperBrowserProcessHandler() = default;
+CefWrapperBrowserProcessHandler::CefWrapperBrowserProcessHandler() : init_width(1024), init_height(768), init_frameless(false) {}
 
 /* Null, because instance will be initialized on demand. */
 CefRefPtr<CefWrapperBrowserProcessHandler>
@@ -83,7 +83,20 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
 #if defined(OS_WIN)
     // On Windows we need to specify certain flags that will be passed to
     // CreateWindowEx().
-    window_info.SetAsPopup(nullptr, "");
+    if (init_frameless) {
+        // Frameless window - no title bar, no borders, just the web content
+        window_info.style = WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+        window_info.parent_window = nullptr;
+        window_info.x = CW_USEDEFAULT;
+        window_info.y = CW_USEDEFAULT;
+    } else {
+        // Standard window with title bar but no Chrome UI
+        window_info.SetAsPopup(nullptr, "");
+    }
+#elif defined(OS_LINUX)
+    if (init_frameless) {
+        window_info.SetAsWindowless(nullptr, true);
+    }
 #endif
 
     CefRefPtr<CefDictionaryValue> extra = CefDictionaryValue::Create();
@@ -163,6 +176,11 @@ void CefWrapperBrowserProcessHandler::SetInitialResolution(int width,
 {
     GetInstance()->init_width = width;
     GetInstance()->init_height = height;
+}
+
+void CefWrapperBrowserProcessHandler::SetFramelessWindow(bool frameless)
+{
+    GetInstance()->init_frameless = frameless;
 }
 
 void CefWrapperBrowserProcessHandler::SendReturnValueToJavascript(int message_id, CefValueWrapper returnValue)

@@ -274,3 +274,9 @@ void PytoniumLibrary::AddMimeTypeMapping(const std::string& fileExtension, std::
 {
     m_MimeTypeMap[fileExtension] = std::move(mimeType);
 }
+
+void PytoniumLibrary::SetFramelessWindow(bool frameless)
+{
+    m_FramelessWindow = frameless;
+    CefWrapperBrowserProcessHandler::SetFramelessWindow(frameless);
+}

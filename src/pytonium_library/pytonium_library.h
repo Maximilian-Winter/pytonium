@@ -70,6 +70,9 @@ public:
     void AddCustomScheme(std::string schemeIdentifier, std::string contentRootFolder);
 
     void AddMimeTypeMapping(const std::string& fileExtension, std::string mimeType);
+
+    void SetFramelessWindow(bool frameless);
+
 private:
 
     CefRefPtr<CefWrapperApp> m_App;
@@ -88,6 +91,8 @@ private:
 
     bool m_UseCustomIcon = false;
     std::string m_CustomIconPath;
+
+    bool m_FramelessWindow = false;
 
     std::vector<JavascriptBinding> m_Javascript_Bindings;
     std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;

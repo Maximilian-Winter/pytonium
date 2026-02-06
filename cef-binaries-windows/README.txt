@@ -1,15 +1,15 @@
 Chromium Embedded Framework (CEF) Standard Binary Distribution for Windows
 -------------------------------------------------------------------------------
 
-Date:             September 14, 2023
+Date:             December 20, 2025
 
-CEF Version:      116.0.23+g375735a+chromium-116.0.5845.189
+CEF Version:      143.0.13+g30cb3bd+chromium-143.0.7499.170
 CEF URL:          https://bitbucket.org/chromiumembedded/cef.git
-                  @375735a3c690324455ed9e805863ecb9ec820d3f
+                  @30cb3bdf337b9c32016d8b892d39d2f2df135ce6
 
-Chromium Version: 116.0.5845.189
+Chromium Version: 143.0.7499.170
 Chromium URL:     https://chromium.googlesource.com/chromium/src.git
-                  @a96fcf1c75e119aa8a91189610511821c8df553d
+                  @81613192193ccffe8b499e9ddd97f85f85c3da25
 
 This distribution contains all components necessary to build and distribute an
 application using CEF on the Windows platform. Please see the LICENSING
@@ -18,6 +18,8 @@ section of this document for licensing terms and conditions.
 
 CONTENTS
 --------
+
+bazel       Contains Bazel configuration files shared by all targets.
 
 cmake       Contains CMake configuration files shared by all targets.
 
@@ -65,6 +67,28 @@ Building using CMake:
   CMake can be used to generate project files in many different formats. See
   usage instructions at the top of the CMakeLists.txt file.
 
+Building using Bazel:
+  Bazel can be used to build CEF-based applications. CEF support for Bazel is
+  considered experimental. For current development status see
+  https://github.com/chromiumembedded/cef/issues/3757.
+
+  To build the bundled cefclient sample application using Bazel:
+
+  1. Install Bazelisk [https://github.com/bazelbuild/bazelisk/blob/master/README.md]
+  2. Build using Bazel:
+     $ bazel build //tests/cefclient
+  3. Run using Bazel:
+     $ bazel run //tests/cefclient/win:cefclient.exe
+
+  Other sample applications (cefsimple, ceftests) can be built in the same way.
+
+  Additional notes:
+  - To generate a Debug build add `-c dbg` (both `build` and `run`
+    command-line).
+  - To pass arguments using the `run` command add `-- [...]` at the end.
+  - Windows x86 and ARM64 builds using Bazel may be broken, see
+    https://github.com/bazelbuild/bazel/issues/22164.
+
 Please visit the CEF Website for additional usage information.
 
 https://bitbucket.org/chromiumembedded/cef/
@@ -89,7 +113,6 @@ The following components are required. CEF will not function without them.
   * icudtl.dat
 
 * V8 snapshot data.
-  * snapshot_blob.bin
   * v8_context_snapshot.bin
 
 Optional components:
@@ -128,6 +151,12 @@ run but any related functionality may become broken or disabled.
   is recommended instead of relying on the possibly old and untested system
   installed version.
 
+* DirectX compiler support (x64 only).
+  * dxil.dll
+  * dxcompiler.dll
+  Support for DirectX rendering of WebGPU. Without these files the
+  aforementioned capabilities may fail.
+
 * ANGLE support.
   * libEGL.dll
   * libGLESv2.dll
@@ -149,6 +178,6 @@ LICENSING
 
 The CEF project is BSD licensed. Please read the LICENSE.txt file included with
 this binary distribution for licensing terms and conditions. Other software
-included in this distribution is provided under other licenses. Please visit
-"about:credits" in a CEF-based application for complete Chromium and third-party
-licensing information.
+included in this distribution is provided under other licenses. Please see the
+CREDITS.html file or visit "about:credits" in a CEF-based application for
+complete Chromium and third-party licensing information.

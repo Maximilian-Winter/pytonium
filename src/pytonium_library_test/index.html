@@ -2,60 +2,331 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Babylon.js 3D Scene</title>
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <title>Pytonium C++ Callback Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        
+        /* Custom title bar for frameless window */
+        .titlebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .titlebar .title {
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .titlebar .title::before {
+            content: "⚡";
+            font-size: 18px;
+        }
+        
+        .titlebar .controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .titlebar button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            transition: background 0.2s;
+        }
+        
+        .titlebar button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .titlebar button.close:hover {
+            background: #e74c3c;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        .section {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .section button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        
+        .section button:hover {
+            background-color: #0056b3;
+        }
+        
+        #output {
+            background: #333;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+        
+        #date {
+            color: #666;
+            font-style: italic;
+            margin-top: 10px;
+        }
+        
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        
+        .status.ok {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status.waiting {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .frameless-note {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .frameless-note strong {
+            color: #1976d2;
+        }
+    </style>
 </head>
 <body>
-<div id="gameContainer" style="width: 100%; height: 100vh;"></div>
+    <!-- Custom title bar for frameless window -->
+    <div class="titlebar">
+        <div class="title">Pytonium C++ Test</div>
+        <div class="controls">
+            <button onclick="minimizeWindow()" title="Minimize">_</button>
+            <button onclick="maximizeWindow()" title="Maximize">□</button>
+            <button class="close" onclick="closeWindow()" title="Close">×</button>
+        </div>
+    </div>
+    
+    <div class="content">
+        <div class="frameless-note">
+            <strong>Frameless Window Mode:</strong> This window has a custom title bar created with HTML/CSS. 
+            The Chrome UI (tabs, address bar) has been removed. Set <code>SetFramelessWindow(false)</code> in main.cpp to restore the standard window.
+        </div>
+        
+        <h1>Pytonium C++ Callback Test</h1>
+        
+        <div class="section">
+            <h2>Test Function Bindings</h2>
+            <button onclick="callTestFunc()">Call testfunc() (returns object)</button>
+            <button onclick="callTestOne()">Call test_one() (returns object)</button>
+            <button onclick="callTestTwo()">Call test_two() (no return)</button>
+        </div>
+
+        <div class="section">
+            <h2>State Management Test</h2>
+            <div id="status" class="status waiting">Waiting for Pytonium...</div>
+            <div id="date">Waiting for state updates from C++...</div>
+            <button onclick="setUserState()">Set User State from JS</button>
+        </div>
+
+        <div class="section">
+            <h2>Output Log</h2>
+            <div id="output"></div>
+        </div>
+    </div>
+
 </body>
 <script>
-    function Init() {
+    const output = document.getElementById('output');
+    const statusDiv = document.getElementById('status');
+    const dateDiv = document.getElementById('date');
+    let logLineCount = 0;
+    const maxLogLines = 100;
+    
+    function log(msg) {
+        const timestamp = new Date().toLocaleTimeString();
+        output.textContent += '[' + timestamp + '] ' + msg + '\n';
+        logLineCount++;
+        
+        // Limit log size
+        if (logLineCount > maxLogLines) {
+            const lines = output.textContent.split('\n');
+            output.textContent = lines.slice(lines.length - maxLogLines).join('\n');
+            logLineCount = maxLogLines;
+        }
+        
+        output.scrollTop = output.scrollHeight;
+    }
 
-        // Initialize Babylon.js Scene
-        var box;  // Declare box variable in the global scope
+    // Window control functions (for demonstration - you'd bind these to actual window controls)
+    function minimizeWindow() {
+        log('Minimize button clicked (bind to Pytonium window controls)');
+        // In a real app, you'd call a Python binding to minimize the window
+        // Pytonium.window.minimize();
+    }
+    
+    function maximizeWindow() {
+        log('Maximize button clicked (bind to Pytonium window controls)');
+        // In a real app, you'd call a Python binding to maximize the window
+        // Pytonium.window.maximize();
+    }
+    
+    function closeWindow() {
+        log('Close button clicked (bind to Pytonium window controls)');
+        // In a real app, you'd call a Python binding to close the window
+        // Pytonium.window.close();
+    }
 
-        window.addEventListener('DOMContentLoaded', function () {
-            var canvas = document.createElement("canvas");
-            var container = document.getElementById("gameContainer");
-            container.appendChild(canvas);
-            canvas.width = container.offsetWidth;
-            canvas.height = container.offsetHeight;
-            var engine = new BABYLON.Engine(canvas, true);
-
-            var createScene = function () {
-                var scene = new BABYLON.Scene(engine);
-
-                var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 4, 3, new BABYLON.Vector3(0, 1, 0), scene);
-                camera.attachControl(canvas, true);
-
-                var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
-
-                box = BABYLON.MeshBuilder.CreateBox("box", {}, scene);  // Initialize box within the function scope
-                BABYLON.SceneLoader.ImportMesh("", "pytonium-data://", "HipHopDancing.glb", scene, function (meshes, particleSystems, skeletons) {
-                    var character = meshes[0];
-                    character.position = new BABYLON.Vector3(0, 0, 0); // Initial position
-
-                    var idleAnim = scene.beginAnimation(skeletons[0], 0, 100, true, 0.8);  // Replace with your actual frame numbers and speed
+    // Test calling testfunc() which returns an object
+    function callTestFunc() {
+        log('Calling Pytonium.test_function_binding.testfunc()...');
+        try {
+            let myPromise = Pytonium.test_function_binding.testfunc();
+            if (myPromise && typeof myPromise.then === 'function') {
+                myPromise.then((resolvedValue) => {
+                    log('testfunc() returned: ' + JSON.stringify(resolvedValue));
+                }).catch((err) => {
+                    log('testfunc() error: ' + err);
                 });
-                return scene;
-            };
+            } else {
+                log('testfunc() returned (no promise): ' + myPromise);
+            }
+        } catch (e) {
+            log('testfunc() exception: ' + e.message);
+        }
+    }
 
-            var scene = createScene();
+    // Test calling test_one() which returns an object
+    function callTestOne() {
+        log('Calling Pytonium.test_class_methods_binding.test_one(64)...');
+        try {
+            let myPromise = Pytonium.test_class_methods_binding.test_one(64);
+            if (myPromise && typeof myPromise.then === 'function') {
+                myPromise.then((resolvedValue) => {
+                    log('test_one() returned: ' + JSON.stringify(resolvedValue));
+                }).catch((err) => {
+                    log('test_one() error: ' + err);
+                });
+            } else {
+                log('test_one() returned (no promise): ' + myPromise);
+            }
+        } catch (e) {
+            log('test_one() exception: ' + e.message);
+        }
+    }
 
-            engine.runRenderLoop(function () {
-                box.rotation.x += 0.005;
-                box.rotation.y += 0.005;
-                scene.render();
-            });
+    // Test calling test_two() which has no return value (no promise)
+    function callTestTwo() {
+        log('Calling Pytonium.test_class_methods_binding.test_two("Hello", 20, 40)...');
+        try {
+            let result = Pytonium.test_class_methods_binding.test_two("Hello", 20, 40);
+            log('test_two() called. Return value: ' + result);
+        } catch (e) {
+            log('test_two() exception: ' + e.message);
+        }
+    }
+
+    // Set user state from JavaScript
+    function setUserState() {
+        try {
+            Pytonium.appState.setState("user", "age", 25);
+            log('Set user state: age = 25');
+            let age = Pytonium.appState.getState("user", "age");
+            log('Retrieved user age from state: ' + age);
+        } catch (e) {
+            log('setUserState() exception: ' + e.message);
+        }
+    }
+
+    function Init() {
+        log('Pytonium is ready!');
+        statusDiv.textContent = 'Pytonium Ready';
+        statusDiv.className = 'status ok';
+        
+        // Register for state updates from the "user" and "app-general" namespaces
+        try {
+            Pytonium.appState.registerForStateUpdates("StateChanged", ["user", "app-general"], true, true);
+            log('Registered for state updates on "user" and "app-general" namespaces');
+        } catch (e) {
+            log('Failed to register for state updates: ' + e.message);
+        }
+        
+        // Listen for state change events from C++
+        document.addEventListener('StateChanged', function(event) {
+            const detail = event.detail;
+            log('State update from C++: namespace=' + detail.namespace + ', key=' + detail.key + ', value=' + JSON.stringify(detail.value));
+            
+            if (detail.namespace === 'app-general' && detail.key === 'date') {
+                dateDiv.innerHTML = 'Last update from C++: ' + detail.value;
+            }
         });
+
+        // Initial calls to demonstrate the bindings work
+        log('');
+        log('=== Running initial callback tests ===');
+        
+        // Use setTimeout to space out the calls
+        setTimeout(callTestFunc, 100);
+        setTimeout(callTestOne, 300);
+        setTimeout(callTestTwo, 500);
+        setTimeout(setUserState, 700);
     }
 
     // Check if Python bindings are ready and call them, if not add an event listener for the PytoniumReady event.
     if (window.PytoniumReady) {
         Init();
     } else {
-        window.addEventListener('PytoniumReady', function () {
+        window.addEventListener('PytoniumReady', function() {
             Init();
         });
     }

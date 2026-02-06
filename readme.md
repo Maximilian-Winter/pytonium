@@ -244,6 +244,96 @@ Set a custom icon for your application window.
 pytonium.set_custom_icon_path("path/to/icon.ico")
 ```
 
+### Frameless Window (Custom Window Layout)
+
+Create a frameless window without the Chrome UI (tabs, menu bar, address bar). This allows you to create completely custom window layouts using HTML/CSS, similar to Electron apps.
+
+```python
+pytonium.set_frameless_window(True)
+```
+
+When enabled, the window will have no title bar or borders - just the web content. You can then create your own window controls (minimize, maximize, close buttons) using HTML/CSS/JS.
+
+**Note:** This must be called before `pytonium.initialize()`.
+
+**Example with custom title bar in HTML:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        
+        /* Custom title bar */
+        .titlebar {
+            background: #2c3e50;
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            -webkit-app-region: drag; /* Makes the area draggable on some platforms */
+        }
+        
+        .titlebar .title { font-weight: bold; }
+        
+        .titlebar .controls {
+            display: flex;
+            gap: 10px;
+            -webkit-app-region: no-drag; /* Buttons remain clickable */
+        }
+        
+        .titlebar button {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        
+        .titlebar button:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">
+        <div class="title">My Custom App</div>
+        <div class="controls">
+            <button onclick="minimizeWindow()">_</button>
+            <button onclick="maximizeWindow()">□</button>
+            <button onclick="closeWindow()">×</button>
+        </div>
+    </div>
+    <div class="content">
+        <h1>Welcome to my frameless app!</h1>
+        <p>This window has a custom title bar created with HTML/CSS.</p>
+    </div>
+    
+    <script>
+        // Call Python bindings to control the window
+        function minimizeWindow() {
+            // You can bind these to Python window controls
+            console.log('Minimize clicked');
+        }
+        
+        function maximizeWindow() {
+            console.log('Maximize clicked');
+        }
+        
+        function closeWindow() {
+            console.log('Close clicked');
+        }
+    </script>
+</body>
+</html>
+```
+
 ---
 ### Bindings, State and Context Menus
 The bindings of the Python functions and methods, the context menus, and state handlers, has to be performed before Pytonium is initialized and started.

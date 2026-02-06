@@ -11,7 +11,7 @@ endif(UNIX)
 if(WIN32)
   set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/cef-binaries-windows")
 endif(WIN32)
-
+set(USE_SANDBOX OFF)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CEF_ROOT}/cmake")
 
 find_package(CEF REQUIRED)

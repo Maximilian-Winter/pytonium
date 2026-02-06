@@ -1,0 +1,338 @@
+# Copyright (c) 2024 The Chromium Embedded Framework Authors. All rights
+# reserved. Use of this source code is governed by a BSD-style license that
+# can be found in the LICENSE file.
+
+# Allow access from targets in other packages.
+package(default_visibility = [
+    "//visibility:public",
+])
+
+load("@aspect_bazel_lib//lib:copy_directory.bzl", "copy_directory")
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("//bazel:library_helpers.bzl", "declare_cc_library", "declare_objc_library")
+load("//bazel/win:variables.bzl",
+     WIN_DLLS="DLLS",
+     WIN_DLLS_X64="DLLS_X64")
+load("//bazel/linux:variables.bzl",
+     LINUX_SOS="SOS")
+load("//bazel/mac:variables.bzl",
+     "CEF_FRAMEWORK_NAME")
+load("@rules_cc//cc:defs.bzl", "cc_import")
+
+#
+# Define supported configurations.
+# See https://bazel.build/docs/configurable-attributes
+#
+# Normal build (ARM64 host):
+# % bazel build //tests/cefsimple [-c dbg]
+#
+# Cross-compile build (ARM64 host):
+# % bazel build //tests/cefsimple --cpu=darwin_x86_64 [-c dbg]
+#
+
+config_setting(
+    name = "dbg",
+    values = {"compilation_mode": "dbg"},
+)
+
+config_setting(
+    name = "fastbuild",
+    values = {"compilation_mode": "fastbuild"},
+)
+
+config_setting(
+    name = "opt",
+    values = {"compilation_mode": "opt"},
+)
+
+selects.config_setting_group(
+    name = "windows_32",
+    match_all = ["@platforms//os:windows", "@platforms//cpu:x86_32"],
+)
+
+selects.config_setting_group(
+    name = "windows_64",
+    match_all = ["@platforms//os:windows", "@platforms//cpu:x86_64"],
+)
+
+selects.config_setting_group(
+    name = "windows_dbg",
+    match_all = ["@platforms//os:windows", "@cef//:dbg"],
+)
+
+selects.config_setting_group(
+    name = "windows_fastbuild",
+    match_all = ["@platforms//os:windows", "@cef//:fastbuild"],
+)
+
+selects.config_setting_group(
+    name = "windows_opt",
+    match_all = ["@platforms//os:windows", "@cef//:opt"],
+)
+
+selects.config_setting_group(
+    name = "linux_dbg",
+    match_all = ["@platforms//os:linux", "@cef//:dbg"],
+)
+
+selects.config_setting_group(
+    name = "linux_fastbuild",
+    match_all = ["@platforms//os:linux", "@cef//:fastbuild"],
+)
+
+selects.config_setting_group(
+    name = "linux_opt",
+    match_all = ["@platforms//os:linux", "@cef//:opt"],
+)
+
+selects.config_setting_group(
+    name = "macos_dbg",
+    match_all = ["@platforms//os:macos", "@cef//:dbg"],
+)
+
+selects.config_setting_group(
+    name = "macos_fastbuild",
+    match_all = ["@platforms//os:macos", "@cef//:fastbuild"],
+)
+
+selects.config_setting_group(
+    name = "macos_opt",
+    match_all = ["@platforms//os:macos", "@cef//:opt"],
+)
+
+#
+# Define common build targets.
+#
+
+# Public headers for cef_wrapper here.
+declare_cc_library(
+    name = "cef_wrapper_headers",
+    hdrs = glob(
+        [
+            "include/**/*.h",
+        ],
+    ),
+    defines = [
+        "WRAPPING_CEF_SHARED",
+    ],
+)
+
+declare_objc_library(
+    name = "cef_wrapper_apple",
+    srcs = glob(
+        [
+            "libcef_dll/**/*.mm",
+        ]
+    ),
+    deps = [":cef_wrapper_headers"],
+)
+
+declare_cc_library(
+    name = "cef_wrapper",
+    srcs = glob(
+        [
+            "libcef_dll/**/*.cc",
+            "libcef_dll/**/*.h",
+            "include/**/*.inc",
+        ],
+    ),
+    deps = [":cef_wrapper_headers"] +
+           select({
+               "@platforms//os:macos": [":cef_wrapper_apple"],
+               "@platforms//os:windows": [":cef"],
+               "//conditions:default": None,
+           }),
+)
+
+filegroup(
+    name = "dlls_opt",
+    srcs = ["Release/{}".format(name) for name in WIN_DLLS] +
+        select({
+            "@cef//:windows_64": ["Release/{}".format(name) for name in WIN_DLLS_X64],
+            "//conditions:default": None,
+        }),
+)
+
+filegroup(
+    name = "dlls_dbg",
+    srcs = ["Debug/{}".format(name) for name in WIN_DLLS] +
+        select({
+            "@cef//:windows_64": ["Debug/{}".format(name) for name in WIN_DLLS_X64],
+            "//conditions:default": None,
+        }),
+)
+
+alias(
+    name = "dlls",
+    actual = select({
+        "@cef//:dbg": "@cef//:dlls_dbg",
+        "//conditions:default": "@cef//:dlls_opt",
+    })
+)
+
+alias(
+    name = "bootstrap.exe_opt",
+    actual = select({
+        "@platforms//os:windows": "Release/bootstrap.exe",
+        "//conditions:default": None,
+    })
+)
+
+alias(
+    name = "bootstrap.exe_dbg",
+    actual = select({
+        "@platforms//os:windows": "Debug/bootstrap.exe",
+        "//conditions:default": None,
+    })
+)
+
+alias(
+    name = "bootstrap.exe",
+    actual = select({
+        "@cef//:dbg": "@cef//:bootstrap.exe_dbg",
+        "//conditions:default": "@cef//:bootstrap.exe_opt",
+    })
+)
+
+alias(
+    name = "bootstrapc.exe_opt",
+    actual = select({
+        "@platforms//os:windows": "Release/bootstrapc.exe",
+        "//conditions:default": None,
+    })
+)
+
+alias(
+    name = "bootstrapc.exe_dbg",
+    actual = select({
+        "@platforms//os:windows": "Debug/bootstrapc.exe",
+        "//conditions:default": None,
+    })
+)
+
+alias(
+    name = "bootstrapc.exe",
+    actual = select({
+        "@cef//:dbg": "@cef//:bootstrapc.exe_dbg",
+        "//conditions:default": "@cef//:bootstrapc.exe_opt",
+    })
+)
+
+filegroup(
+    name = "sos_opt",
+    srcs = ["Release/{}".format(name) for name in LINUX_SOS],
+)
+
+filegroup(
+    name = "sos_dbg",
+    srcs = ["Debug/{}".format(name) for name in LINUX_SOS],
+)
+
+alias(
+    name = "sos",
+    actual = select({
+        "@cef//:dbg": "@cef//:sos_dbg",
+        "//conditions:default": "@cef//:sos_opt",
+    })
+)
+
+filegroup(
+    name = "resources_common",
+    srcs = glob([
+        "Resources/**",
+    ]),
+)
+
+filegroup(
+    name = "resources_opt",
+    srcs = [
+        "Release/v8_context_snapshot.bin",
+        "Release/vk_swiftshader_icd.json",
+        "@cef//:resources_common",
+    ],
+)
+
+filegroup(
+    name = "resources_dbg",
+    srcs = [
+        "Debug/v8_context_snapshot.bin",
+        "Debug/vk_swiftshader_icd.json",
+        "@cef//:resources_common",
+    ],
+)
+
+alias(
+    name = "resources",
+    actual = select({
+        "@cef//:opt": "@cef//:resources_opt",
+        "//conditions:default": "@cef//:resources_dbg",
+    })
+)
+
+# Only available on Linux.
+cc_import(
+    name = "cef_dbg",
+    shared_library = select({
+        "@platforms//os:linux": "Debug/libcef.so",
+        "//conditions:default": None,
+    }),
+)
+
+cc_import(
+    name = "cef_opt",
+    shared_library = select({
+        "@platforms//os:linux": "Release/libcef.so",
+        "//conditions:default": None,
+    }),
+)
+
+alias(
+    name = "cef",
+    actual = select({
+        "@cef//:dbg": "@cef//:cef_dbg",
+        "//conditions:default": "@cef//:cef_opt",
+    }),
+)
+
+# Only available on Windows.
+# Using cc_import + interface_library/shared_library to link libcef.lib causes
+# libcef.dll to be copied as a transitive dependency, leading to issues with
+# complex Bazel configs. Instead, we explicitly link libcef.lib in the binary
+# target (cc_binary + linkopts/additional_linker_inputs) and explicitly copy
+# libcef.dll to the target directory.
+alias(
+    name = "cef_lib_dbg",
+    actual = select({
+        "@platforms//os:windows": "Debug/libcef.lib",
+        "//conditions:default": None,
+    }),
+)
+
+alias(
+    name = "cef_lib_opt",
+    actual =  select({
+        "@platforms//os:windows": "Release/libcef.lib",
+        "//conditions:default": None,
+    }),
+)
+
+alias(
+    name = "cef_lib",
+    actual = select({
+       "@cef//:dbg": "@cef//:cef_lib_dbg",
+       "//conditions:default": "@cef//:cef_lib_opt",
+    }),
+)
+
+# Copy the CEF framework into the app bundle but do not link it. See
+# https://groups.google.com/g/cef-announce/c/Fith0A3kWtw/m/6ds_mJVMCQAJ
+# for background. Use `copy_directory` instead of `filegroup` to remove
+# the Debug/Release path prefix.
+copy_directory(
+    name = "cef_framework",
+    src = select({
+        "@cef//:dbg": "Debug/{}.framework".format(CEF_FRAMEWORK_NAME),
+        "//conditions:default": "Release/{}.framework".format(CEF_FRAMEWORK_NAME),
+    }),
+    out = "{}.framework".format(CEF_FRAMEWORK_NAME),
+)

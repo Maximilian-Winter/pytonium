@@ -20,6 +20,7 @@ private:
 
     int init_width;
     int init_height;
+    bool init_frameless;
 
 public:
     /* Static access method. */
@@ -28,6 +29,8 @@ public:
     static void SendReturnValueToJavascript(int message_id, CefValueWrapper returnValue);
 
     static void SetInitialResolution(int width, int height);
+
+    static void SetFramelessWindow(bool frameless);
 
     static void SetJavascriptBindings(std::vector<JavascriptBinding> javascript_bindings,
                                       std::vector<JavascriptPythonBinding> javascript_python_bindings,
