@@ -190,3 +190,4 @@ src/pytonium_python_framework/Pytonium/bin_win.zip
 /cmake-build-release/
 /cmake-build-debug/
 gh-wiki/pytonium.wiki/
+/src/pytonium_library_test/cache

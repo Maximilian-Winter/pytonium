@@ -16,7 +16,7 @@
 
 CefRefPtr<CefBrowser> CefWrapperApp::GetBrowser()
 {
-    return CefWrapperBrowserProcessHandler::GetInstance()->Browser;
+    return CefWrapperBrowserProcessHandler::GetInstance()->ContentBrowser;
 }
 
 void CefWrapperApp::OnBeforeCommandLineProcessing(

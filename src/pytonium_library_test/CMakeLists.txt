@@ -22,6 +22,7 @@ if(OS_WINDOWS)
     COPY_SINGLE_FILE(${CEF_TARGET} "../../../readme.md" "../../../src/pytonium_python_framework/README.md")
 
     COPY_SINGLE_FILE(${CEF_TARGET} "../../../src/pytonium_library_test/index.html"  "${CEF_TARGET_OUT_DIR}/index.html")
+    COPY_SINGLE_FILE(${CEF_TARGET} "../../../src/pytonium_library_test/custom_frame.html"  "${CEF_TARGET_OUT_DIR}/custom_frame.html")
     COPY_SINGLE_FILE(${CEF_TARGET} "../../../src/pytonium_library_test/radioactive.ico"  "${CEF_TARGET_OUT_DIR}/radioactive.ico")
 endif()
 

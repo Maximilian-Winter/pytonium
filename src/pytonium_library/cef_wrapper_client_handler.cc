@@ -1,5 +1,6 @@
 #include "cef_wrapper_client_handler.h"
 
+#include <filesystem>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -172,9 +173,44 @@ void CefWrapperClientHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
 void CefWrapperClientHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 {
     CEF_REQUIRE_UI_THREAD();
+    if(browser_list_.empty())
+    {
+        SetupCustomWindowFrame(browser);
+    }
 
     // Add to the list of existing browsers.
     browser_list_.push_back(browser);
+}
+
+void CefWrapperClientHandler::SetupCustomWindowFrame(CefRefPtr<CefBrowser> browser) {
+    HWND hwnd = browser->GetHost()->GetWindowHandle();
+    DWORD style = GetWindowLong(hwnd, GWL_STYLE);
+    SetWindowLong(hwnd, GWL_STYLE, style & ~WS_CAPTION & ~WS_THICKFRAME);
+
+    // Load custom HTML for the window frame
+    std::filesystem::path entryPoint = std::filesystem::current_path() / "custom_frame.html";
+    browser->GetMainFrame()->LoadURL(entryPoint.c_str());
+}
+
+bool CefWrapperClientHandler::OnConsoleMessage(CefRefPtr<CefBrowser> browser,
+                                               cef_log_severity_t level,
+                                               const CefString& message,
+                                               const CefString& source,
+                                               int line) {
+    // Handle custom window controls here
+    if (message == "minimize") {
+        ShowWindow(browser->GetHost()->GetWindowHandle(), SW_MINIMIZE);
+        return true;
+    } else if (message == "maximize") {
+        ShowWindow(browser->GetHost()->GetWindowHandle(), SW_MAXIMIZE);
+        return true;
+    } else if (message == "close") {
+        browser->GetHost()->CloseBrowser(false);
+        return true;
+    }
+
+    // Call the base class implementation for other console messages
+    return CefDisplayHandler::OnConsoleMessage(browser, level, message, source, line);
 }
 
 bool CefWrapperClientHandler::DoClose(CefRefPtr<CefBrowser> browser)

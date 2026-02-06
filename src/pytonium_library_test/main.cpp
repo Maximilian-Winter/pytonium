@@ -89,21 +89,23 @@ int main()
     cefSimpleWrapper.SetCustomIconPath("radioactive.ico");
     cefSimpleWrapper.InitPytonium("file://" + entryPoint.string(), 1920, 1080);
 
+
     long long counter = 0;
     while (cefSimpleWrapper.IsRunning())
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         cefSimpleWrapper.UpdateMessageLoop();
+
         std::stringstream ss;
         /*ss << "CallFromPythonExample.setTicker(" << counter++ << ")";
         cefSimpleWrapper.ExecuteJavascript(ss.str());*/
 
-        if(counter == 500)
+        if(counter == 200)
         {
-            CefValueWrapper valueWrapper;
-            valueWrapper.SetInt(123);
-            cefSimpleWrapper.SetState("user", "age", valueWrapper);
+            std::cout << counter << std::endl;
+            cefSimpleWrapper.LoadUrl("file://" + entryPoint.string());
         }
+        counter++;
     }
 
     //cefSimpleWrapper.ShutdownPytonium();

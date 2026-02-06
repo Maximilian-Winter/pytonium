@@ -78,13 +78,7 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
     std::string url;
     url = StartUrl;
 
-    CefWindowInfo window_info;
 
-#if defined(OS_WIN)
-    // On Windows we need to specify certain flags that will be passed to
-    // CreateWindowEx().
-    window_info.SetAsPopup(nullptr, "");
-#endif
 
     CefRefPtr<CefDictionaryValue> extra = CefDictionaryValue::Create();
     if (!m_JavascriptBindings.empty())
@@ -136,11 +130,32 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
                       static_cast<int>(m_JavascriptPythonBindings.size()));
     }
 
-    window_info.bounds.width = init_width;
-    window_info.bounds.height = init_height;
+    CefWindowInfo frame_window_info;
+    frame_window_info.SetAsPopup(nullptr, "Custom Frame Window");
+    frame_window_info.style |= WS_VISIBLE | WS_OVERLAPPEDWINDOW;
+    frame_window_info.bounds.x = CW_USEDEFAULT;
+    frame_window_info.bounds.y = CW_USEDEFAULT;
+    frame_window_info.bounds.width = init_width;
+    frame_window_info.bounds.height = init_height;
 
-    Browser = CefBrowserHost::CreateBrowserSync(window_info, handler, url,
+    // Load custom HTML for the window frame
+    std::filesystem::path entryPoint = std::filesystem::current_path() / "custom_frame.html";
+
+
+    FrameBrowser = CefBrowserHost::CreateBrowserSync(frame_window_info, handler,  ("file://" + entryPoint.string()).c_str(),
                                                 browser_settings, extra, nullptr);
+
+    CefWindowInfo content_window_info;
+
+    HWND frame_hwnd = FrameBrowser->GetHost()->GetWindowHandle();
+    RECT frame_rect;
+    GetClientRect(frame_hwnd, &frame_rect);
+    content_window_info.SetAsChild(frame_hwnd,
+        CefRect(0, 30, frame_rect.right - frame_rect.left, frame_rect.bottom - frame_rect.top - 30));
+
+    // Create the content browser synchronously
+    ContentBrowser = CefBrowserHost::CreateBrowserSync(
+        content_window_info, handler, StartUrl, browser_settings, nullptr, nullptr);
 
     // m_Browser->GetHost()->ShowDevTools(window_info, nullptr, browser_settings,
     // CefPoint());
@@ -154,7 +169,7 @@ void CefWrapperBrowserProcessHandler::SetStartUrl(std::string url)
 void CefWrapperBrowserProcessHandler::LoadUrl(std::string url)
 {
     CefWrapperBrowserProcessHandler::GetInstance()
-            ->Browser->GetMainFrame()
+            ->ContentBrowser->GetMainFrame()
             ->LoadURL(url);
 }
 
