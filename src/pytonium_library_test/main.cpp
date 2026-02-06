@@ -100,6 +100,40 @@ void windowDrag(void *python_callback_object, int size, CefValueWrapper *args, i
     }
 }
 
+// Returns current window position as an object {x, y}
+void windowGetPosition(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    int x = 0, y = 0;
+    cefSimpleWrapper.GetWindowPosition(x, y);
+    
+    CefValueWrapper xVal, yVal, result;
+    xVal.SetInt(x);
+    yVal.SetInt(y);
+    
+    std::map<std::string, CefValueWrapper> posMap;
+    posMap["x"] = xVal;
+    posMap["y"] = yVal;
+    result.SetObject(posMap);
+    
+    cefSimpleWrapper.ReturnValueToJavascript(message_id, result);
+}
+
+void windowSetPosition(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    if (size >= 2) {
+        int x = args[0].GetInt();
+        int y = args[1].GetInt();
+        cefSimpleWrapper.SetWindowPosition(x, y);
+    }
+}
+
+void windowIsMaximized(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    CefValueWrapper result;
+    result.SetBool(cefSimpleWrapper.IsMaximized());
+    cefSimpleWrapper.ReturnValueToJavascript(message_id, result);
+}
+
 int main()
 {
     std::vector<std::string> namespacesToSubscribe;
@@ -115,6 +149,9 @@ int main()
     cefSimpleWrapper.AddJavascriptPythonBinding("maximize", windowMaximize, nullptr, "window", false);
     cefSimpleWrapper.AddJavascriptPythonBinding("close", windowClose, nullptr, "window", false);
     cefSimpleWrapper.AddJavascriptPythonBinding("drag", windowDrag, nullptr, "window", false);
+    cefSimpleWrapper.AddJavascriptPythonBinding("getPosition", windowGetPosition, nullptr, "window", true);
+    cefSimpleWrapper.AddJavascriptPythonBinding("setPosition", windowSetPosition, nullptr, "window", false);
+    cefSimpleWrapper.AddJavascriptPythonBinding("isMaximized", windowIsMaximized, nullptr, "window", true);
     
     // Register JavaScript bindings
     // testfunc and test_one return values (true), test_two does not (false)

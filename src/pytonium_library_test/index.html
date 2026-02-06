@@ -237,48 +237,61 @@
         }
     }
     
-    // Draggable title bar functionality
+    // Draggable title bar functionality - smooth dragging
     let isDragging = false;
-    let lastMouseX = 0;
-    let lastMouseY = 0;
+    let dragStartMouseX = 0;
+    let dragStartMouseY = 0;
+    let dragStartWindowX = 0;
+    let dragStartWindowY = 0;
     
-    function initDraggableTitlebar() {
+    async function initDraggableTitlebar() {
         const titlebar = document.querySelector('.titlebar');
         if (!titlebar) return;
         
-        // Only allow dragging on the title area, not the buttons
-        titlebar.addEventListener('mousedown', function(e) {
+        titlebar.addEventListener('mousedown', async function(e) {
             // Don't drag if clicking on buttons
             if (e.target.tagName === 'BUTTON' || e.target.closest('.controls')) {
                 return;
             }
+            
+            // Check if window is maximized
+            try {
+                let result = await Pytonium.window.isMaximized();
+                if (result) return;
+            } catch (err) {}
+            
             isDragging = true;
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
-            log('Started dragging window');
+            dragStartMouseX = e.screenX;
+            dragStartMouseY = e.screenY;
+            
+            // Get current window position
+            try {
+                let pos = await Pytonium.window.getPosition();
+                dragStartWindowX = pos.x;
+                dragStartWindowY = pos.y;
+            } catch (err) {
+                dragStartWindowX = 0;
+                dragStartWindowY = 0;
+            }
+            
+            e.preventDefault();
         });
         
         document.addEventListener('mousemove', function(e) {
             if (!isDragging) return;
             
-            const deltaX = e.clientX - lastMouseX;
-            const deltaY = e.clientY - lastMouseY;
+            const deltaX = e.screenX - dragStartMouseX;
+            const deltaY = e.screenY - dragStartMouseY;
             
-            try {
-                Pytonium.window.drag(deltaX, deltaY);
-            } catch (err) {
-                // Dragging errors are normal if window is maximized
-            }
+            const newX = dragStartWindowX + deltaX;
+            const newY = dragStartWindowY + deltaY;
             
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
+            // Direct position update - much smoother than delta accumulation
+            Pytonium.window.setPosition(newX, newY);
         });
         
         document.addEventListener('mouseup', function() {
-            if (isDragging) {
-                isDragging = false;
-                log('Stopped dragging window');
-            }
+            isDragging = false;
         });
     }
 

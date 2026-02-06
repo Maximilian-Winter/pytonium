@@ -367,8 +367,40 @@ void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
             if (GetWindowRect(hwnd, &rect)) {
                 int newX = rect.left + deltaX;
                 int newY = rect.top + deltaY;
-                SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+                // Use SWP_FRAMECHANGED to force a redraw and SWP_ASYNCWINDOWPOS for smoother movement
+                SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
             }
+        }
+    }
+#endif
+}
+
+void PytoniumLibrary::GetWindowPosition(int& x, int& y)
+{
+#if defined(OS_WIN)
+    if (m_App && m_App->GetBrowser()) {
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            RECT rect;
+            if (GetWindowRect(hwnd, &rect)) {
+                x = rect.left;
+                y = rect.top;
+                return;
+            }
+        }
+    }
+#endif
+    x = 0;
+    y = 0;
+}
+
+void PytoniumLibrary::SetWindowPosition(int x, int y)
+{
+#if defined(OS_WIN)
+    if (m_App && m_App->GetBrowser()) {
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         }
     }
 #endif

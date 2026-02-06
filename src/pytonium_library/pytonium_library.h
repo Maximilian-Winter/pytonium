@@ -82,6 +82,12 @@ public:
     
     // Drag window by delta (for draggable custom title bar)
     void DragWindow(int deltaX, int deltaY);
+    
+    // Get window position
+    void GetWindowPosition(int& x, int& y);
+    
+    // Move window to absolute position (smoother than delta)
+    void SetWindowPosition(int x, int y);
 
 private:
 
