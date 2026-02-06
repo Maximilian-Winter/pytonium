@@ -8,6 +8,10 @@
 #include <utility>
 #undef CEF_USE_SANDBOX
 
+#if defined(OS_WIN)
+#include <Windows.h>
+#endif
+
 
 std::string ExePath() {
 #if OS_WIN
@@ -289,4 +293,55 @@ void PytoniumLibrary::SetFramelessWindow(bool frameless)
     // Store the frameless setting - it will be applied when InitPytonium is called
     // via the CefWrapperApp constructor
     m_FramelessWindow = frameless;
+}
+
+void PytoniumLibrary::MinimizeWindow()
+{
+    if (m_App && m_App->GetBrowser()) {
+        m_App->GetBrowser()->GetHost()->SetWindowVisibility(false);
+    }
+}
+
+void PytoniumLibrary::MaximizeWindow()
+{
+    if (m_App && m_App->GetBrowser()) {
+        m_App->GetBrowser()->GetHost()->SetFocus(true);
+        // Use Windows API for maximize since CEF doesn't have a direct maximize method
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            ShowWindow(hwnd, SW_MAXIMIZE);
+        }
+    }
+}
+
+void PytoniumLibrary::RestoreWindow()
+{
+    if (m_App && m_App->GetBrowser()) {
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            ShowWindow(hwnd, SW_RESTORE);
+        }
+    }
+}
+
+void PytoniumLibrary::CloseWindow()
+{
+    if (m_App && m_App->GetBrowser()) {
+        m_App->GetBrowser()->GetHost()->CloseBrowser(false);
+    }
+}
+
+bool PytoniumLibrary::IsMaximized()
+{
+    if (m_App && m_App->GetBrowser()) {
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            WINDOWPLACEMENT wp;
+            wp.length = sizeof(WINDOWPLACEMENT);
+            if (GetWindowPlacement(hwnd, &wp)) {
+                return wp.showCmd == SW_SHOWMAXIMIZED;
+            }
+        }
+    }
+    return false;
 }

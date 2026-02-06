@@ -73,6 +73,13 @@ public:
 
     void SetFramelessWindow(bool frameless);
 
+    // Window control methods for frameless windows
+    void MinimizeWindow();
+    void MaximizeWindow();
+    void RestoreWindow();
+    void CloseWindow();
+    bool IsMaximized();
+
 private:
 
     CefRefPtr<CefWrapperApp> m_App;

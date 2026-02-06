@@ -68,6 +68,29 @@ void testfuncNoReturn(void *python_callback_object, int size, CefValueWrapper *a
     }
 }
 
+// Window control callbacks for the custom title bar
+void windowMinimize(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    std::cout << "Window minimize called" << std::endl;
+    cefSimpleWrapper.MinimizeWindow();
+}
+
+void windowMaximize(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    std::cout << "Window maximize/restore called" << std::endl;
+    if (cefSimpleWrapper.IsMaximized()) {
+        cefSimpleWrapper.RestoreWindow();
+    } else {
+        cefSimpleWrapper.MaximizeWindow();
+    }
+}
+
+void windowClose(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    std::cout << "Window close called" << std::endl;
+    cefSimpleWrapper.CloseWindow();
+}
+
 int main()
 {
     std::vector<std::string> namespacesToSubscribe;
@@ -77,6 +100,11 @@ int main()
     // Enable frameless window - removes Chrome UI (tabs, menu bar, etc.)
     // Set to false if you want the standard window with title bar
     cefSimpleWrapper.SetFramelessWindow(true);
+    
+    // Register window control bindings for the custom title bar
+    cefSimpleWrapper.AddJavascriptPythonBinding("minimize", windowMinimize, nullptr, "window", false);
+    cefSimpleWrapper.AddJavascriptPythonBinding("maximize", windowMaximize, nullptr, "window", false);
+    cefSimpleWrapper.AddJavascriptPythonBinding("close", windowClose, nullptr, "window", false);
     
     // Register JavaScript bindings
     // testfunc and test_one return values (true), test_two does not (false)

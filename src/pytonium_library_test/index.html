@@ -208,23 +208,32 @@
         output.scrollTop = output.scrollHeight;
     }
 
-    // Window control functions (for demonstration - you'd bind these to actual window controls)
+    // Window control functions - these call the C++ bindings
     function minimizeWindow() {
-        log('Minimize button clicked (bind to Pytonium window controls)');
-        // In a real app, you'd call a Python binding to minimize the window
-        // Pytonium.window.minimize();
+        log('Minimizing window...');
+        try {
+            Pytonium.window.minimize();
+        } catch (e) {
+            log('Minimize error: ' + e.message);
+        }
     }
     
     function maximizeWindow() {
-        log('Maximize button clicked (bind to Pytonium window controls)');
-        // In a real app, you'd call a Python binding to maximize the window
-        // Pytonium.window.maximize();
+        log('Maximizing/Restoring window...');
+        try {
+            Pytonium.window.maximize();
+        } catch (e) {
+            log('Maximize error: ' + e.message);
+        }
     }
     
     function closeWindow() {
-        log('Close button clicked (bind to Pytonium window controls)');
-        // In a real app, you'd call a Python binding to close the window
-        // Pytonium.window.close();
+        log('Closing window...');
+        try {
+            Pytonium.window.close();
+        } catch (e) {
+            log('Close error: ' + e.message);
+        }
     }
 
     // Test calling testfunc() which returns an object
