@@ -24,7 +24,7 @@ void CefWrapperApp::OnBeforeCommandLineProcessing(
   //command_line->AppendSwitch("allow-file-access-from-files");
 }
 
-CefWrapperApp::CefWrapperApp(std::string start_url, std::vector<JavascriptBinding> javascript_bindings, std::vector<JavascriptPythonBinding> javascript_python_bindings, std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings,  std::vector<ContextMenuBinding> contextMenuBindings, std::vector<CefCustomScheme> customSchemes, std::unordered_map<std::string, std::string> mimeTypeMap) {
+CefWrapperApp::CefWrapperApp(std::string start_url, std::vector<JavascriptBinding> javascript_bindings, std::vector<JavascriptPythonBinding> javascript_python_bindings, std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings,  std::vector<ContextMenuBinding> contextMenuBindings, std::vector<CefCustomScheme> customSchemes, std::unordered_map<std::string, std::string> mimeTypeMap, bool frameless) {
   m_Javascript_Bindings = std::move(javascript_bindings);
   m_Javascript_Python_Bindings = std::move(javascript_python_bindings);
   m_StateHandlerPythonBindings = std::move(stateHandlerPythonBindings);
@@ -32,6 +32,7 @@ CefWrapperApp::CefWrapperApp(std::string start_url, std::vector<JavascriptBindin
   CefWrapperBrowserProcessHandler::SetJavascriptBindings(
       m_Javascript_Bindings, m_Javascript_Python_Bindings, m_StateHandlerPythonBindings, std::move(contextMenuBindings), m_CustomSchemes, mimeTypeMap);
   CefWrapperBrowserProcessHandler::SetStartUrl(std::move(start_url));
+  CefWrapperBrowserProcessHandler::SetFramelessWindow(frameless);
 }
 
 void CefWrapperApp::LoadUrl(std::string url) {

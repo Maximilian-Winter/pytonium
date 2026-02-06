@@ -15,7 +15,7 @@ public:
             std::string start_url, std::vector<JavascriptBinding> javascript_bindings,
             std::vector<JavascriptPythonBinding> javascript_python_bindings,
             std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings,
-            std::vector<ContextMenuBinding> contextMenuBindings, std::vector<CefCustomScheme> customSchemes, std::unordered_map<std::string, std::string> mimeTypeMap);
+            std::vector<ContextMenuBinding> contextMenuBindings, std::vector<CefCustomScheme> customSchemes, std::unordered_map<std::string, std::string> mimeTypeMap, bool frameless = false);
 
     CefRefPtr<CefBrowser> GetBrowser();
 

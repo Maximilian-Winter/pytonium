@@ -9,6 +9,8 @@
 #include "javascript_binding.h"
 #include "cef_value_wrapper.h"
 
+#include "include/internal/cef_types_runtime.h"
+
 
 CefWrapperBrowserProcessHandler::CefWrapperBrowserProcessHandler() : init_width(1024), init_height(768), init_frameless(false) {}
 
@@ -65,6 +67,9 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
             CefCommandLine::GetGlobalCommandLine();
 
     bool use_views = command_line->HasSwitch("use-views");
+    bool chrome_runtime_disabled = command_line->HasSwitch("disable-chrome-runtime");
+    std::cout << "Chrome Runtime disabled: " << (chrome_runtime_disabled ? "YES" : "NO") << std::endl;
+    std::cout << "Use Views: " << (use_views ? "YES" : "NO") << std::endl;
 
     RegisterSchemeHandlerFactory(m_CustomSchemes, m_MimeTypeMap);
 
@@ -74,6 +79,13 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
             m_JavascriptBindings, m_JavascriptPythonBindings);
 
     CefBrowserSettings browser_settings;
+    
+    // Hide Chrome UI elements when not using Chrome runtime
+    browser_settings.chrome_status_bubble = STATE_DISABLED;
+    browser_settings.chrome_zoom_bubble = STATE_DISABLED;
+    
+    // Set window title from the HTML document
+    browser_settings.windowless_frame_rate = 60;
 
     std::string url;
     url = StartUrl;
@@ -83,12 +95,19 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
 #if defined(OS_WIN)
     // On Windows we need to specify certain flags that will be passed to
     // CreateWindowEx().
+    std::cout << "Creating window - Frameless: " << (init_frameless ? "YES" : "NO") << std::endl;
+    
+    // Force Alloy runtime style to disable Chrome UI (tabs, address bar, etc.)
+    window_info.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
+    std::cout << "Set runtime_style to ALLOY" << std::endl;
+    
     if (init_frameless) {
         // Frameless window - no title bar, no borders, just the web content
         window_info.style = WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
         window_info.parent_window = nullptr;
-        window_info.x = CW_USEDEFAULT;
-        window_info.y = CW_USEDEFAULT;
+        window_info.bounds.x = CW_USEDEFAULT;
+        window_info.bounds.y = CW_USEDEFAULT;
+        std::cout << "Frameless window style: " << window_info.style << std::endl;
     } else {
         // Standard window with title bar but no Chrome UI
         window_info.SetAsPopup(nullptr, "");

@@ -58,10 +58,19 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
   command_line->InitFromString(std::data(name));
 #endif
 
+  // Disable Chrome Runtime - must be done before CefExecuteProcess
+  // This removes the Chrome UI (tabs, address bar, etc.)
+  command_line->AppendSwitch("disable-chrome-runtime");
+  command_line->AppendSwitchWithValue("disable-features", "ChromeRuntime");
+  
+  // Debug: print command line to verify switches
+  CefString cmdLineStr = command_line->GetCommandLineString();
+  std::cout << "Command line: " << cmdLineStr.ToString() << std::endl;
 
 
 
-  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings, m_StateHandlerPythonBindings, m_ContextMenuBindings, m_CustomSchemes, m_MimeTypeMap));
+
+  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings, m_StateHandlerPythonBindings, m_ContextMenuBindings, m_CustomSchemes, m_MimeTypeMap, m_FramelessWindow));
   CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
   CefExecuteProcess(main_args, m_App.get(), sandbox_info);
 
@@ -277,6 +286,7 @@ void PytoniumLibrary::AddMimeTypeMapping(const std::string& fileExtension, std::
 
 void PytoniumLibrary::SetFramelessWindow(bool frameless)
 {
+    // Store the frameless setting - it will be applied when InitPytonium is called
+    // via the CefWrapperApp constructor
     m_FramelessWindow = frameless;
-    CefWrapperBrowserProcessHandler::SetFramelessWindow(frameless);
 }

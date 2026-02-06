@@ -191,3 +191,4 @@ src/pytonium_python_framework/Pytonium/bin_win.zip
 /cmake-build-debug/
 gh-wiki/pytonium.wiki/
 /cef-binaries-windows/bazel
+/src/pytonium_library_test/cache
