@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <iostream>
 #include <utility>
+#include <vector>
 #undef CEF_USE_SANDBOX
 
 #if defined(OS_WIN)
@@ -15,13 +16,36 @@
 
 std::string ExePath() {
 #if OS_WIN
-  std::filesystem::path cwd = std::filesystem::current_path() / "bin" / "pytonium_subprocess.exe";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
-  return cwd.string();
+  // Try multiple locations for the subprocess executable
+  std::vector<std::filesystem::path> possiblePaths;
+  
+  // From current working directory
+  possiblePaths.push_back(std::filesystem::current_path() / "bin" / "pytonium_subprocess.exe");
+  possiblePaths.push_back(std::filesystem::current_path() / "pytonium_subprocess.exe");
+  
+  // From executable directory
+  char exePath[MAX_PATH];
+  if (GetModuleFileNameA(NULL, exePath, MAX_PATH) > 0) {
+    std::filesystem::path exeDir = std::filesystem::path(exePath).parent_path();
+    possiblePaths.push_back(exeDir / "pytonium_subprocess.exe");
+    possiblePaths.push_back(exeDir / "bin" / "pytonium_subprocess.exe");
+    possiblePaths.push_back(exeDir.parent_path() / "pytonium_subprocess.exe");
+    possiblePaths.push_back(exeDir.parent_path() / "bin" / "pytonium_subprocess.exe");
+  }
+  
+  for (const auto& path : possiblePaths) {
+    if (std::filesystem::exists(path)) {
+      std::cout << "Found subprocess at: " << path.string() << std::endl;
+      return path.string();
+    }
+  }
+  
+  std::cout << "Warning: subprocess not found, trying default path" << std::endl;
+  return possiblePaths[0].string();
 #else
-  std::filesystem::path cwd = std::filesystem::current_path() / "pytonium_subprocess";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
+  std::filesystem::path cwd = std::filesystem::current_path() / "pytonium_subprocess";
   return cwd.string();
 #endif
-
 }
 
 std::string ResourcePath() {
@@ -66,6 +90,20 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
   // This removes the Chrome UI (tabs, address bar, etc.)
   command_line->AppendSwitch("disable-chrome-runtime");
   command_line->AppendSwitchWithValue("disable-features", "ChromeRuntime");
+  
+  // Fix Release build GPU/Network service crashes
+  command_line->AppendSwitch("disable-gpu-sandbox");
+  command_line->AppendSwitch("disable-setuid-sandbox");
+  command_line->AppendSwitch("disable-network-service-sandbox");
+  command_line->AppendSwitch("no-sandbox");
+  
+  // Alternative: Run GPU in browser process (slower but more stable)
+  // Uncomment the next line if GPU process still crashes:
+  // command_line->AppendSwitch("in-process-gpu");
+  
+  // Disable GPU if all else fails (software rendering):
+  // command_line->AppendSwitch("disable-gpu");
+  // command_line->AppendSwitch("disable-software-rasterizer");
   
   // Debug: print command line to verify switches
   CefString cmdLineStr = command_line->GetCommandLineString();
