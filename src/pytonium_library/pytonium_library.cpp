@@ -297,13 +297,19 @@ void PytoniumLibrary::SetFramelessWindow(bool frameless)
 
 void PytoniumLibrary::MinimizeWindow()
 {
+#if defined(OS_WIN)
     if (m_App && m_App->GetBrowser()) {
-        m_App->GetBrowser()->GetHost()->SetWindowVisibility(false);
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            ShowWindow(hwnd, SW_MINIMIZE);
+        }
     }
+#endif
 }
 
 void PytoniumLibrary::MaximizeWindow()
 {
+#if defined(OS_WIN)
     if (m_App && m_App->GetBrowser()) {
         m_App->GetBrowser()->GetHost()->SetFocus(true);
         // Use Windows API for maximize since CEF doesn't have a direct maximize method
@@ -312,16 +318,19 @@ void PytoniumLibrary::MaximizeWindow()
             ShowWindow(hwnd, SW_MAXIMIZE);
         }
     }
+#endif
 }
 
 void PytoniumLibrary::RestoreWindow()
 {
+#if defined(OS_WIN)
     if (m_App && m_App->GetBrowser()) {
         CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
         if (hwnd) {
             ShowWindow(hwnd, SW_RESTORE);
         }
     }
+#endif
 }
 
 void PytoniumLibrary::CloseWindow()
@@ -333,6 +342,7 @@ void PytoniumLibrary::CloseWindow()
 
 bool PytoniumLibrary::IsMaximized()
 {
+#if defined(OS_WIN)
     if (m_App && m_App->GetBrowser()) {
         CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
         if (hwnd) {
@@ -343,5 +353,23 @@ bool PytoniumLibrary::IsMaximized()
             }
         }
     }
+#endif
     return false;
+}
+
+void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
+{
+#if defined(OS_WIN)
+    if (m_App && m_App->GetBrowser()) {
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            RECT rect;
+            if (GetWindowRect(hwnd, &rect)) {
+                int newX = rect.left + deltaX;
+                int newY = rect.top + deltaY;
+                SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            }
+        }
+    }
+#endif
 }

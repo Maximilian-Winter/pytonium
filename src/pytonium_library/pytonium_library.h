@@ -79,6 +79,9 @@ public:
     void RestoreWindow();
     void CloseWindow();
     bool IsMaximized();
+    
+    // Drag window by delta (for draggable custom title bar)
+    void DragWindow(int deltaX, int deltaY);
 
 private:
 

@@ -160,7 +160,8 @@
     <div class="content">
         <div class="frameless-note">
             <strong>Frameless Window Mode:</strong> This window has a custom title bar created with HTML/CSS. 
-            The Chrome UI (tabs, address bar) has been removed. Set <code>SetFramelessWindow(false)</code> in main.cpp to restore the standard window.
+            The Chrome UI (tabs, address bar) has been removed. <strong>Click and drag the title bar</strong> to move the window.
+            Set <code>SetFramelessWindow(false)</code> in main.cpp to restore the standard window.
         </div>
         
         <h1>Pytonium C++ Callback Test</h1>
@@ -235,6 +236,51 @@
             log('Close error: ' + e.message);
         }
     }
+    
+    // Draggable title bar functionality
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    
+    function initDraggableTitlebar() {
+        const titlebar = document.querySelector('.titlebar');
+        if (!titlebar) return;
+        
+        // Only allow dragging on the title area, not the buttons
+        titlebar.addEventListener('mousedown', function(e) {
+            // Don't drag if clicking on buttons
+            if (e.target.tagName === 'BUTTON' || e.target.closest('.controls')) {
+                return;
+            }
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            log('Started dragging window');
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - lastMouseX;
+            const deltaY = e.clientY - lastMouseY;
+            
+            try {
+                Pytonium.window.drag(deltaX, deltaY);
+            } catch (err) {
+                // Dragging errors are normal if window is maximized
+            }
+            
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+        
+        document.addEventListener('mouseup', function() {
+            if (isDragging) {
+                isDragging = false;
+                log('Stopped dragging window');
+            }
+        });
+    }
 
     // Test calling testfunc() which returns an object
     function callTestFunc() {
@@ -301,6 +347,10 @@
         log('Pytonium is ready!');
         statusDiv.textContent = 'Pytonium Ready';
         statusDiv.className = 'status ok';
+        
+        // Initialize draggable title bar
+        initDraggableTitlebar();
+        log('Title bar is draggable - click and drag to move the window');
         
         // Register for state updates from the "user" and "app-general" namespaces
         try {

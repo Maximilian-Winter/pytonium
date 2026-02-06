@@ -91,6 +91,15 @@ void windowClose(void *python_callback_object, int size, CefValueWrapper *args, 
     cefSimpleWrapper.CloseWindow();
 }
 
+void windowDrag(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    if (size >= 2) {
+        int deltaX = args[0].GetInt();
+        int deltaY = args[1].GetInt();
+        cefSimpleWrapper.DragWindow(deltaX, deltaY);
+    }
+}
+
 int main()
 {
     std::vector<std::string> namespacesToSubscribe;
@@ -105,6 +114,7 @@ int main()
     cefSimpleWrapper.AddJavascriptPythonBinding("minimize", windowMinimize, nullptr, "window", false);
     cefSimpleWrapper.AddJavascriptPythonBinding("maximize", windowMaximize, nullptr, "window", false);
     cefSimpleWrapper.AddJavascriptPythonBinding("close", windowClose, nullptr, "window", false);
+    cefSimpleWrapper.AddJavascriptPythonBinding("drag", windowDrag, nullptr, "window", false);
     
     // Register JavaScript bindings
     // testfunc and test_one return values (true), test_two does not (false)
