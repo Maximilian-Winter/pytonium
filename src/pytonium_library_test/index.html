@@ -144,9 +144,42 @@
         .frameless-note strong {
             color: #1976d2;
         }
+        
+        /* Resize handles for frameless window */
+        .resize-handle {
+            position: fixed;
+            z-index: 9999;
+            background: transparent;
+        }
+        
+        .resize-handle:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Edge handles */
+        .resize-n { top: 0; left: 8px; right: 8px; height: 8px; cursor: n-resize; }
+        .resize-s { bottom: 0; left: 8px; right: 8px; height: 8px; cursor: s-resize; }
+        .resize-w { left: 0; top: 8px; bottom: 8px; width: 8px; cursor: w-resize; }
+        .resize-e { right: 0; top: 8px; bottom: 8px; width: 8px; cursor: e-resize; }
+        
+        /* Corner handles */
+        .resize-nw { top: 0; left: 0; width: 16px; height: 16px; cursor: nw-resize; }
+        .resize-ne { top: 0; right: 0; width: 16px; height: 16px; cursor: ne-resize; }
+        .resize-sw { bottom: 0; left: 0; width: 16px; height: 16px; cursor: sw-resize; }
+        .resize-se { bottom: 0; right: 0; width: 16px; height: 16px; cursor: se-resize; }
     </style>
 </head>
 <body>
+    <!-- Resize handles for frameless window -->
+    <div class="resize-handle resize-n" data-edge="n"></div>
+    <div class="resize-handle resize-s" data-edge="s"></div>
+    <div class="resize-handle resize-w" data-edge="w"></div>
+    <div class="resize-handle resize-e" data-edge="e"></div>
+    <div class="resize-handle resize-nw" data-edge="nw"></div>
+    <div class="resize-handle resize-ne" data-edge="ne"></div>
+    <div class="resize-handle resize-sw" data-edge="sw"></div>
+    <div class="resize-handle resize-se" data-edge="se"></div>
+    
     <!-- Custom title bar for frameless window -->
     <div class="titlebar">
         <div class="title">Pytonium C++ Test</div>
@@ -160,7 +193,8 @@
     <div class="content">
         <div class="frameless-note">
             <strong>Frameless Window Mode:</strong> This window has a custom title bar created with HTML/CSS. 
-            The Chrome UI (tabs, address bar) has been removed. <strong>Click and drag the title bar</strong> to move the window.
+            The Chrome UI (tabs, address bar) has been removed. 
+            <strong>Click and drag the title bar</strong> to move, <strong>drag edges/corners</strong> to resize.
             Set <code>SetFramelessWindow(false)</code> in main.cpp to restore the standard window.
         </div>
         
@@ -294,6 +328,109 @@
             isDragging = false;
         });
     }
+    
+    // Window resizing functionality
+    let isResizing = false;
+    let resizeEdge = '';
+    let resizeStartX = 0;
+    let resizeStartY = 0;
+    let resizeStartWidth = 0;
+    let resizeStartHeight = 0;
+    let resizeStartWindowX = 0;
+    let resizeStartWindowY = 0;
+    
+    async function initResizableWindow() {
+        const handles = document.querySelectorAll('.resize-handle');
+        
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', async function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                isResizing = true;
+                resizeEdge = handle.dataset.edge;
+                resizeStartX = e.screenX;
+                resizeStartY = e.screenY;
+                
+                // Get current window size and position
+                try {
+                    let size = await Pytonium.window.getSize();
+                    let pos = await Pytonium.window.getPosition();
+                    resizeStartWidth = size.width;
+                    resizeStartHeight = size.height;
+                    resizeStartWindowX = pos.x;
+                    resizeStartWindowY = pos.y;
+                } catch (err) {
+                    return;
+                }
+            });
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isResizing) return;
+            
+            const deltaX = e.screenX - resizeStartX;
+            const deltaY = e.screenY - resizeStartY;
+            
+            let newWidth = resizeStartWidth;
+            let newHeight = resizeStartHeight;
+            let anchor = 0; // Default: top-left anchor
+            
+            // Calculate new size based on which edge is being dragged
+            // Anchor determines which corner stays fixed
+            switch (resizeEdge) {
+                case 'e': // Right edge - expand right
+                    newWidth = resizeStartWidth + deltaX;
+                    anchor = 0; // Top-left fixed
+                    break;
+                case 'w': // Left edge - expand left, move left
+                    newWidth = resizeStartWidth - deltaX;
+                    anchor = 1; // Top-right fixed
+                    break;
+                case 's': // Bottom edge - expand down
+                    newHeight = resizeStartHeight + deltaY;
+                    anchor = 0; // Top-left fixed
+                    break;
+                case 'n': // Top edge - expand up, move up
+                    newHeight = resizeStartHeight - deltaY;
+                    anchor = 2; // Bottom-left fixed
+                    break;
+                case 'se': // Bottom-right corner
+                    newWidth = resizeStartWidth + deltaX;
+                    newHeight = resizeStartHeight + deltaY;
+                    anchor = 0; // Top-left fixed
+                    break;
+                case 'sw': // Bottom-left corner
+                    newWidth = resizeStartWidth - deltaX;
+                    newHeight = resizeStartHeight + deltaY;
+                    anchor = 1; // Top-right fixed
+                    break;
+                case 'ne': // Top-right corner
+                    newWidth = resizeStartWidth + deltaX;
+                    newHeight = resizeStartHeight - deltaY;
+                    anchor = 2; // Bottom-left fixed
+                    break;
+                case 'nw': // Top-left corner
+                    newWidth = resizeStartWidth - deltaX;
+                    newHeight = resizeStartHeight - deltaY;
+                    anchor = 3; // Bottom-right fixed
+                    break;
+            }
+            
+            // Minimum window size
+            const minWidth = 400;
+            const minHeight = 300;
+            
+            if (newWidth >= minWidth && newHeight >= minHeight) {
+                Pytonium.window.resize(newWidth, newHeight, anchor);
+            }
+        });
+        
+        document.addEventListener('mouseup', function() {
+            isResizing = false;
+            resizeEdge = '';
+        });
+    }
 
     // Test calling testfunc() which returns an object
     function callTestFunc() {
@@ -361,9 +498,11 @@
         statusDiv.textContent = 'Pytonium Ready';
         statusDiv.className = 'status ok';
         
-        // Initialize draggable title bar
+        // Initialize draggable title bar and resizable window
         initDraggableTitlebar();
+        initResizableWindow();
         log('Title bar is draggable - click and drag to move the window');
+        log('Window is resizable - drag the edges/corners');
         
         // Register for state updates from the "user" and "app-general" namespaces
         try {

@@ -88,6 +88,15 @@ public:
     
     // Move window to absolute position (smoother than delta)
     void SetWindowPosition(int x, int y);
+    
+    // Get window size
+    void GetWindowSize(int& width, int& height);
+    
+    // Resize window
+    void SetWindowSize(int width, int height);
+    
+    // Resize window from a specific edge/corner (anchor: 0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right)
+    void ResizeWindow(int newWidth, int newHeight, int anchor);
 
 private:
 

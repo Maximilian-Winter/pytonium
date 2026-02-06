@@ -134,6 +134,36 @@ void windowIsMaximized(void *python_callback_object, int size, CefValueWrapper *
     cefSimpleWrapper.ReturnValueToJavascript(message_id, result);
 }
 
+void windowGetSize(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    int width = 0, height = 0;
+    cefSimpleWrapper.GetWindowSize(width, height);
+    
+    CefValueWrapper wVal, hVal, result;
+    wVal.SetInt(width);
+    hVal.SetInt(height);
+    
+    std::map<std::string, CefValueWrapper> sizeMap;
+    sizeMap["width"] = wVal;
+    sizeMap["height"] = hVal;
+    result.SetObject(sizeMap);
+    
+    cefSimpleWrapper.ReturnValueToJavascript(message_id, result);
+}
+
+// Resize with anchor - which corner/edge stays fixed
+// anchor: 0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right
+void windowResize(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    if (size >= 3) {
+        int newWidth = args[0].GetInt();
+        int newHeight = args[1].GetInt();
+        int anchor = args[2].GetInt(); // 0-3 for corners
+        
+        cefSimpleWrapper.ResizeWindow(newWidth, newHeight, anchor);
+    }
+}
+
 int main()
 {
     std::vector<std::string> namespacesToSubscribe;
@@ -152,6 +182,8 @@ int main()
     cefSimpleWrapper.AddJavascriptPythonBinding("getPosition", windowGetPosition, nullptr, "window", true);
     cefSimpleWrapper.AddJavascriptPythonBinding("setPosition", windowSetPosition, nullptr, "window", false);
     cefSimpleWrapper.AddJavascriptPythonBinding("isMaximized", windowIsMaximized, nullptr, "window", true);
+    cefSimpleWrapper.AddJavascriptPythonBinding("getSize", windowGetSize, nullptr, "window", true);
+    cefSimpleWrapper.AddJavascriptPythonBinding("resize", windowResize, nullptr, "window", false);
     
     // Register JavaScript bindings
     // testfunc and test_one return values (true), test_two does not (false)

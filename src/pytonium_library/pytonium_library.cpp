@@ -405,3 +405,71 @@ void PytoniumLibrary::SetWindowPosition(int x, int y)
     }
 #endif
 }
+
+void PytoniumLibrary::GetWindowSize(int& width, int& height)
+{
+#if defined(OS_WIN)
+    if (m_App && m_App->GetBrowser()) {
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            RECT rect;
+            if (GetWindowRect(hwnd, &rect)) {
+                width = rect.right - rect.left;
+                height = rect.bottom - rect.top;
+                return;
+            }
+        }
+    }
+#endif
+    width = 0;
+    height = 0;
+}
+
+void PytoniumLibrary::SetWindowSize(int width, int height)
+{
+#if defined(OS_WIN)
+    if (m_App && m_App->GetBrowser()) {
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            SetWindowPos(hwnd, NULL, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+    }
+#endif
+}
+
+void PytoniumLibrary::ResizeWindow(int newWidth, int newHeight, int anchor)
+{
+#if defined(OS_WIN)
+    if (m_App && m_App->GetBrowser()) {
+        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+        if (hwnd) {
+            // Get current position and size
+            RECT rect;
+            if (!GetWindowRect(hwnd, &rect)) return;
+            
+            int currX = rect.left;
+            int currY = rect.top;
+            int currWidth = rect.right - rect.left;
+            int currHeight = rect.bottom - rect.top;
+            
+            int newX = currX;
+            int newY = currY;
+            
+            // Adjust position based on anchor to keep that corner fixed
+            // anchor 0 (top-left): no position change
+            // anchor 1 (top-right): adjust X based on width change
+            // anchor 2 (bottom-left): adjust Y based on height change  
+            // anchor 3 (bottom-right): adjust both X and Y
+            if (anchor == 1 || anchor == 3) {
+                newX = currX + (currWidth - newWidth);
+            }
+            if (anchor == 2 || anchor == 3) {
+                newY = currY + (currHeight - newHeight);
+            }
+            
+            // Move and resize in one atomic operation
+            SetWindowPos(hwnd, NULL, newX, newY, newWidth, newHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+    }
+#endif
+}
