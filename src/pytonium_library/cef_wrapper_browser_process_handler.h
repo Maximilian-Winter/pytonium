@@ -38,8 +38,8 @@ public:
     static void SetStartUrl(std::string url);
 
     static void LoadUrl(std::string url);
-    CefRefPtr<CefBrowser> FrameBrowser;
-    CefRefPtr<CefBrowser> ContentBrowser;
+
+    CefRefPtr<CefBrowser> Browser;
     std::vector<JavascriptBinding> m_JavascriptBindings;
     std::vector<JavascriptPythonBinding> m_JavascriptPythonBindings;
     std::vector<StateHandlerPythonBinding> m_StateHandlerPythonBindings;

@@ -65,12 +65,6 @@ public:
     void OnTitleChange(CefRefPtr<CefBrowser> browser,
                        const CefString &title) override;
 
-    bool OnConsoleMessage(CefRefPtr<CefBrowser> browser,
-                          cef_log_severity_t level,
-                          const CefString& message,
-                          const CefString& source,
-                          int line) override;
-
     // CefLifeSpanHandler methods:
     void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
 
@@ -136,7 +130,7 @@ private:
     // Platform-specific implementation.
     void PlatformTitleChange(CefRefPtr<CefBrowser> browser,
                              const CefString &title);
-    void SetupCustomWindowFrame(CefRefPtr<CefBrowser> browser);
+
     // True if the application is using the Views framework.
     const bool use_views_;
 
