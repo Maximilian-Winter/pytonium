@@ -86,6 +86,10 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
     
     // Set window title from the HTML document
     browser_settings.windowless_frame_rate = 60;
+    
+    // Disable web security features that can cause issues in Release builds
+    browser_settings.web_security = STATE_DISABLED;
+    browser_settings.javascript_access_clipboard = STATE_ENABLED;
 
     std::string url;
     url = StartUrl;
