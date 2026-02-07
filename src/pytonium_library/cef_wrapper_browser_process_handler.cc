@@ -2,6 +2,7 @@
 
 #include "cef_wrapper_browser_process_handler.h"
 
+#include <cstring>
 #include <utility>
 #include "cef_wrapper_client_handler.h"
 #include "cef_wrapper_render_process_handler.h"
@@ -10,6 +11,7 @@
 #include "cef_value_wrapper.h"
 
 #include "include/internal/cef_types_runtime.h"
+#include "include/internal/cef_types.h"
 
 
 CefWrapperBrowserProcessHandler::CefWrapperBrowserProcessHandler() : init_width(1024), init_height(768), init_frameless(false) {}
@@ -78,18 +80,12 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
     SimpleRenderProcessHandler::getInstance()->SetJavascriptBindings(
             m_JavascriptBindings, m_JavascriptPythonBindings);
 
-    CefBrowserSettings browser_settings;
-    
-    // Hide Chrome UI elements when not using Chrome runtime
-    browser_settings.chrome_status_bubble = STATE_DISABLED;
-    browser_settings.chrome_zoom_bubble = STATE_DISABLED;
-    
-    // Set window title from the HTML document
-    browser_settings.windowless_frame_rate = 60;
-    
-    // Disable web security features that can cause issues in Release builds
-    browser_settings.web_security = STATE_DISABLED;
-    browser_settings.javascript_access_clipboard = STATE_ENABLED;
+    // Initialize browser settings using the underlying C struct
+    cef_browser_settings_t cefBrowserSettings;
+    memset(&cefBrowserSettings, 0, sizeof(cef_browser_settings_t));
+    cefBrowserSettings.size = sizeof(cef_browser_settings_t);
+    cefBrowserSettings.windowless_frame_rate = 30;
+    CefBrowserSettings browser_settings(cefBrowserSettings);
 
     std::string url;
     url = StartUrl;

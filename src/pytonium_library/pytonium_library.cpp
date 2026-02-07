@@ -3,6 +3,8 @@
 #include "global_vars.h"
 #include "javascript_binding.h"
 #include "cef_value_wrapper.h"
+#include "include/internal/cef_types.h"
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <utility>
@@ -118,7 +120,11 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 
 
 
-  CefSettings settings;
+  // Initialize CEF settings using the underlying C struct
+  cef_settings_t cefSettings;
+  memset(&cefSettings, 0, sizeof(cef_settings_t));
+  cefSettings.size = sizeof(cef_settings_t);
+  CefSettings settings(cefSettings);
 
 
   if(m_UseCustomCefResourcesPath)

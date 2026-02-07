@@ -167,6 +167,49 @@
         .resize-ne { top: 0; right: 0; width: 16px; height: 16px; cursor: ne-resize; }
         .resize-sw { bottom: 0; left: 0; width: 16px; height: 16px; cursor: sw-resize; }
         .resize-se { bottom: 0; right: 0; width: 16px; height: 16px; cursor: se-resize; }
+        
+        /* UI Feedback display */
+        #ui-feedback {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 100px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .feedback-item {
+            background: white;
+            border-left: 4px solid #667eea;
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 0 4px 4px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .feedback-item.success {
+            border-left-color: #4caf50;
+        }
+        
+        .feedback-item.error {
+            border-left-color: #f44336;
+        }
+        
+        .feedback-item.info {
+            border-left-color: #2196f3;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
     </style>
 </head>
 <body>
@@ -215,6 +258,13 @@
         </div>
 
         <div class="section">
+            <h2>UI Feedback</h2>
+            <div id="ui-feedback">
+                <div class="feedback-item">Click buttons above to see reactions here...</div>
+            </div>
+        </div>
+
+        <div class="section">
             <h2>Output Log</h2>
             <div id="output"></div>
         </div>
@@ -242,31 +292,65 @@
         
         output.scrollTop = output.scrollHeight;
     }
+    
+    // UI Feedback display function
+    const feedbackContainer = document.getElementById('ui-feedback');
+    let feedbackCount = 0;
+    const maxFeedbackItems = 10;
+    
+    function showFeedback(message, type = 'info') {
+        // Remove placeholder if present
+        if (feedbackCount === 0) {
+            feedbackContainer.innerHTML = '';
+        }
+        
+        const item = document.createElement('div');
+        item.className = 'feedback-item ' + type;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        item.innerHTML = '<strong>' + timestamp + '</strong> - ' + message;
+        
+        feedbackContainer.insertBefore(item, feedbackContainer.firstChild);
+        feedbackCount++;
+        
+        // Limit number of feedback items
+        while (feedbackContainer.children.length > maxFeedbackItems) {
+            feedbackContainer.removeChild(feedbackContainer.lastChild);
+        }
+    }
 
     // Window control functions - these call the C++ bindings
     function minimizeWindow() {
+        showFeedback('Minimize button clicked', 'info');
         log('Minimizing window...');
         try {
             Pytonium.window.minimize();
+            showFeedback('Window minimized successfully', 'success');
         } catch (e) {
+            showFeedback('Minimize failed: ' + e.message, 'error');
             log('Minimize error: ' + e.message);
         }
     }
     
     function maximizeWindow() {
+        showFeedback('Maximize/Restore button clicked', 'info');
         log('Maximizing/Restoring window...');
         try {
             Pytonium.window.maximize();
+            showFeedback('Window maximized/restored successfully', 'success');
         } catch (e) {
+            showFeedback('Maximize failed: ' + e.message, 'error');
             log('Maximize error: ' + e.message);
         }
     }
     
     function closeWindow() {
+        showFeedback('Close button clicked - Closing application...', 'info');
         log('Closing window...');
         try {
             Pytonium.window.close();
         } catch (e) {
+            showFeedback('Close failed: ' + e.message, 'error');
             log('Close error: ' + e.message);
         }
     }
@@ -434,61 +518,77 @@
 
     // Test calling testfunc() which returns an object
     function callTestFunc() {
+        showFeedback('Button clicked: testfunc()', 'info');
         log('Calling Pytonium.test_function_binding.testfunc()...');
         try {
             let myPromise = Pytonium.test_function_binding.testfunc();
             if (myPromise && typeof myPromise.then === 'function') {
                 myPromise.then((resolvedValue) => {
+                    showFeedback('testfunc() returned successfully!', 'success');
                     log('testfunc() returned: ' + JSON.stringify(resolvedValue));
                 }).catch((err) => {
+                    showFeedback('testfunc() failed: ' + err, 'error');
                     log('testfunc() error: ' + err);
                 });
             } else {
+                showFeedback('testfunc() returned (no promise)', 'info');
                 log('testfunc() returned (no promise): ' + myPromise);
             }
         } catch (e) {
+            showFeedback('testfunc() exception: ' + e.message, 'error');
             log('testfunc() exception: ' + e.message);
         }
     }
 
     // Test calling test_one() which returns an object
     function callTestOne() {
+        showFeedback('Button clicked: test_one(64)', 'info');
         log('Calling Pytonium.test_class_methods_binding.test_one(64)...');
         try {
             let myPromise = Pytonium.test_class_methods_binding.test_one(64);
             if (myPromise && typeof myPromise.then === 'function') {
                 myPromise.then((resolvedValue) => {
+                    showFeedback('test_one() returned successfully!', 'success');
                     log('test_one() returned: ' + JSON.stringify(resolvedValue));
                 }).catch((err) => {
+                    showFeedback('test_one() failed: ' + err, 'error');
                     log('test_one() error: ' + err);
                 });
             } else {
+                showFeedback('test_one() returned (no promise)', 'info');
                 log('test_one() returned (no promise): ' + myPromise);
             }
         } catch (e) {
+            showFeedback('test_one() exception: ' + e.message, 'error');
             log('test_one() exception: ' + e.message);
         }
     }
 
     // Test calling test_two() which has no return value (no promise)
     function callTestTwo() {
+        showFeedback('Button clicked: test_two("Hello", 20, 40)', 'info');
         log('Calling Pytonium.test_class_methods_binding.test_two("Hello", 20, 40)...');
         try {
             let result = Pytonium.test_class_methods_binding.test_two("Hello", 20, 40);
+            showFeedback('test_two() executed successfully!', 'success');
             log('test_two() called. Return value: ' + result);
         } catch (e) {
+            showFeedback('test_two() exception: ' + e.message, 'error');
             log('test_two() exception: ' + e.message);
         }
     }
 
     // Set user state from JavaScript
     function setUserState() {
+        showFeedback('Button clicked: Set User State', 'info');
         try {
             Pytonium.appState.setState("user", "age", 25);
+            showFeedback('User state set: age = 25', 'success');
             log('Set user state: age = 25');
             let age = Pytonium.appState.getState("user", "age");
             log('Retrieved user age from state: ' + age);
         } catch (e) {
+            showFeedback('setUserState() failed: ' + e.message, 'error');
             log('setUserState() exception: ' + e.message);
         }
     }
@@ -497,6 +597,10 @@
         log('Pytonium is ready!');
         statusDiv.textContent = 'Pytonium Ready';
         statusDiv.className = 'status ok';
+        
+        // Show welcome feedback
+        showFeedback('🎉 Pytonium C++ Test App Started!', 'success');
+        showFeedback('Click any button to see UI reactions here', 'info');
         
         // Initialize draggable title bar and resizable window
         initDraggableTitlebar();
