@@ -44,3 +44,13 @@ void CefWrapperClientHandler::PlatformTitleChange(CefRefPtr<CefBrowser> browser,
   XStoreName(display, browser->GetHost()->GetWindowHandle(), titleStr.c_str());
 #endif  // defined(CEF_X11)
 }
+
+void CefWrapperClientHandler::PlatformSubclassWindow(CefRefPtr<CefBrowser> browser)
+{
+    // No-op on Linux - resize borders are handled by the window manager
+}
+
+void CefWrapperClientHandler::PlatformRemoveSubclass(CefRefPtr<CefBrowser> browser)
+{
+    // No-op on Linux
+}

@@ -130,6 +130,10 @@ private:
     // Platform-specific implementation.
     void PlatformTitleChange(CefRefPtr<CefBrowser> browser,
                              const CefString &title);
+    
+    // Platform-specific window subclassing for resize borders
+    void PlatformSubclassWindow(CefRefPtr<CefBrowser> browser);
+    void PlatformRemoveSubclass(CefRefPtr<CefBrowser> browser);
 
     // True if the application is using the Views framework.
     const bool use_views_;

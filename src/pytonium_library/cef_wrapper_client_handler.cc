@@ -175,6 +175,9 @@ void CefWrapperClientHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 
     // Add to the list of existing browsers.
     browser_list_.push_back(browser);
+    
+    // Subclass the window for resize border handling
+    PlatformSubclassWindow(browser);
 }
 
 bool CefWrapperClientHandler::DoClose(CefRefPtr<CefBrowser> browser)
@@ -198,6 +201,9 @@ bool CefWrapperClientHandler::DoClose(CefRefPtr<CefBrowser> browser)
 void CefWrapperClientHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
 {
     CEF_REQUIRE_UI_THREAD();
+
+    // Remove window subclassing
+    PlatformRemoveSubclass(browser);
 
     // Remove from the list of existing browsers.
     BrowserList::iterator bit = browser_list_.begin();
