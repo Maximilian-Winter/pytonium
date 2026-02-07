@@ -96,3 +96,17 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         void SetShowDebugContextMenu(bool show);
         void AddCustomScheme(string schemeIdentifier, string contentRootFolder);
         void AddMimeTypeMapping(string fileExtension, string mimeType);
+        
+        # Window control methods
+        void SetFramelessWindow(bool frameless);
+        void MinimizeWindow();
+        void MaximizeWindow();
+        void RestoreWindow();
+        void CloseWindow();
+        bool IsMaximized();
+        void DragWindow(int deltaX, int deltaY);
+        void GetWindowPosition(int& x, int& y);
+        void SetWindowPosition(int x, int y);
+        void GetWindowSize(int& width, int& height);
+        void SetWindowSize(int width, int height);
+        void ResizeWindow(int newWidth, int newHeight, int anchor);

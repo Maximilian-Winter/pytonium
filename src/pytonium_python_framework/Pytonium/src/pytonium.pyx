@@ -490,6 +490,68 @@ cdef class Pytonium:
     def load_url(self, url: str):
         self.pytonium_library.LoadUrl(url.encode("utf-8"))
 
+    # Window control methods
+    def set_frameless_window(self, frameless: bool):
+        """Enable/disable frameless window mode (must be called before initialize)."""
+        self.pytonium_library.SetFramelessWindow(frameless)
+
+    def minimize_window(self):
+        """Minimize the window."""
+        self.pytonium_library.MinimizeWindow()
+
+    def maximize_window(self):
+        """Maximize the window."""
+        self.pytonium_library.MaximizeWindow()
+
+    def restore_window(self):
+        """Restore the window from maximized state."""
+        self.pytonium_library.RestoreWindow()
+
+    def close_window(self):
+        """Close the window."""
+        self.pytonium_library.CloseWindow()
+
+    def is_maximized(self) -> bool:
+        """Check if the window is currently maximized."""
+        return self.pytonium_library.IsMaximized()
+
+    def drag_window(self, delta_x: int, delta_y: int):
+        """Drag the window by the specified delta (for frameless windows)."""
+        self.pytonium_library.DragWindow(delta_x, delta_y)
+
+    def get_window_position(self) -> tuple:
+        """Get the current window position as (x, y)."""
+        cdef int x = 0
+        cdef int y = 0
+        self.pytonium_library.GetWindowPosition(x, y)
+        return (x, y)
+
+    def set_window_position(self, x: int, y: int):
+        """Set the window position."""
+        self.pytonium_library.SetWindowPosition(x, y)
+
+    def get_window_size(self) -> tuple:
+        """Get the current window size as (width, height)."""
+        cdef int width = 0
+        cdef int height = 0
+        self.pytonium_library.GetWindowSize(width, height)
+        return (width, height)
+
+    def set_window_size(self, width: int, height: int):
+        """Set the window size."""
+        self.pytonium_library.SetWindowSize(width, height)
+
+    def resize_window(self, new_width: int, new_height: int, anchor: int = 0):
+        """
+        Resize the window from a specific anchor point.
+        
+        Args:
+            new_width: New window width
+            new_height: New window height
+            anchor: Which corner stays fixed (0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right)
+        """
+        self.pytonium_library.ResizeWindow(new_width, new_height, anchor)
+
     def set_state(self, namespace: str, key: str, value: object):
         converter = PytoniumValueWrapper()
         self.pytonium_library.SetState(namespace.encode("utf-8"), key.encode("utf-8"), converter.PythonType_to_CefValueWrapper(value))
