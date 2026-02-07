@@ -1,7 +1,12 @@
-cmake_minimum_required(VERSION 3.3.0)
+cmake_minimum_required(VERSION 3.5)
 project(Pytonium)
 set(CMAKE_CXX_STANDARD 20)
 set_property(GLOBAL PROPERTY OS_FOLDERS ON)
+
+# Fix Windows macro conflicts with CEF
+if(WIN32)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
 
 if(UNIX)
     set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Pytonium/src/cef-binaries-linux")
