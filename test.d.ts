@@ -6,6 +6,13 @@ declare namespace Pytonium {
     function test_one(arg1: number): number;
     function test_two(arg1: string, arg2: number, arg3: number): void;
   }
+  export namespace window {
+    function minimize(): void;
+    function maximize(): void;
+    function close(): void;
+    function drag(delta_x: number, delta_y: number): void;
+    function resize(new_width: number, new_height: number, anchor: number): void;
+  }
   export namespace appState {
     function registerForStateUpdates(eventName: string, namespaces: string[], getUpdatesFromJavascript: boolean, getUpdatesFromPytonium: boolean): void;
     function setState(namespace: string, key: string, value: any): void;
