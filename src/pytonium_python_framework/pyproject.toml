@@ -1,8 +1,12 @@
 [build-system]
-requires = [  "setuptools>=42",
-    "scikit-build",
-    "cmake",
-    "ninja; platform_system!='Windows'", "Cython>=3.0.2"]
+requires = [
+    "scikit-build>=0.16",
+    "setuptools>=42",
+    "wheel",
+    "cmake>=3.18",
+    "ninja; platform_system!='Windows'",
+    "Cython>=3.0.2"
+]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,7 +15,13 @@ version = "0.0.13"
 description = "A framework for building python apps, with a GUI based on the web-technologies HTML, CSS and Javascript."
 readme = "README.md"
 requires-python = ">=3.10"
-classifiers = [ "Programming Language :: Python :: 3", "License :: OSI Approved :: BSD License", "Operating System :: Microsoft :: Windows", "Operating System :: POSIX :: Linux"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux"
+]
+
 [[project.authors]]
 name = "Maximilian Winter"
 email = "maximilian.winter.91@gmail.com"
@@ -19,3 +29,6 @@ email = "maximilian.winter.91@gmail.com"
 [project.urls]
 Homepage = "https://github.com/Maximilian-Winter/pytonium"
 "Bug Tracker" = "https://github.com/Maximilian-Winter/pytonium/issues"
+
+[tool.scikit-build]
+build-type = "Release"
