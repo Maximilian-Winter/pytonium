@@ -1,7 +1,13 @@
 #include "cef_wrapper_client_handler.h"
 
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0601  // Windows 7
+#endif
+
 #include <windows.h>
 #include <windowsx.h>
+#include <commctrl.h>
+#pragma comment(lib, "comctl32.lib")
 #include <string>
 
 #include "include/cef_browser.h"
