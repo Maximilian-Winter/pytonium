@@ -342,11 +342,10 @@ void PytoniumLibrary::SetFramelessWindow(bool frameless)
 void PytoniumLibrary::MinimizeWindow()
 {
 #if defined(OS_WIN)
-    if (m_App && m_App->GetBrowser()) {
-        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-        if (hwnd) {
-            ShowWindow(hwnd, SW_MINIMIZE);
-        }
+    if (!m_App || !m_App->GetBrowser()) return;
+    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (hwnd && IsWindow(hwnd)) {
+        ShowWindow(hwnd, SW_MINIMIZE);
     }
 #endif
 }
@@ -354,13 +353,11 @@ void PytoniumLibrary::MinimizeWindow()
 void PytoniumLibrary::MaximizeWindow()
 {
 #if defined(OS_WIN)
-    if (m_App && m_App->GetBrowser()) {
-        m_App->GetBrowser()->GetHost()->SetFocus(true);
-        // Use Windows API for maximize since CEF doesn't have a direct maximize method
-        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-        if (hwnd) {
-            ShowWindow(hwnd, SW_MAXIMIZE);
-        }
+    if (!m_App || !m_App->GetBrowser()) return;
+    m_App->GetBrowser()->GetHost()->SetFocus(true);
+    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (hwnd && IsWindow(hwnd)) {
+        ShowWindow(hwnd, SW_MAXIMIZE);
     }
 #endif
 }
@@ -368,11 +365,10 @@ void PytoniumLibrary::MaximizeWindow()
 void PytoniumLibrary::RestoreWindow()
 {
 #if defined(OS_WIN)
-    if (m_App && m_App->GetBrowser()) {
-        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-        if (hwnd) {
-            ShowWindow(hwnd, SW_RESTORE);
-        }
+    if (!m_App || !m_App->GetBrowser()) return;
+    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (hwnd && IsWindow(hwnd)) {
+        ShowWindow(hwnd, SW_RESTORE);
     }
 #endif
 }
@@ -387,14 +383,13 @@ void PytoniumLibrary::CloseWindow()
 bool PytoniumLibrary::IsMaximized()
 {
 #if defined(OS_WIN)
-    if (m_App && m_App->GetBrowser()) {
-        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-        if (hwnd) {
-            WINDOWPLACEMENT wp;
-            wp.length = sizeof(WINDOWPLACEMENT);
-            if (GetWindowPlacement(hwnd, &wp)) {
-                return wp.showCmd == SW_SHOWMAXIMIZED;
-            }
+    if (!m_App || !m_App->GetBrowser()) return false;
+    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (hwnd && IsWindow(hwnd)) {
+        WINDOWPLACEMENT wp;
+        wp.length = sizeof(WINDOWPLACEMENT);
+        if (GetWindowPlacement(hwnd, &wp)) {
+            return wp.showCmd == SW_SHOWMAXIMIZED;
         }
     }
 #endif
@@ -404,16 +399,14 @@ bool PytoniumLibrary::IsMaximized()
 void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
 {
 #if defined(OS_WIN)
-    if (m_App && m_App->GetBrowser()) {
-        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-        if (hwnd) {
-            RECT rect;
-            if (GetWindowRect(hwnd, &rect)) {
-                int newX = rect.left + deltaX;
-                int newY = rect.top + deltaY;
-                // Use SWP_FRAMECHANGED to force a redraw and SWP_ASYNCWINDOWPOS for smoother movement
-                SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-            }
+    if (!m_App || !m_App->GetBrowser()) return;
+    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (hwnd && IsWindow(hwnd)) {
+        RECT rect;
+        if (GetWindowRect(hwnd, &rect)) {
+            int newX = rect.left + deltaX;
+            int newY = rect.top + deltaY;
+            SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         }
     }
 #endif
@@ -421,31 +414,28 @@ void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
 
 void PytoniumLibrary::GetWindowPosition(int& x, int& y)
 {
+    x = 0;
+    y = 0;
 #if defined(OS_WIN)
-    if (m_App && m_App->GetBrowser()) {
-        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-        if (hwnd) {
-            RECT rect;
-            if (GetWindowRect(hwnd, &rect)) {
-                x = rect.left;
-                y = rect.top;
-                return;
-            }
+    if (!m_App || !m_App->GetBrowser()) return;
+    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (hwnd && IsWindow(hwnd)) {
+        RECT rect;
+        if (GetWindowRect(hwnd, &rect)) {
+            x = rect.left;
+            y = rect.top;
         }
     }
 #endif
-    x = 0;
-    y = 0;
 }
 
 void PytoniumLibrary::SetWindowPosition(int x, int y)
 {
 #if defined(OS_WIN)
-    if (m_App && m_App->GetBrowser()) {
-        CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-        if (hwnd) {
-            SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-        }
+    if (!m_App || !m_App->GetBrowser()) return;
+    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (hwnd && IsWindow(hwnd)) {
+        SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
 #endif
 }
@@ -456,31 +446,15 @@ void PytoniumLibrary::GetWindowSize(int& width, int& height)
     height = 0;
     
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) {
-        std::cout << "[Pytonium] GetWindowSize: app or browser is null" << std::endl;
-        return;
-    }
+    if (!m_App || !m_App->GetBrowser()) return;
     
     CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-    std::cout << "[Pytonium] GetWindowSize: hwnd=" << hwnd << std::endl;
-    
-    if (!hwnd) {
-        std::cout << "[Pytonium] GetWindowSize: hwnd is null" << std::endl;
-        return;
-    }
-    
-    if (!IsWindow(hwnd)) {
-        std::cout << "[Pytonium] GetWindowSize: hwnd is not a valid window" << std::endl;
-        return;
-    }
+    if (!hwnd || !IsWindow(hwnd)) return;
     
     RECT rect;
     if (GetWindowRect(hwnd, &rect)) {
         width = rect.right - rect.left;
         height = rect.bottom - rect.top;
-        std::cout << "[Pytonium] GetWindowSize: success, " << width << "x" << height << std::endl;
-    } else {
-        std::cout << "[Pytonium] GetWindowSize: GetWindowRect failed, error=" << GetLastError() << std::endl;
     }
 #endif
 }
@@ -488,83 +462,34 @@ void PytoniumLibrary::GetWindowSize(int& width, int& height)
 void PytoniumLibrary::SetWindowSize(int width, int height)
 {
 #if defined(OS_WIN)
-    std::cout << "[Pytonium] SetWindowSize called: " << width << "x" << height << std::endl;
-    
-    if (!m_App || !m_App->GetBrowser()) {
-        std::cout << "[Pytonium] SetWindowSize failed: app or browser is null" << std::endl;
-        return;
-    }
+    if (!m_App || !m_App->GetBrowser()) return;
     
     CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-    std::cout << "[Pytonium] Window handle: " << hwnd << std::endl;
+    if (!hwnd || !IsWindow(hwnd)) return;
+    if (IsZoomed(hwnd)) return;  // Can't resize maximized windows
     
-    if (!hwnd) {
-        std::cout << "[Pytonium] SetWindowSize failed: hwnd is null" << std::endl;
-        return;
-    }
-    
-    if (!IsWindow(hwnd)) {
-        std::cout << "[Pytonium] SetWindowSize failed: hwnd is not a valid window" << std::endl;
-        return;
-    }
-    
-    if (IsZoomed(hwnd)) {
-        std::cout << "[Pytonium] SetWindowSize failed: window is maximized" << std::endl;
-        return;
-    }
-    
-    BOOL result = SetWindowPos(hwnd, NULL, 0, 0, width, height, 
-                               SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-    
-    if (!result) {
-        std::cout << "[Pytonium] SetWindowPos failed, error=" << GetLastError() << std::endl;
-    } else {
-        std::cout << "[Pytonium] SetWindowSize succeeded" << std::endl;
-    }
+    SetWindowPos(hwnd, NULL, 0, 0, width, height, 
+                 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 #endif
 }
 
 void PytoniumLibrary::ResizeWindow(int newWidth, int newHeight, int anchor)
 {
 #if defined(OS_WIN)
-    std::cout << "[Pytonium] ResizeWindow called: " << newWidth << "x" << newHeight << ", anchor=" << anchor << std::endl;
+    if (!m_App || !m_App->GetBrowser()) return;
     
-    if (!m_App) {
-        std::cout << "[Pytonium] ResizeWindow failed: m_App is null" << std::endl;
-        return;
-    }
-    
-    CefRefPtr<CefBrowser> browser = m_App->GetBrowser();
-    if (!browser) {
-        std::cout << "[Pytonium] ResizeWindow failed: browser is null" << std::endl;
-        return;
-    }
-    
-    CefWindowHandle hwnd = browser->GetHost()->GetWindowHandle();
-    if (!hwnd) {
-        std::cout << "[Pytonium] ResizeWindow failed: hwnd is null" << std::endl;
-        return;
-    }
-    
-    // Check if window is maximized - can't resize maximized windows
-    if (IsZoomed(hwnd)) {
-        std::cout << "[Pytonium] ResizeWindow failed: window is maximized" << std::endl;
-        return;
-    }
+    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!hwnd || !IsWindow(hwnd)) return;
+    if (IsZoomed(hwnd)) return;  // Can't resize maximized windows
     
     // Get current position and size
     RECT rect;
-    if (!GetWindowRect(hwnd, &rect)) {
-        std::cout << "[Pytonium] ResizeWindow failed: GetWindowRect failed, error=" << GetLastError() << std::endl;
-        return;
-    }
+    if (!GetWindowRect(hwnd, &rect)) return;
     
     int currX = rect.left;
     int currY = rect.top;
     int currWidth = rect.right - rect.left;
     int currHeight = rect.bottom - rect.top;
-    
-    std::cout << "[Pytonium] Current: pos=(" << currX << "," << currY << ") size=" << currWidth << "x" << currHeight << std::endl;
     
     int newX = currX;
     int newY = currY;
@@ -581,16 +506,8 @@ void PytoniumLibrary::ResizeWindow(int newWidth, int newHeight, int anchor)
         newY = currY + (currHeight - newHeight);
     }
     
-    std::cout << "[Pytonium] Setting new pos=(" << newX << "," << newY << ") size=" << newWidth << "x" << newHeight << std::endl;
-    
     // Move and resize in one atomic operation
-    BOOL result = SetWindowPos(hwnd, NULL, newX, newY, newWidth, newHeight, 
-                               SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-    
-    if (!result) {
-        std::cout << "[Pytonium] SetWindowPos failed, error=" << GetLastError() << std::endl;
-    } else {
-        std::cout << "[Pytonium] ResizeWindow succeeded" << std::endl;
-    }
+    SetWindowPos(hwnd, NULL, newX, newY, newWidth, newHeight, 
+                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 #endif
 }
