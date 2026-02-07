@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pytonium Resize Test</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        .titlebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: -20px -20px 20px -20px;
+        }
+        .section {
+            background: #16213e;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        h2 { margin-top: 0; color: #667eea; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button:hover { background: #764ba2; }
+        .resize-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 400px;
+        }
+        .resize-grid button { width: 100%; }
+        .info { 
+            background: #0f3460; 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">
+        <div>Pytonium Resize Test</div>
+        <div>
+            <button onclick="minimizeWindow()">_</button>
+            <button onclick="maximizeWindow()">□</button>
+            <button onclick="closeWindow()">×</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Current Window Info</h2>
+        <div class="info" id="window-info">Click "Get Info" to load...</div>
+        <button onclick="getWindowInfo()">Get Info</button>
+    </div>
+
+    <div class="section">
+        <h2>Absolute Resize (set_window_size)</h2>
+        <label>Width: <input type="number" id="abs-width" value="1200"></label>
+        <label>Height: <input type="number" id="abs-height" value="800"></label>
+        <button onclick="setAbsoluteSize()">Set Size</button>
+    </div>
+
+    <div class="section">
+        <h2>Relative Resize (resize_window with anchor)</h2>
+        <p>Click to resize by ±100px from the anchor point:</p>
+        <div class="resize-grid">
+            <button onclick="resizeRel(-100, -100, 3)">↖ -100,-100<br>(BR anchor)</button>
+            <button onclick="resizeRel(0, -100, 2)">↑ -100h<br>(BL anchor)</button>
+            <button onclick="resizeRel(100, -100, 2)">↗ +100,-100<br>(BL anchor)</button>
+            
+            <button onclick="resizeRel(-100, 0, 1)">← -100w<br>(TR anchor)</button>
+            <button onclick="resizeRel(100, 100, 0)">+100,+100<br>(TL anchor)</button>
+            <button onclick="resizeRel(100, 0, 0)">→ +100w<br>(TL anchor)</button>
+            
+            <button onclick="resizeRel(-100, 100, 1)">↙ -100,+100<br>(TR anchor)</button>
+            <button onclick="resizeRel(0, 100, 0)">↓ +100h<br>(TL anchor)</button>
+            <button onclick="resizeRel(100, 100, 0)">↘ +100,+100<br>(TL anchor)</button>
+        </div>
+        <p style="font-size: 12px; color: #888;">
+            Anchor: 0=TopLeft, 1=TopRight, 2=BottomLeft, 3=BottomRight<br>
+            The anchor point stays fixed while the opposite corner moves.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Debug Log</h2>
+        <div class="log" id="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            log.textContent += `[${time}] ${msg}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function clearLog() {
+            log.textContent = '';
+        }
+        
+        async function getWindowInfo() {
+            try {
+                const pos = await Pytonium.window.getPosition();
+                const size = await Pytonium.window.getSize();
+                const maximized = await Pytonium.window.isMaximized();
+                document.getElementById('window-info').innerHTML = 
+                    `Position: (${pos.x}, ${pos.y})<br>` +
+                    `Size: ${size.width} x ${size.height}<br>` +
+                    `Maximized: ${maximized}`;
+                addLog(`Window info: pos=(${pos.x},${pos.y}) size=${size.width}x${size.height} max=${maximized}`);
+            } catch (e) {
+                addLog(`ERROR getting window info: ${e.message}`);
+            }
+        }
+        
+        async function setAbsoluteSize() {
+            const w = parseInt(document.getElementById('abs-width').value);
+            const h = parseInt(document.getElementById('abs-height').value);
+            addLog(`Setting size to ${w}x${h}...`);
+            try {
+                await Pytonium.window.setSize(w, h);
+                addLog(`Size set successfully`);
+                getWindowInfo();
+            } catch (e) {
+                addLog(`ERROR: ${e.message}`);
+            }
+        }
+        
+        async function resizeRel(dw, dh, anchor) {
+            addLog(`Resizing by ${dw},${dh} with anchor ${anchor}...`);
+            try {
+                // Get current size
+                const size = await Pytonium.window.getSize();
+                const newW = size.width + dw;
+                const newH = size.height + dh;
+                addLog(`Current: ${size.width}x${size.height}, New: ${newW}x${newH}`);
+                
+                // Call resize
+                await Pytonium.window.resize(newW, newH, anchor);
+                addLog(`Resize completed`);
+                getWindowInfo();
+            } catch (e) {
+                addLog(`ERROR: ${e.message}`);
+            }
+        }
+        
+        function minimizeWindow() {
+            addLog('Minimizing...');
+            try { Pytonium.window.minimize(); } catch (e) { addLog(`ERROR: ${e.message}`); }
+        }
+        
+        function maximizeWindow() {
+            addLog('Maximizing/Restoring...');
+            try { Pytonium.window.maximize(); } catch (e) { addLog(`ERROR: ${e.message}`); }
+        }
+        
+        function closeWindow() {
+            addLog('Closing...');
+            try { Pytonium.window.close(); } catch (e) { addLog(`ERROR: ${e.message}`); }
+        }
+        
+        // Initialize
+        if (window.PytoniumReady) {
+            addLog('Ready!');
+            getWindowInfo();
+        } else {
+            window.addEventListener('PytoniumReady', () => {
+                addLog('Ready!');
+                getWindowInfo();
+            });
+        }
+    </script>
+</body>
+</html>

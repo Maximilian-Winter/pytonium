@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Babylon.js 3D Scene</title>
+    <script src="pytonium://babylon.js"></script>
+    <script src="pytonium://babylonjs.loaders.js"></script>
+</head>
+<body>
+<div id="gameContainer" style="width: 100%; height: 100vh;"></div>
+</body>
+<script>
+    function Init() {
+
+        // Initialize Babylon.js Scene
+        var box;  // Declare box variable in the global scope
+
+        window.addEventListener('DOMContentLoaded', function () {
+            var canvas = document.createElement("canvas");
+            var container = document.getElementById("gameContainer");
+            container.appendChild(canvas);
+            canvas.width = container.offsetWidth;
+            canvas.height = container.offsetHeight;
+            var engine = new BABYLON.Engine(canvas, true);
+
+            var createScene = function () {
+                var scene = new BABYLON.Scene(engine);
+
+                var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 4, 3, new BABYLON.Vector3(0, 1, 0), scene);
+                camera.attachControl(canvas, true);
+
+                var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
+
+                box = BABYLON.MeshBuilder.CreateBox("box", {}, scene);  // Initialize box within the function scope
+                BABYLON.SceneLoader.ImportMesh("", "pytonium-data://", "HipHopDancing.glb", scene, function (meshes, particleSystems, skeletons) {
+                    var character = meshes[0];
+                    character.position = new BABYLON.Vector3(0, 0, 0); // Initial position
+
+                    var idleAnim = scene.beginAnimation(skeletons[0], 0, 100, true, 0.8);  // Replace with your actual frame numbers and speed
+                });
+                return scene;
+            };
+
+            var scene = createScene();
+
+            engine.runRenderLoop(function () {
+                box.rotation.x += 0.005;
+                box.rotation.y += 0.005;
+                scene.render();
+            });
+        });
+    }
+
+    // Check if Python bindings are ready and call them, if not add an event listener for the PytoniumReady event.
+    if (window.PytoniumReady) {
+        Init();
+    } else {
+        window.addEventListener('PytoniumReady', function () {
+            Init();
+        });
+    }
+</script>
+</html>

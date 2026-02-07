@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Line Graph with D3.js</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script> <!-- Include D3.js library -->
+</head>
+<body>
+<h1>Simple Line Graph Example</h1>
+<div id="chartContainer" style="width: 600px; height: 400px;">
+    <!-- SVG element where the chart will be rendered -->
+    <svg id="myLineChart" width="600" height="400"></svg>
+</div>
+</body>
+<script>
+    function parseCustomDate(str) {
+        const [datePart, timePart] = str.split(", ");
+        const [day, month, year] = datePart.split(".");
+        const [hour, minute, second] = timePart.split(":");
+        return new Date(year, month - 1, day, hour, minute, second);
+    }
+
+    function Init() {
+        Pytonium.appState.registerForStateUpdates("ChangeData", ["app-general"], true, true);
+
+        document.addEventListener('ChangeData', function (event) {
+            let detail = event.detail;
+            let value = detail.value;
+
+            // Convert string dates to Date objects and numbers to Number objects
+            const labels = value.labels.map(parseCustomDate);
+            const data = value.data.map(Number);
+
+            // Combine into a single array of objects
+            const combinedData = data.map((d, i) => ({x: labels[i], y: d}));
+
+            const width = 600;
+            const height = 400;
+            const margin = {top: 20, right: 30, bottom: 30, left: 40};
+
+            // Create scales
+            const xScale = d3.scaleTime()
+                .domain(d3.extent(labels))
+                .range([margin.left, width - margin.right]);
+
+            const yScale = d3.scaleLinear()
+                .domain([d3.min(data), d3.max(data)])
+                .range([height - margin.bottom, margin.top]);
+
+            // Create line generator
+            const line = d3.line()
+                .x(d => xScale(d.x))
+                .y(d => yScale(d.y));
+
+            // Update SVG
+            const svg = d3.select("#myLineChart");
+            svg.selectAll("path").remove();
+
+            svg.append("path")
+                .datum(combinedData)
+                .attr("fill", "none")
+                .attr("stroke", "rgba(75, 192, 192, 1)")
+                .attr("d", line);
+        });
+    }
+
+    // Check if Python bindings are ready and call them, if not add an event listener for the PytoniumReady event.
+    if (window.PytoniumReady) {
+        Init();
+    } else {
+        window.addEventListener('PytoniumReady', function () {
+            Init();
+        });
+    }
+</script>
+</html>

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pytonium Frameless Window Example</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            overflow-x: hidden;
+        }
+        
+        /* Custom title bar */
+        .titlebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .titlebar .title {
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .titlebar .title::before {
+            content: "🐍";
+            font-size: 18px;
+        }
+        
+        .titlebar .controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .titlebar button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            transition: all 0.2s;
+        }
+        
+        .titlebar button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+        
+        .titlebar button.close:hover {
+            background: #e74c3c;
+        }
+        
+        /* Content area */
+        .content {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+            margin-top: 0;
+            font-weight: 300;
+        }
+        
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .section h2 {
+            margin-top: 0;
+            color: #667eea;
+            font-size: 18px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        button.action-btn {
+            padding: 12px 24px;
+            margin: 8px 5px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+        }
+        
+        button.action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button.action-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* UI Feedback display */
+        #ui-feedback {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 120px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        .feedback-item {
+            background: white;
+            border-left: 4px solid #667eea;
+            padding: 12px 16px;
+            margin: 8px 0;
+            border-radius: 0 6px 6px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .feedback-item.success {
+            border-left-color: #4caf50;
+        }
+        
+        .feedback-item.error {
+            border-left-color: #f44336;
+        }
+        
+        .feedback-item.info {
+            border-left-color: #2196f3;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        /* Output log */
+        #output {
+            background: #1e1e1e;
+            color: #4af626;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            min-height: 150px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        /* Status display */
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 5px 0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status.ok {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status.waiting {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        /* Info note */
+        .info-note {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 4px solid #2196f3;
+            padding: 16px 20px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .info-note strong {
+            color: #1976d2;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 90%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Custom title bar for frameless window -->
+    <div class="titlebar" id="titlebar">
+        <div class="title">Pytonium Frameless Example</div>
+        <div class="controls">
+            <button onclick="minimizeWindow()" title="Minimize">_</button>
+            <button onclick="maximizeWindow()" title="Maximize/Restore">□</button>
+            <button class="close" onclick="closeWindow()" title="Close">×</button>
+        </div>
+    </div>
+    
+    <div class="content">
+        <div class="info-note">
+            <strong>Frameless Window Mode:</strong> This window has a custom title bar created with HTML/CSS. 
+            The Chrome UI (tabs, address bar) has been removed. <strong>Click and drag the title bar</strong> to move, 
+            <strong>drag edges/corners</strong> to resize.
+        </div>
+        
+        <h1>🐍 Pytonium Frameless Window Example</h1>
+        
+        <div class="section">
+            <h2>Test Function Bindings</h2>
+            <p>Click these buttons to call Python functions from JavaScript:</p>
+            <button class="action-btn" onclick="callTestFunc()">Call testfunc() (returns object)</button>
+            <button class="action-btn" onclick="callTestOne()">Call test_one(64) (returns value)</button>
+            <button class="action-btn" onclick="callTestTwo()">Call test_two() (no return)</button>
+        </div>
+
+        <div class="section">
+            <h2>State Management Test</h2>
+            <div id="status" class="status waiting">Waiting for Pytonium...</div>
+            <div id="date">Waiting for state updates from Python...</div>
+            <br>
+            <button class="action-btn" onclick="setUserState()">Set User State from JS</button>
+        </div>
+
+        <div class="section">
+            <h2>UI Feedback</h2>
+            <div id="ui-feedback">
+                <div class="feedback-item">Click buttons above to see reactions here...</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Output Log</h2>
+            <div id="output"></div>
+        </div>
+    </div>
+
+</body>
+<script>
+    // =========================================================================
+    // UI Feedback System
+    // =========================================================================
+    const feedbackContainer = document.getElementById('ui-feedback');
+    let feedbackCount = 0;
+    const maxFeedbackItems = 10;
+    
+    function showFeedback(message, type = 'info') {
+        if (feedbackCount === 0) {
+            feedbackContainer.innerHTML = '';
+        }
+        
+        const item = document.createElement('div');
+        item.className = 'feedback-item ' + type;
+        const timestamp = new Date().toLocaleTimeString();
+        item.innerHTML = '<strong>' + timestamp + '</strong> - ' + message;
+        
+        feedbackContainer.insertBefore(item, feedbackContainer.firstChild);
+        feedbackCount++;
+        
+        while (feedbackContainer.children.length > maxFeedbackItems) {
+            feedbackContainer.removeChild(feedbackContainer.lastChild);
+        }
+    }
+    
+    // =========================================================================
+    // Output Log
+    // =========================================================================
+    const output = document.getElementById('output');
+    let logLineCount = 0;
+    const maxLogLines = 100;
+    
+    function log(msg) {
+        const timestamp = new Date().toLocaleTimeString();
+        output.textContent += '[' + timestamp + '] ' + msg + '\n';
+        logLineCount++;
+        
+        if (logLineCount > maxLogLines) {
+            const lines = output.textContent.split('\n');
+            output.textContent = lines.slice(lines.length - maxLogLines).join('\n');
+            logLineCount = maxLogLines;
+        }
+        
+        output.scrollTop = output.scrollHeight;
+    }
+    
+    // =========================================================================
+    // Window Control Functions
+    // =========================================================================
+    function minimizeWindow() {
+        showFeedback('Minimize button clicked', 'info');
+        log('Minimizing window...');
+        try {
+            Pytonium.window.minimize();
+            showFeedback('Window minimized', 'success');
+        } catch (e) {
+            showFeedback('Minimize failed: ' + e.message, 'error');
+        }
+    }
+    
+    function maximizeWindow() {
+        showFeedback('Maximize/Restore button clicked', 'info');
+        log('Toggling maximize/restore...');
+        try {
+            Pytonium.window.maximize();
+            showFeedback('Window maximized/restored', 'success');
+        } catch (e) {
+            showFeedback('Maximize failed: ' + e.message, 'error');
+        }
+    }
+    
+    function closeWindow() {
+        showFeedback('Close button clicked - Closing...', 'info');
+        log('Closing application...');
+        try {
+            Pytonium.window.close();
+        } catch (e) {
+            showFeedback('Close failed: ' + e.message, 'error');
+        }
+    }
+    
+    // =========================================================================
+    // Draggable Title Bar
+    // =========================================================================
+    let isDragging = false;
+    let dragStartMouseX = 0;
+    let dragStartMouseY = 0;
+    
+    async function initDraggableTitlebar() {
+        const titlebar = document.getElementById('titlebar');
+        if (!titlebar) return;
+        
+        titlebar.addEventListener('mousedown', async function(e) {
+            // Don't drag if clicking on buttons
+            if (e.target.tagName === 'BUTTON' || e.target.closest('.controls')) {
+                return;
+            }
+            
+            // Check if window is maximized
+            try {
+                let result = await Pytonium.window.isMaximized();
+                if (result) return;
+            } catch (err) {}
+            
+            isDragging = true;
+            dragStartMouseX = e.screenX;
+            dragStartMouseY = e.screenY;
+            
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            const deltaX = e.screenX - dragStartMouseX;
+            const deltaY = e.screenY - dragStartMouseY;
+            
+            dragStartMouseX = e.screenX;
+            dragStartMouseY = e.screenY;
+            
+            try {
+                Pytonium.window.drag(deltaX, deltaY);
+            } catch (err) {}
+        });
+        
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+    }
+    
+    // =========================================================================
+    // Test Function Calls
+    // =========================================================================
+    function callTestFunc() {
+        showFeedback('Button clicked: testfunc()', 'info');
+        log('Calling Pytonium.test_function_binding.testfunc()...');
+        try {
+            let myPromise = Pytonium.test_function_binding.testfunc();
+            if (myPromise && typeof myPromise.then === 'function') {
+                myPromise.then((resolvedValue) => {
+                    showFeedback('testfunc() returned: ' + JSON.stringify(resolvedValue), 'success');
+                    log('testfunc() returned: ' + JSON.stringify(resolvedValue));
+                }).catch((err) => {
+                    showFeedback('testfunc() error: ' + err, 'error');
+                });
+            }
+        } catch (e) {
+            showFeedback('Exception: ' + e.message, 'error');
+        }
+    }
+    
+    function callTestOne() {
+        showFeedback('Button clicked: test_one(64)', 'info');
+        log('Calling Pytonium.test_class_methods_binding.test_one(64)...');
+        try {
+            let myPromise = Pytonium.test_class_methods_binding.test_one(64);
+            if (myPromise && typeof myPromise.then === 'function') {
+                myPromise.then((resolvedValue) => {
+                    showFeedback('test_one() returned: ' + resolvedValue, 'success');
+                    log('test_one() returned: ' + resolvedValue);
+                }).catch((err) => {
+                    showFeedback('test_one() error: ' + err, 'error');
+                });
+            }
+        } catch (e) {
+            showFeedback('Exception: ' + e.message, 'error');
+        }
+    }
+    
+    function callTestTwo() {
+        showFeedback('Button clicked: test_two()', 'info');
+        log('Calling Pytonium.test_class_methods_binding.test_two("Hello", 20, 40)...');
+        try {
+            Pytonium.test_class_methods_binding.test_two("Hello", 20, 40);
+            showFeedback('test_two() executed successfully', 'success');
+        } catch (e) {
+            showFeedback('Exception: ' + e.message, 'error');
+        }
+    }
+    
+    function setUserState() {
+        showFeedback('Button clicked: Set User State', 'info');
+        try {
+            Pytonium.appState.setState("user", "age", 25);
+            showFeedback('User state set: age = 25', 'success');
+            log('Set user state: age = 25');
+            let age = Pytonium.appState.getState("user", "age");
+            log('Retrieved user age from state: ' + age);
+        } catch (e) {
+            showFeedback('Failed: ' + e.message, 'error');
+        }
+    }
+    
+    // =========================================================================
+    // Initialization
+    // =========================================================================
+    function Init() {
+        log('Pytonium is ready!');
+        document.getElementById('status').textContent = 'Pytonium Ready';
+        document.getElementById('status').className = 'status ok';
+        
+        // Show welcome feedback
+        showFeedback('🎉 Pytonium Frameless Example Started!', 'success');
+        showFeedback('Click buttons to see UI reactions', 'info');
+        
+        // Initialize draggable title bar
+        initDraggableTitlebar();
+        log('Title bar is draggable - click and drag to move');
+        
+        // Register for state updates
+        try {
+            Pytonium.appState.registerForStateUpdates("StateChanged", ["user", "app-general"], true, true);
+            log('Registered for state updates');
+        } catch (e) {
+            log('Failed to register for state updates: ' + e.message);
+        }
+        
+        // Listen for state change events from Python
+        document.addEventListener('StateChanged', function(event) {
+            const detail = event.detail;
+            showFeedback('State from Python: ' + detail.namespace + '.' + detail.key + ' = ' + detail.value, 'info');
+            log('State update: namespace=' + detail.namespace + ', key=' + detail.key + ', value=' + detail.value);
+            
+            if (detail.namespace === 'app-general' && detail.key === 'date') {
+                document.getElementById('date').innerHTML = 'Last update: ' + detail.value;
+            }
+        });
+        
+        // Run initial tests
+        setTimeout(() => {
+            log('');
+            log('=== Running initial callback tests ===');
+            callTestFunc();
+        }, 500);
+        
+        setTimeout(callTestOne, 1000);
+        setTimeout(callTestTwo, 1500);
+    }
+    
+    // Check if Pytonium is ready
+    if (window.PytoniumReady) {
+        Init();
+    } else {
+        window.addEventListener('PytoniumReady', function() {
+            Init();
+        });
+    }
+</script>
+</html>
