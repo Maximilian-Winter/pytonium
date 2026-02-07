@@ -73,6 +73,77 @@
             background: #e74c3c;
         }
         
+        /* Resize handles for frameless window */
+        .resize-handle {
+            position: fixed;
+            z-index: 9999;
+            /* background: rgba(255, 0, 0, 0.1);  Uncomment to debug */ 
+        }
+        
+        .resize-handle.n {
+            top: 0;
+            left: 8px;
+            right: 8px;
+            height: 8px;
+            cursor: ns-resize;
+        }
+        
+        .resize-handle.s {
+            bottom: 0;
+            left: 8px;
+            right: 8px;
+            height: 8px;
+            cursor: ns-resize;
+        }
+        
+        .resize-handle.e {
+            top: 8px;
+            right: 0;
+            bottom: 8px;
+            width: 8px;
+            cursor: ew-resize;
+        }
+        
+        .resize-handle.w {
+            top: 8px;
+            left: 0;
+            bottom: 8px;
+            width: 8px;
+            cursor: ew-resize;
+        }
+        
+        .resize-handle.nw {
+            top: 0;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nwse-resize;
+        }
+        
+        .resize-handle.ne {
+            top: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nesw-resize;
+        }
+        
+        .resize-handle.sw {
+            bottom: 0;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nesw-resize;
+        }
+        
+        .resize-handle.se {
+            bottom: 0;
+            right: 0;
+            width: 8px;
+            height: 8px;
+            cursor: nwse-resize;
+        }
+        
         /* Content area */
         .content {
             padding: 20px;
@@ -226,6 +297,16 @@
     </style>
 </head>
 <body>
+    <!-- Resize handles for frameless window -->
+    <div class="resize-handle n" data-edge="n"></div>
+    <div class="resize-handle s" data-edge="s"></div>
+    <div class="resize-handle e" data-edge="e"></div>
+    <div class="resize-handle w" data-edge="w"></div>
+    <div class="resize-handle nw" data-corner="nw"></div>
+    <div class="resize-handle ne" data-corner="ne"></div>
+    <div class="resize-handle sw" data-corner="sw"></div>
+    <div class="resize-handle se" data-corner="se"></div>
+    
     <!-- Custom title bar for frameless window -->
     <div class="titlebar" id="titlebar">
         <div class="title">Pytonium Frameless Example</div>
