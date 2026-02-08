@@ -18,9 +18,17 @@
             --accent-primary: #3b82f6;
             --accent-secondary: #8b5cf6;
             --accent-success: #10b981;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --border-color: rgba(255, 255, 255, 0.1);
+            
+            /* Type badge colors */
+            --type-numeric: #10b981;
+            --type-string: #3b82f6;
+            --type-datetime: #f59e0b;
+            --type-categorical: #8b5cf6;
         }
         
         body {
@@ -117,181 +125,43 @@
             margin: 0 auto;
         }
         
-        /* Hero Section */
-        .hero {
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
             text-align: center;
-            padding: 40px 20px;
-            margin-bottom: 30px;
-        }
-        
-        .hero h1 {
-            font-size: 36px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .hero p {
-            font-size: 16px;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto 24px;
-            line-height: 1.6;
-        }
-        
-        .hero code {
-            background: rgba(59, 130, 246, 0.2);
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-family: 'Consolas', monospace;
-            font-size: 14px;
-        }
-        
-        /* Layout */
-        .workspace {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
-            min-height: 600px;
-        }
-        
-        @media (max-width: 1000px) {
-            .workspace { grid-template-columns: 1fr; }
-        }
-        
-        /* Sidebar */
-        .sidebar {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
-        }
-        
-        .section-title {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-secondary);
-            margin-bottom: 16px;
-        }
-        
-        .dataset-list {
             margin-bottom: 24px;
-        }
-        
-        .dataset-item {
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid transparent;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
             transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.02);
         }
         
-        .dataset-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: var(--border-color);
-        }
-        
-        .dataset-item.active {
-            background: rgba(59, 130, 246, 0.15);
+        .drop-zone:hover, .drop-zone.drag-over {
             border-color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.1);
         }
         
-        .dataset-name {
-            font-weight: 500;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-        
-        .dataset-desc {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-        
-        /* Form Elements */
-        .input-group {
+        .drop-zone-icon {
+            font-size: 48px;
             margin-bottom: 16px;
         }
         
-        .input-label {
-            display: block;
-            font-size: 12px;
+        .drop-zone h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        
+        .drop-zone p {
             color: var(--text-secondary);
-            margin-bottom: 6px;
+            margin-bottom: 16px;
         }
         
-        .dark-input {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 10px 12px;
-            color: var(--text-primary);
-            font-size: 14px;
-            outline: none;
-        }
-        
-        .dark-input:focus {
-            border-color: var(--accent-primary);
-        }
-        
-        /* Select dropdown styling */
-        .dark-select {
-            width: 100%;
-            background-color: #1e293b;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 10px 36px 10px 12px;
-            color: var(--text-primary);
-            font-size: 14px;
-            outline: none;
-            cursor: pointer;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            /* Custom dropdown arrow */
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-        }
-        
-        .dark-select:focus {
-            border-color: var(--accent-primary);
-        }
-        
-        /* Dropdown options - force dark theme */
-        .dark-select option {
-            background-color: #1e293b;
-            color: #f1f5f9;
-            padding: 10px;
-            font-size: 14px;
-        }
-        
-        /* Selected/hovered option */
-        .dark-select option:hover,
-        .dark-select option:focus {
-            background-color: #334155;
-            color: #f1f5f9;
-        }
-        
-        .dark-select option:checked {
-            background-color: #3b82f6;
-            color: #ffffff;
-        }
-        
-        /* Disabled state */
-        .dark-select:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .file-input {
+            display: none;
         }
         
         .btn {
-            width: 100%;
-            padding: 12px;
+            padding: 10px 20px;
             border: none;
             border-radius: 8px;
             font-size: 14px;
@@ -314,26 +184,148 @@
             color: var(--text-primary);
         }
         
+        /* Layout */
+        .workspace {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1000px) {
+            .workspace { grid-template-columns: 1fr; }
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            height: fit-content;
+        }
+        
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        
+        /* Type Badges */
+        .type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .type-badge.numeric {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--type-numeric);
+        }
+        
+        .type-badge.string {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--type-string);
+        }
+        
+        .type-badge.datetime {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--type-datetime);
+        }
+        
+        .type-badge.categorical {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--type-categorical);
+        }
+        
+        /* Column List */
+        .column-list {
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .column-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .column-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        
+        .column-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .column-nulls {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+        
+        /* Chart Config */
+        .input-group {
+            margin-bottom: 12px;
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        
+        .dark-select {
+            width: 100%;
+            background-color: #1e293b;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 32px 8px 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+        
+        .dark-select option {
+            background-color: #1e293b;
+            color: #f1f5f9;
+        }
+        
         /* Main Panel */
         .main-panel {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
         
         .panel-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 20px;
+            padding: 16px;
         }
         
         /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 16px;
         }
         
         @media (max-width: 800px) {
@@ -342,41 +334,70 @@
         
         .stat-item {
             text-align: center;
-            padding: 16px;
+            padding: 12px;
             background: rgba(255, 255, 255, 0.03);
             border-radius: 8px;
         }
         
         .stat-value {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
             color: var(--accent-primary);
         }
         
         .stat-label {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-secondary);
-            margin-top: 4px;
+            margin-top: 2px;
+        }
+        
+        /* Auto Charts */
+        .auto-charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        
+        .chart-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        
+        .chart-card img {
+            width: 100%;
+            border-radius: 6px;
+        }
+        
+        .chart-reason {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
         }
         
         /* Data Table */
         .table-container {
             overflow-x: auto;
-            max-height: 400px;
+            max-height: 350px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            margin-top: 16px;
+            margin-top: 12px;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 12px;
         }
         
         th {
             background: rgba(255, 255, 255, 0.08);
-            padding: 12px;
+            padding: 10px;
             text-align: left;
             font-weight: 600;
             position: sticky;
@@ -384,7 +405,7 @@
         }
         
         td {
-            padding: 10px 12px;
+            padding: 8px 10px;
             border-bottom: 1px solid var(--border-color);
         }
         
@@ -392,47 +413,29 @@
             background: rgba(255, 255, 255, 0.03);
         }
         
-        .col-type {
-            font-size: 10px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-        }
-        
-        /* Chart Display */
-        .chart-display {
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .chart-display img {
-            max-width: 100%;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-        }
-        
-        .chart-info {
+        /* Column Stats Panel */
+        .column-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
             margin-top: 12px;
-            font-size: 13px;
+        }
+        
+        .stat-box {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 8px;
+        }
+        
+        .stat-box-label {
+            font-size: 11px;
             color: var(--text-secondary);
+            margin-bottom: 4px;
         }
         
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
-        }
-        
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-        
-        .empty-state h3 {
+        .stat-box-value {
             font-size: 18px;
-            margin-bottom: 8px;
-            color: var(--text-primary);
+            font-weight: 600;
         }
         
         /* Loading */
@@ -445,17 +448,66 @@
         }
         
         .spinner {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             border: 2px solid var(--border-color);
             border-top-color: var(--accent-primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-right: 12px;
+            margin-right: 10px;
         }
         
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        /* Current File Banner */
+        .file-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .file-icon {
+            font-size: 24px;
+        }
+        
+        .file-name {
+            font-weight: 600;
+        }
+        
+        .file-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
         }
         
         /* Scrollbar */
@@ -471,10 +523,6 @@
         ::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.2);
             border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
@@ -504,31 +552,40 @@
     
     <!-- Main Content -->
     <div class="main-content">
-        <!-- Hero -->
-        <div class="hero">
-            <h1>Data Analysis with Python</h1>
-            <p>
-                Load CSV/Excel files, explore data with pandas, and create beautiful 
-                visualizations with matplotlib — all in a sleek desktop app.
-            </p>
-            <p>
-                <code>pip install pandas matplotlib</code> → That's it! No native modules, no compilation.
-            </p>
+        <!-- Drop Zone -->
+        <div class="drop-zone" id="drop-zone">
+            <div class="drop-zone-icon">📁</div>
+            <h3>Drop a CSV or Excel file here</h3>
+            <p>or click to browse. Get instant analysis with auto-generated charts.</p>
+            <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                Select File
+            </button>
+            <input type="file" id="file-input" class="file-input" 
+                   accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
+        </div>
+        
+        <!-- File Banner (hidden initially) -->
+        <div class="file-banner" id="file-banner" style="display: none;">
+            <div class="file-info">
+                <span class="file-icon">📄</span>
+                <div>
+                    <div class="file-name" id="file-name">filename.csv</div>
+                    <div class="file-meta" id="file-meta">12,345 rows • 2.5 MB</div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="loadAnother()">Load Another</button>
         </div>
         
         <!-- Workspace -->
-        <div class="workspace">
+        <div class="workspace" id="workspace" style="display: none;">
             <!-- Sidebar -->
             <div class="sidebar">
-                <div class="section-title">Sample Datasets</div>
-                <div class="dataset-list" id="dataset-list">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Loading datasets...
-                    </div>
+                <div class="section-title">Columns</div>
+                <div class="column-list" id="column-list">
+                    <!-- Columns populated here -->
                 </div>
                 
-                <div class="section-title">Chart Configuration</div>
+                <div class="section-title">Custom Chart</div>
                 <div class="input-group">
                     <label class="input-label">Chart Type</label>
                     <select class="dark-select" id="chart-type">
@@ -537,87 +594,88 @@
                         <option value="scatter">Scatter Plot</option>
                         <option value="histogram">Histogram</option>
                         <option value="pie">Pie Chart</option>
-                        <option value="heatmap">Correlation Heatmap</option>
                     </select>
                 </div>
                 
                 <div class="input-group">
                     <label class="input-label">X Column</label>
-                    <select class="dark-select" id="x-column" disabled>
-                        <option value="">Select dataset first</option>
-                    </select>
+                    <select class="dark-select" id="x-column"></select>
                 </div>
                 
                 <div class="input-group">
-                    <label class="input-label">Y Column (Optional)</label>
-                    <select class="dark-select" id="y-column" disabled>
-                        <option value="">Select dataset first</option>
+                    <label class="input-label">Y Column (optional)</label>
+                    <select class="dark-select" id="y-column">
+                        <option value="">None</option>
                     </select>
                 </div>
                 
-                <button class="btn btn-primary" id="generate-btn" onclick="generateChart()" disabled>
+                <button class="btn btn-primary" onclick="generateCustomChart()" style="width: 100%;">
                     Generate Chart
                 </button>
             </div>
             
             <!-- Main Panel -->
             <div class="main-panel">
-                <!-- Data Overview -->
-                <div class="panel-card" id="overview-panel" style="display: none;">
+                <!-- Overview -->
+                <div class="panel-card">
                     <div class="section-title">Dataset Overview</div>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-rows">-</div>
-                            <div class="stat-label">Rows</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-cols">-</div>
-                            <div class="stat-label">Columns</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-memory">-</div>
-                            <div class="stat-label">MB</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-nulls">-</div>
-                            <div class="stat-label">Nulls</div>
-                        </div>
+                    <div class="stats-grid" id="stats-grid">
+                        <!-- Stats populated here -->
                     </div>
                     
-                    <div class="section-title">Data Preview</div>
+                    <div class="section-title">Column Details</div>
                     <div class="table-container">
-                        <table id="data-table">
-                            <thead></thead>
-                            <tbody></tbody>
+                        <table id="columns-table">
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Type</th>
+                                    <th>Unique</th>
+                                    <th>Nulls</th>
+                                </tr>
+                            </thead>
+                            <tbody id="columns-tbody"></tbody>
                         </table>
                     </div>
                 </div>
                 
-                <!-- Chart Display -->
-                <div class="panel-card" id="chart-panel" style="display: none;">
-                    <div class="section-title">Visualization</div>
-                    <div class="chart-display" id="chart-display">
-                        <div class="loading">
-                            <div class="spinner"></div>
-                            Generating chart with matplotlib...
-                        </div>
+                <!-- Auto Charts -->
+                <div class="panel-card" id="auto-charts-card" style="display: none;">
+                    <div class="section-title">Auto-Generated Visualizations</div>
+                    <div id="auto-charts-loading" class="loading">
+                        <div class="spinner"></div>
+                        Analyzing data and generating charts...
                     </div>
+                    <div class="auto-charts-grid" id="auto-charts-grid"></div>
                 </div>
                 
-                <!-- Empty State -->
-                <div class="panel-card" id="empty-state">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📁</div>
-                        <h3>No Dataset Loaded</h3>
-                        <p>Select a sample dataset from the sidebar to get started.<br>
-                        You can also load your own CSV or Excel files.</p>
+                <!-- Data Preview -->
+                <div class="panel-card">
+                    <div class="section-title">Data Preview (First 20 rows)</div>
+                    <div class="table-container">
+                        <table id="preview-table">
+                            <thead id="preview-head"></thead>
+                            <tbody id="preview-body"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
+        
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <h3>Welcome to Pytonium Data Studio</h3>
+            <p>Drop a CSV or Excel file above to get started.<br>
+            You'll get instant analysis with smart auto-generated charts!</p>
+        </div>
     </div>
 
     <script>
+        // Global state
+        let currentDataId = null;
+        let currentColumns = [];
+        
         // Window Controls
         function minimizeWindow() { Pytonium.window.minimize(); }
         function maximizeWindow() { Pytonium.window.maximize(); }
@@ -714,107 +772,210 @@
         
         document.addEventListener('mouseup', () => isDragging = false);
         
-        // Data Management
-        let currentColumns = [];
-        let currentDataset = null;
+        // File Drop Zone
+        const dropZone = document.getElementById('drop-zone');
         
-        async function loadDatasets() {
-            try {
-                const result = await Pytonium.data.getSampleDatasets();
-                const container = document.getElementById('dataset-list');
-                container.innerHTML = '';
-                
-                result.datasets.forEach(ds => {
-                    const div = document.createElement('div');
-                    div.className = 'dataset-item';
-                    div.innerHTML = `
-                        <div class="dataset-name">${ds.name}</div>
-                        <div class="dataset-desc">${ds.description}</div>
-                    `;
-                    div.onclick = () => selectDataset(ds.name, div);
-                    container.appendChild(div);
-                });
-            } catch (e) {
-                console.error('Failed to load datasets:', e);
-                document.getElementById('dataset-list').innerHTML = 
-                    '<div style="padding: 20px; text-align: center; color: var(--text-secondary);">Failed to load datasets</div>';
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                loadFile(files[0].path);
+            }
+        });
+        
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                loadFile(file.path);
             }
         }
         
-        async function selectDataset(name, element) {
-            // Update UI
-            document.querySelectorAll('.dataset-item').forEach(el => el.classList.remove('active'));
-            element.classList.add('active');
-            
+        // Load File
+        async function loadFile(filePath) {
             // Show loading
-            document.getElementById('empty-state').style.display = 'none';
-            document.getElementById('overview-panel').style.display = 'none';
-            document.getElementById('chart-panel').style.display = 'none';
+            dropZone.innerHTML = '<div class="loading"><div class="spinner"></div>Loading file...</div>';
             
             try {
-                const result = await Pytonium.data.loadSampleDataset(name);
-                displayDataset(result);
+                const result = await Pytonium.data.loadFile(filePath);
+                
+                if (result.error) {
+                    alert('Error loading file: ' + result.error);
+                    resetDropZone();
+                    return;
+                }
+                
+                currentDataId = result.data_id;
+                currentColumns = result.columns;
+                
+                // Update UI
+                showLoadedFile(result, filePath);
+                displayOverview(result);
+                displayColumns(result);
+                displayPreview(result.preview);
+                populateChartSelects(result.columns);
+                
+                // Generate auto charts
+                generateAutoCharts();
+                
             } catch (e) {
-                console.error('Failed to load dataset:', e);
-                alert('Failed to load dataset: ' + e.message);
+                console.error('Failed to load file:', e);
+                alert('Failed to load file: ' + e.message);
+                resetDropZone();
             }
         }
         
-        function displayDataset(result) {
-            if (result.error) {
-                alert('Error: ' + result.error);
-                return;
-            }
+        function resetDropZone() {
+            dropZone.innerHTML = `
+                <div class="drop-zone-icon">📁</div>
+                <h3>Drop a CSV or Excel file here</h3>
+                <p>or click to browse. Get instant analysis with auto-generated charts.</p>
+                <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">Select File</button>
+                <input type="file" id="file-input" class="file-input" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
+            `;
+        }
+        
+        function showLoadedFile(result, filePath) {
+            const fileName = filePath.split(/[\\/]/).pop();
+            document.getElementById('file-name').textContent = fileName;
+            document.getElementById('file-meta').textContent = 
+                `${result.info.rows.toLocaleString()} rows • ${result.info.memory_mb} MB`;
             
-            currentColumns = result.columns;
+            document.getElementById('drop-zone').style.display = 'none';
+            document.getElementById('file-banner').style.display = 'flex';
+            document.getElementById('workspace').style.display = 'grid';
+            document.getElementById('empty-state').style.display = 'none';
+        }
+        
+        function loadAnother() {
+            location.reload(); // Simple way to reset
+        }
+        
+        // Display Functions
+        function displayOverview(result) {
+            const info = result.info;
+            document.getElementById('stats-grid').innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${info.rows.toLocaleString()}</div>
+                    <div class="stat-label">Rows</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${info.columns}</div>
+                    <div class="stat-label">Columns</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${info.memory_mb}</div>
+                    <div class="stat-label">MB</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${info.missing_values}</div>
+                    <div class="stat-label">Missing</div>
+                </div>
+            `;
+        }
+        
+        function displayColumns(result) {
+            // Sidebar column list
+            const columnList = document.getElementById('column-list');
+            columnList.innerHTML = result.columns.map(col => `
+                <div class="column-item">
+                    <div>
+                        <div class="column-name">${col.name}</div>
+                        <div class="column-nulls">${col.null_count} nulls</div>
+                    </div>
+                    <span class="type-badge ${col.type_category}">${col.type_category}</span>
+                </div>
+            `).join('');
             
-            // Update stats
-            document.getElementById('stat-rows').textContent = result.stats.rows.toLocaleString();
-            document.getElementById('stat-cols').textContent = result.stats.columns;
-            document.getElementById('stat-memory').textContent = result.stats.memory_mb;
-            document.getElementById('stat-nulls').textContent = result.stats.missing_values;
+            // Columns table
+            document.getElementById('columns-tbody').innerHTML = result.columns.map(col => `
+                <tr>
+                    <td><strong>${col.name}</strong></td>
+                    <td><span class="type-badge ${col.type_category}">${col.type_category}</span></td>
+                    <td>${col.unique_count.toLocaleString()}</td>
+                    <td>${col.null_count}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function displayPreview(preview) {
+            if (!preview.data || preview.data.length === 0) return;
             
-            // Update column selects
+            const columns = Object.keys(preview.data[0]);
+            
+            // Header
+            document.getElementById('preview-head').innerHTML = `
+                <tr>${columns.map(col => `<th>${col}</th>`).join('')}</tr>
+            `;
+            
+            // Body
+            document.getElementById('preview-body').innerHTML = preview.data.map(row => `
+                <tr>${columns.map(col => `
+                    <td>${row[col] !== null ? row[col] : '<em style="opacity: 0.4;">null</em>'}</td>
+                `).join('')}</tr>
+            `).join('');
+        }
+        
+        function populateChartSelects(columns) {
             const xSelect = document.getElementById('x-column');
             const ySelect = document.getElementById('y-column');
             
             xSelect.innerHTML = '<option value="">Select column...</option>';
             ySelect.innerHTML = '<option value="">None</option>';
             
-            result.columns.forEach(col => {
-                xSelect.add(new Option(col.name + (col.is_numeric ? ' (num)' : ''), col.name));
-                ySelect.add(new Option(col.name + (col.is_numeric ? ' (num)' : ''), col.name));
+            columns.forEach(col => {
+                xSelect.add(new Option(col.name, col.name));
+                ySelect.add(new Option(col.name, col.name));
             });
-            
-            xSelect.disabled = false;
-            ySelect.disabled = false;
-            document.getElementById('generate-btn').disabled = false;
-            
-            // Update table
-            updateTable(result);
-            
-            // Show overview
-            document.getElementById('overview-panel').style.display = 'block';
         }
         
-        function updateTable(result) {
-            const thead = document.querySelector('#data-table thead');
-            const tbody = document.querySelector('#data-table tbody');
+        // Auto Charts
+        async function generateAutoCharts() {
+            if (!currentDataId) return;
             
-            // Header
-            thead.innerHTML = '<tr>' + result.columns.map(col => 
-                `<th>${col.name}<br><span class="col-type">${col.type}</span></th>`
-            ).join('') + '</tr>';
+            document.getElementById('auto-charts-card').style.display = 'block';
+            document.getElementById('auto-charts-loading').style.display = 'flex';
+            document.getElementById('auto-charts-grid').innerHTML = '';
             
-            // Body (first 50 rows)
-            tbody.innerHTML = result.preview.slice(0, 50).map(row => 
-                '<tr>' + result.columns.map(col => 
-                    `<td>${row[col.name] !== null ? row[col.name] : '<em style="opacity: 0.4;">null</em>'}</td>`
-                ).join('') + '</tr>'
-            ).join('');
+            try {
+                const result = await Pytonium.data.generateAutoCharts(currentDataId);
+                
+                document.getElementById('auto-charts-loading').style.display = 'none';
+                
+                if (result.charts && result.charts.length > 0) {
+                    document.getElementById('auto-charts-grid').innerHTML = result.charts.map(chart => `
+                        <div class="chart-card">
+                            <img src="${chart.image}" alt="${chart.suggestion.title}">
+                            <div class="chart-reason">${chart.suggestion.reason}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('auto-charts-grid').innerHTML = 
+                        '<div style="color: var(--text-secondary);">No suitable auto-charts for this dataset</div>';
+                }
+                
+            } catch (e) {
+                console.error('Failed to generate auto charts:', e);
+                document.getElementById('auto-charts-loading').style.display = 'none';
+                document.getElementById('auto-charts-grid').innerHTML = 
+                    '<div style="color: #ef4444;">Failed to generate charts</div>';
+            }
         }
         
-        async function generateChart() {
+        // Custom Chart
+        async function generateCustomChart() {
+            if (!currentDataId) return;
+            
             const chartType = document.getElementById('chart-type').value;
             const xColumn = document.getElementById('x-column').value;
             const yColumn = document.getElementById('y-column').value;
@@ -824,40 +985,36 @@
                 return;
             }
             
-            // Show chart panel with loading
-            document.getElementById('chart-panel').style.display = 'block';
-            document.getElementById('chart-display').innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    Generating chart with matplotlib...
-                </div>
-            `;
+            // Add to auto charts area
+            const grid = document.getElementById('auto-charts-grid');
+            const loadingCard = document.createElement('div');
+            loadingCard.className = 'chart-card';
+            loadingCard.innerHTML = '<div class="loading"><div class="spinner"></div>Generating...</div>';
+            grid.appendChild(loadingCard);
             
             try {
                 const result = await Pytonium.data.generateChart(
-                    chartType, xColumn, yColumn || null, null,
-                    `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`
+                    currentDataId, chartType, xColumn, yColumn || null
                 );
                 
                 if (result.error) {
-                    document.getElementById('chart-display').innerHTML = 
-                        `<div style="color: #ef4444;">Error: ${result.error}</div>`;
+                    loadingCard.innerHTML = `<div style="color: #ef4444; padding: 20px;">${result.error}</div>`;
                     return;
                 }
                 
-                document.getElementById('chart-display').innerHTML = `
-                    <img src="${result.image}" alt="Chart">
-                    <div class="chart-info">Generated by matplotlib from ${result.rows_used.toLocaleString()} rows</div>
+                loadingCard.innerHTML = `
+                    <img src="${result.image}" alt="Custom Chart">
+                    <div class="chart-reason">Custom ${chartType} chart: ${xColumn}${yColumn ? ' vs ' + yColumn : ''}</div>
                 `;
+                
             } catch (e) {
-                document.getElementById('chart-display').innerHTML = 
-                    `<div style="color: #ef4444;">Error: ${e.message}</div>`;
+                loadingCard.innerHTML = `<div style="color: #ef4444; padding: 20px;">Error: ${e.message}</div>`;
             }
         }
         
-        // Initialize
+        // Init
         function Init() {
-            loadDatasets();
+            console.log('Pytonium Data Studio ready');
         }
         
         if (window.PytoniumReady) {

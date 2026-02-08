@@ -2,12 +2,14 @@
 Pytonium Data Studio - Data Analysis & Visualization Demo
 
 This example showcases Pytonium's data analysis capabilities using:
-- pandas: Data manipulation and analysis
+- pandas: Data manipulation and analysis  
 - matplotlib: Professional chart generation
-- openpyxl: Excel file support
 
-In Electron: Native module compilation nightmare
-In Pytonium: pip install pandas matplotlib - done!
+Features:
+- Load CSV/Excel files via drag & drop or file picker
+- Auto-analysis: instant overview with smart visualizations
+- Data handle pattern: efficient handling of large files
+- Color-coded column types with detailed statistics
 
 Install dependencies:
     pip install pandas matplotlib openpyxl
@@ -16,14 +18,11 @@ Install dependencies:
 import os
 import sys
 import time
-from threading import Thread
 from pathlib import Path
-
-# Add parent directory to path to import data_analyzer
-sys.path.insert(0, str(Path(__file__).parent.parent / 'pytonium_example_control_center'))
-from data_analyzer import DataAnalyzer
+from threading import Thread
 
 from Pytonium import Pytonium, returns_value_to_javascript
+from data_manager import data_manager
 
 
 # ============================================================================
@@ -59,68 +58,60 @@ def window_resize(new_width: int, new_height: int, anchor: int):
 
 
 # ============================================================================
-# Data Analysis API
+# Data Management API (Using Data Handle Pattern)
 # ============================================================================
 
-data_analyzer = DataAnalyzer()
-
 @returns_value_to_javascript("object")
-def get_sample_datasets():
-    """Get available sample datasets."""
-    return data_analyzer.get_sample_datasets()
-
-
-@returns_value_to_javascript("object")
-def load_sample_dataset(dataset_name: str):
-    """Load a sample dataset."""
-    return data_analyzer.load_sample_dataset(dataset_name)
-
-
-@returns_value_to_javascript("object")
-def load_data_file(file_path: str):
-    """Load CSV or Excel file."""
+def load_file(file_path: str) -> dict:
+    """
+    Load a CSV or Excel file and return a data handle.
+    The actual data stays in Python - only the ID and summaries go to JS.
+    """
     # Handle relative paths
     if not os.path.isabs(file_path):
         file_path = os.path.join(os.path.dirname(__file__), file_path)
-    return data_analyzer.load_file(file_path)
-
-
-@returns_value_to_javascript("object")
-def generate_chart(chart_type: str, x_column: str, y_column: str = None, title: str = None):
-    """Generate matplotlib chart."""
-    return data_analyzer.generate_chart(chart_type, x_column, y_column or None, None, title)
-
-
-@returns_value_to_javascript("object")
-def get_column_stats(column: str):
-    """Get statistics for a specific column."""
-    if data_analyzer.current_df is None:
-        return {"error": "No data loaded"}
     
-    df = data_analyzer.current_df
-    if column not in df.columns:
-        return {"error": f"Column {column} not found"}
+    result = data_manager.load_file(file_path)
     
-    col_data = df[column]
-    result = {
-        "name": column,
-        "type": str(col_data.dtype),
-        "count": int(col_data.count()),
-        "null_count": int(col_data.isnull().sum()),
-        "unique_count": int(col_data.nunique())
-    }
-    
-    # Add numeric stats if applicable
-    if pd.api.types.is_numeric_dtype(col_data):
-        result.update({
-            "min": float(col_data.min()) if not col_data.isna().all() else None,
-            "max": float(col_data.max()) if not col_data.isna().all() else None,
-            "mean": float(col_data.mean()) if not col_data.isna().all() else None,
-            "median": float(col_data.median()) if not col_data.isna().all() else None,
-            "std": float(col_data.std()) if not col_data.isna().all() else None
-        })
+    if "error" not in result:
+        print(f"[Data Studio] Loaded: {file_path}")
+        print(f"              ID: {result['data_id']}")
+        print(f"              Rows: {result['info']['rows']:,}")
+        print(f"              Cols: {result['info']['columns']}")
     
     return result
+
+
+@returns_value_to_javascript("object")
+def get_data_preview(data_id: str, start_row: int = 0, rows: int = 100) -> dict:
+    """Get paginated preview of data by ID."""
+    return data_manager.get_preview(data_id, start_row, rows)
+
+
+@returns_value_to_javascript("object")
+def get_column_stats(data_id: str, column: str) -> dict:
+    """Get detailed statistics for a column."""
+    return data_manager.get_column_stats(data_id, column)
+
+
+@returns_value_to_javascript("object")
+def generate_chart(data_id: str, chart_type: str, x_column: str, 
+                   y_column: str = None, title: str = None) -> dict:
+    """Generate a chart for the dataset."""
+    return data_manager.generate_chart(data_id, chart_type, x_column, y_column, title)
+
+
+@returns_value_to_javascript("object")
+def generate_auto_charts(data_id: str) -> dict:
+    """Generate automatic visualizations based on data types."""
+    return data_manager.generate_auto_charts(data_id)
+
+
+@returns_value_to_javascript("object")
+def unload_data(data_id: str) -> dict:
+    """Unload dataset from memory."""
+    success = data_manager.unload(data_id)
+    return {"success": success}
 
 
 # ============================================================================
@@ -141,12 +132,13 @@ def main():
     pytonium.bind_function_to_javascript(window_drag, "drag", "window")
     pytonium.bind_function_to_javascript(window_resize, "resize", "window")
     
-    # Data API
-    pytonium.bind_function_to_javascript(get_sample_datasets, "getSampleDatasets", "data")
-    pytonium.bind_function_to_javascript(load_sample_dataset, "loadSampleDataset", "data")
-    pytonium.bind_function_to_javascript(load_data_file, "loadDataFile", "data")
-    pytonium.bind_function_to_javascript(generate_chart, "generateChart", "data")
+    # Data API (using data handle pattern)
+    pytonium.bind_function_to_javascript(load_file, "loadFile", "data")
+    pytonium.bind_function_to_javascript(get_data_preview, "getDataPreview", "data")
     pytonium.bind_function_to_javascript(get_column_stats, "getColumnStats", "data")
+    pytonium.bind_function_to_javascript(generate_chart, "generateChart", "data")
+    pytonium.bind_function_to_javascript(generate_auto_charts, "generateAutoCharts", "data")
+    pytonium.bind_function_to_javascript(unload_data, "unloadData", "data")
     
     # Initialize
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -158,10 +150,10 @@ def main():
     print("Pytonium Data Studio Started!")
     print("=" * 60)
     print("Features:")
-    print("  - Load CSV/Excel files with pandas")
-    print("  - Interactive data table with statistics")
-    print("  - Generate charts with matplotlib")
-    print("  - All rendered server-side, displayed in UI")
+    print("  📁 Load CSV/Excel via drag & drop or file picker")
+    print("  🔍 Auto-analysis with smart visualizations")
+    print("  📊 Efficient data handling (large files stay in Python)")
+    print("  🎨 Color-coded column types with statistics")
     print("=" * 60)
     
     while pytonium.is_running():
@@ -170,9 +162,9 @@ def main():
 
 
 if __name__ == "__main__":
-    # Import pandas here to ensure it's available
     try:
         import pandas as pd
+        import numpy as np
         main()
     except ImportError as e:
         print("=" * 60)
@@ -180,6 +172,6 @@ if __name__ == "__main__":
         print("=" * 60)
         print(f"{e}")
         print("\nPlease install required packages:")
-        print("  pip install pandas matplotlib openpyxl")
+        print("  pip install pandas matplotlib openpyxl numpy")
         print("=" * 60)
         input("\nPress Enter to exit...")
