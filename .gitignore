@@ -195,3 +195,4 @@ gh-wiki/pytonium.wiki/
 /src/pytonium_python_framework/.venv/
 /cache
 /pytonium_examples/pytonium_example_frameless/cache/
+/pytonium_examples/pytonium_example_control_center/cache
