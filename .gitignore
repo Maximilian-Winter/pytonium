@@ -196,3 +196,4 @@ gh-wiki/pytonium.wiki/
 /cache
 /pytonium_examples/pytonium_example_frameless/cache/
 /pytonium_examples/pytonium_example_control_center/cache
+/pytonium_examples/pytonium_example_data_studio/cache

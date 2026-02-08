@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pytonium Data Studio</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: rgba(30, 41, 59, 0.8);
+            --accent-primary: #3b82f6;
+            --accent-secondary: #8b5cf6;
+            --accent-success: #10b981;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Resize handles */
+        .resize-handle {
+            position: fixed;
+            z-index: 10000;
+        }
+        .resize-handle.n { top: 0; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+        .resize-handle.s { bottom: 0; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+        .resize-handle.e { top: 8px; right: 0; bottom: 8px; width: 8px; cursor: ew-resize; }
+        .resize-handle.w { top: 8px; left: 0; bottom: 8px; width: 8px; cursor: ew-resize; }
+        .resize-handle.nw { top: 0; left: 0; width: 8px; height: 8px; cursor: nwse-resize; }
+        .resize-handle.ne { top: 0; right: 0; width: 8px; height: 8px; cursor: nesw-resize; }
+        .resize-handle.sw { bottom: 0; left: 0; width: 8px; height: 8px; cursor: nesw-resize; }
+        .resize-handle.se { bottom: 0; right: 0; width: 8px; height: 8px; cursor: nwse-resize; }
+        
+        /* Title Bar */
+        .titlebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 50px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+        }
+        
+        .titlebar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .title-text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        
+        .titlebar-controls {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .titlebar-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        
+        .titlebar-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+        
+        .titlebar-btn.close:hover {
+            background: #ef4444;
+            color: white;
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 66px 20px 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 30px;
+        }
+        
+        .hero h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .hero p {
+            font-size: 16px;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 24px;
+            line-height: 1.6;
+        }
+        
+        .hero code {
+            background: rgba(59, 130, 246, 0.2);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+        }
+        
+        /* Layout */
+        .workspace {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            min-height: 600px;
+        }
+        
+        @media (max-width: 1000px) {
+            .workspace { grid-template-columns: 1fr; }
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+        
+        .dataset-list {
+            margin-bottom: 24px;
+        }
+        
+        .dataset-item {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .dataset-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--border-color);
+        }
+        
+        .dataset-item.active {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: var(--accent-primary);
+        }
+        
+        .dataset-name {
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .dataset-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* Form Elements */
+        .input-group {
+            margin-bottom: 16px;
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        
+        .dark-select, .dark-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .dark-select:focus, .dark-input:focus {
+            border-color: var(--accent-primary);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+        
+        /* Main Panel */
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 800px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        
+        /* Data Table */
+        .table-container {
+            overflow-x: auto;
+            max-height: 400px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        th {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .col-type {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        
+        /* Chart Display */
+        .chart-display {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .chart-display img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        
+        .chart-info {
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 12px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Resize handles -->
+    <div class="resize-handle n" data-edge="n"></div>
+    <div class="resize-handle s" data-edge="s"></div>
+    <div class="resize-handle e" data-edge="e"></div>
+    <div class="resize-handle w" data-edge="w"></div>
+    <div class="resize-handle nw" data-corner="nw"></div>
+    <div class="resize-handle ne" data-corner="ne"></div>
+    <div class="resize-handle sw" data-corner="sw"></div>
+    <div class="resize-handle se" data-corner="se"></div>
+    
+    <!-- Title Bar -->
+    <div class="titlebar" id="titlebar">
+        <div class="titlebar-left">
+            <div class="logo">📊</div>
+            <span class="title-text">Pytonium Data Studio</span>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-btn" onclick="minimizeWindow()">−</button>
+            <button class="titlebar-btn" onclick="maximizeWindow()">□</button>
+            <button class="titlebar-btn close" onclick="closeWindow()">×</button>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Hero -->
+        <div class="hero">
+            <h1>Data Analysis with Python</h1>
+            <p>
+                Load CSV/Excel files, explore data with pandas, and create beautiful 
+                visualizations with matplotlib — all in a sleek desktop app.
+            </p>
+            <p>
+                <code>pip install pandas matplotlib</code> → That's it! No native modules, no compilation.
+            </p>
+        </div>
+        
+        <!-- Workspace -->
+        <div class="workspace">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="section-title">Sample Datasets</div>
+                <div class="dataset-list" id="dataset-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading datasets...
+                    </div>
+                </div>
+                
+                <div class="section-title">Chart Configuration</div>
+                <div class="input-group">
+                    <label class="input-label">Chart Type</label>
+                    <select class="dark-select" id="chart-type">
+                        <option value="line">Line Chart</option>
+                        <option value="bar">Bar Chart</option>
+                        <option value="scatter">Scatter Plot</option>
+                        <option value="histogram">Histogram</option>
+                        <option value="pie">Pie Chart</option>
+                        <option value="heatmap">Correlation Heatmap</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">X Column</label>
+                    <select class="dark-select" id="x-column" disabled>
+                        <option value="">Select dataset first</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">Y Column (Optional)</label>
+                    <select class="dark-select" id="y-column" disabled>
+                        <option value="">Select dataset first</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary" id="generate-btn" onclick="generateChart()" disabled>
+                    Generate Chart
+                </button>
+            </div>
+            
+            <!-- Main Panel -->
+            <div class="main-panel">
+                <!-- Data Overview -->
+                <div class="panel-card" id="overview-panel" style="display: none;">
+                    <div class="section-title">Dataset Overview</div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-rows">-</div>
+                            <div class="stat-label">Rows</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-cols">-</div>
+                            <div class="stat-label">Columns</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-memory">-</div>
+                            <div class="stat-label">MB</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-nulls">-</div>
+                            <div class="stat-label">Nulls</div>
+                        </div>
+                    </div>
+                    
+                    <div class="section-title">Data Preview</div>
+                    <div class="table-container">
+                        <table id="data-table">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Chart Display -->
+                <div class="panel-card" id="chart-panel" style="display: none;">
+                    <div class="section-title">Visualization</div>
+                    <div class="chart-display" id="chart-display">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Generating chart with matplotlib...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Empty State -->
+                <div class="panel-card" id="empty-state">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📁</div>
+                        <h3>No Dataset Loaded</h3>
+                        <p>Select a sample dataset from the sidebar to get started.<br>
+                        You can also load your own CSV or Excel files.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Window Controls
+        function minimizeWindow() { Pytonium.window.minimize(); }
+        function maximizeWindow() { Pytonium.window.maximize(); }
+        function closeWindow() { Pytonium.window.close(); }
+        
+        // Resize functionality
+        let isResizing = false, resizeStartX, resizeStartY, resizeStartWidth, resizeStartHeight, resizeStartPosX, resizeStartPosY, currentResizeHandle;
+        
+        document.querySelectorAll('.resize-handle').forEach(handle => {
+            handle.addEventListener('mousedown', async function(e) {
+                e.preventDefault();
+                try {
+                    let maximized = await Pytonium.window.isMaximized();
+                    if (maximized) return;
+                } catch (err) {}
+                
+                isResizing = true;
+                currentResizeHandle = handle;
+                resizeStartX = e.screenX;
+                resizeStartY = e.screenY;
+                
+                try {
+                    let size = await Pytonium.window.getSize();
+                    let pos = await Pytonium.window.getPosition();
+                    resizeStartWidth = size.width;
+                    resizeStartHeight = size.height;
+                    resizeStartPosX = pos.x;
+                    resizeStartPosY = pos.y;
+                } catch (err) {
+                    isResizing = false;
+                    return;
+                }
+            });
+        });
+        
+        document.addEventListener('mousemove', async function(e) {
+            if (!isResizing || !currentResizeHandle) return;
+            
+            const deltaX = e.screenX - resizeStartX;
+            const deltaY = e.screenY - resizeStartY;
+            let newWidth = resizeStartWidth, newHeight = resizeStartHeight, anchor = 0;
+            
+            const edge = currentResizeHandle.dataset.edge;
+            const corner = currentResizeHandle.dataset.corner;
+            
+            if (edge === 'e' || corner === 'ne' || corner === 'se') {
+                newWidth = resizeStartWidth + deltaX;
+                anchor = corner === 'ne' ? 1 : (corner === 'se' ? 3 : 0);
+            } else if (edge === 'w' || corner === 'nw' || corner === 'sw') {
+                newWidth = resizeStartWidth - deltaX;
+                anchor = corner === 'nw' ? 0 : (corner === 'sw' ? 2 : 1);
+            }
+            
+            if (edge === 's' || corner === 'sw' || corner === 'se') {
+                newHeight = resizeStartHeight + deltaY;
+                anchor = corner === 'sw' ? 2 : (corner === 'se' ? 3 : 0);
+            } else if (edge === 'n' || corner === 'nw' || corner === 'ne') {
+                newHeight = resizeStartHeight - deltaY;
+                anchor = corner === 'nw' ? 0 : (corner === 'ne' ? 1 : 2);
+            }
+            
+            newWidth = Math.max(900, newWidth);
+            newHeight = Math.max(600, newHeight);
+            
+            try {
+                await Pytonium.window.resize(newWidth, newHeight, anchor);
+            } catch (err) {}
+        });
+        
+        document.addEventListener('mouseup', () => { isResizing = false; currentResizeHandle = null; });
+        
+        // Draggable Titlebar
+        let isDragging = false, dragStartX, dragStartY;
+        document.getElementById('titlebar').addEventListener('mousedown', async function(e) {
+            if (e.target.closest('.titlebar-controls')) return;
+            try {
+                let maximized = await Pytonium.window.isMaximized();
+                if (maximized) return;
+            } catch (err) {}
+            isDragging = true;
+            dragStartX = e.screenX;
+            dragStartY = e.screenY;
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            const deltaX = e.screenX - dragStartX;
+            const deltaY = e.screenY - dragStartY;
+            dragStartX = e.screenX;
+            dragStartY = e.screenY;
+            try { Pytonium.window.drag(deltaX, deltaY); } catch (err) {}
+        });
+        
+        document.addEventListener('mouseup', () => isDragging = false);
+        
+        // Data Management
+        let currentColumns = [];
+        let currentDataset = null;
+        
+        async function loadDatasets() {
+            try {
+                const result = await Pytonium.data.getSampleDatasets();
+                const container = document.getElementById('dataset-list');
+                container.innerHTML = '';
+                
+                result.datasets.forEach(ds => {
+                    const div = document.createElement('div');
+                    div.className = 'dataset-item';
+                    div.innerHTML = `
+                        <div class="dataset-name">${ds.name}</div>
+                        <div class="dataset-desc">${ds.description}</div>
+                    `;
+                    div.onclick = () => selectDataset(ds.name, div);
+                    container.appendChild(div);
+                });
+            } catch (e) {
+                console.error('Failed to load datasets:', e);
+                document.getElementById('dataset-list').innerHTML = 
+                    '<div style="padding: 20px; text-align: center; color: var(--text-secondary);">Failed to load datasets</div>';
+            }
+        }
+        
+        async function selectDataset(name, element) {
+            // Update UI
+            document.querySelectorAll('.dataset-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            
+            // Show loading
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('overview-panel').style.display = 'none';
+            document.getElementById('chart-panel').style.display = 'none';
+            
+            try {
+                const result = await Pytonium.data.loadSampleDataset(name);
+                displayDataset(result);
+            } catch (e) {
+                console.error('Failed to load dataset:', e);
+                alert('Failed to load dataset: ' + e.message);
+            }
+        }
+        
+        function displayDataset(result) {
+            if (result.error) {
+                alert('Error: ' + result.error);
+                return;
+            }
+            
+            currentColumns = result.columns;
+            
+            // Update stats
+            document.getElementById('stat-rows').textContent = result.stats.rows.toLocaleString();
+            document.getElementById('stat-cols').textContent = result.stats.columns;
+            document.getElementById('stat-memory').textContent = result.stats.memory_mb;
+            document.getElementById('stat-nulls').textContent = result.stats.missing_values;
+            
+            // Update column selects
+            const xSelect = document.getElementById('x-column');
+            const ySelect = document.getElementById('y-column');
+            
+            xSelect.innerHTML = '<option value="">Select column...</option>';
+            ySelect.innerHTML = '<option value="">None</option>';
+            
+            result.columns.forEach(col => {
+                xSelect.add(new Option(col.name + (col.is_numeric ? ' (num)' : ''), col.name));
+                ySelect.add(new Option(col.name + (col.is_numeric ? ' (num)' : ''), col.name));
+            });
+            
+            xSelect.disabled = false;
+            ySelect.disabled = false;
+            document.getElementById('generate-btn').disabled = false;
+            
+            // Update table
+            updateTable(result);
+            
+            // Show overview
+            document.getElementById('overview-panel').style.display = 'block';
+        }
+        
+        function updateTable(result) {
+            const thead = document.querySelector('#data-table thead');
+            const tbody = document.querySelector('#data-table tbody');
+            
+            // Header
+            thead.innerHTML = '<tr>' + result.columns.map(col => 
+                `<th>${col.name}<br><span class="col-type">${col.type}</span></th>`
+            ).join('') + '</tr>';
+            
+            // Body (first 50 rows)
+            tbody.innerHTML = result.preview.slice(0, 50).map(row => 
+                '<tr>' + result.columns.map(col => 
+                    `<td>${row[col.name] !== null ? row[col.name] : '<em style="opacity: 0.4;">null</em>'}</td>`
+                ).join('') + '</tr>'
+            ).join('');
+        }
+        
+        async function generateChart() {
+            const chartType = document.getElementById('chart-type').value;
+            const xColumn = document.getElementById('x-column').value;
+            const yColumn = document.getElementById('y-column').value;
+            
+            if (!xColumn) {
+                alert('Please select an X column');
+                return;
+            }
+            
+            // Show chart panel with loading
+            document.getElementById('chart-panel').style.display = 'block';
+            document.getElementById('chart-display').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Generating chart with matplotlib...
+                </div>
+            `;
+            
+            try {
+                const result = await Pytonium.data.generateChart(
+                    chartType, xColumn, yColumn || null, null,
+                    `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`
+                );
+                
+                if (result.error) {
+                    document.getElementById('chart-display').innerHTML = 
+                        `<div style="color: #ef4444;">Error: ${result.error}</div>`;
+                    return;
+                }
+                
+                document.getElementById('chart-display').innerHTML = `
+                    <img src="${result.image}" alt="Chart">
+                    <div class="chart-info">Generated by matplotlib from ${result.rows_used.toLocaleString()} rows</div>
+                `;
+            } catch (e) {
+                document.getElementById('chart-display').innerHTML = 
+                    `<div style="color: #ef4444;">Error: ${e.message}</div>`;
+            }
+        }
+        
+        // Initialize
+        function Init() {
+            loadDatasets();
+        }
+        
+        if (window.PytoniumReady) {
+            Init();
+        } else {
+            window.addEventListener('PytoniumReady', Init);
+        }
+    </script>
+</body>
+</html>
