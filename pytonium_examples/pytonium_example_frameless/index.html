@@ -16,8 +16,13 @@
             overflow-x: hidden;
         }
         
-        /* Custom title bar */
+        /* Custom title bar - fixed to top */
         .titlebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 12px 20px;
@@ -146,7 +151,7 @@
         
         /* Content area */
         .content {
-            padding: 20px;
+            padding: 76px 20px 20px 20px;  /* 56px titlebar + 20px padding */
             max-width: 1200px;
             margin: 0 auto;
         }
@@ -488,6 +493,99 @@
     }
     
     // =========================================================================
+    // Resizable Window Edges
+    // =========================================================================
+    let isResizing = false;
+    let resizeStartX = 0;
+    let resizeStartY = 0;
+    let resizeStartWidth = 0;
+    let resizeStartHeight = 0;
+    let resizeStartPosX = 0;
+    let resizeStartPosY = 0;
+    let currentResizeHandle = null;
+    
+    function initResizeHandles() {
+        const handles = document.querySelectorAll('.resize-handle');
+        
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', async function(e) {
+                e.preventDefault();
+                
+                // Don't resize if maximized
+                try {
+                    let maximized = await Pytonium.window.isMaximized();
+                    if (maximized) return;
+                } catch (err) {}
+                
+                isResizing = true;
+                currentResizeHandle = handle;
+                resizeStartX = e.screenX;
+                resizeStartY = e.screenY;
+                
+                // Get current window size and position
+                try {
+                    let size = await Pytonium.window.getSize();
+                    let pos = await Pytonium.window.getPosition();
+                    resizeStartWidth = size.width;
+                    resizeStartHeight = size.height;
+                    resizeStartPosX = pos.x;
+                    resizeStartPosY = pos.y;
+                } catch (err) {
+                    isResizing = false;
+                    return;
+                }
+            });
+        });
+        
+        document.addEventListener('mousemove', async function(e) {
+            if (!isResizing || !currentResizeHandle) return;
+            
+            const deltaX = e.screenX - resizeStartX;
+            const deltaY = e.screenY - resizeStartY;
+            
+            let newWidth = resizeStartWidth;
+            let newHeight = resizeStartHeight;
+            let anchor = 0; // Default: top-left anchor
+            
+            const edge = currentResizeHandle.dataset.edge;
+            const corner = currentResizeHandle.dataset.corner;
+            
+            if (edge === 'e' || corner === 'ne' || corner === 'se') {
+                // Resizing from right edge
+                newWidth = resizeStartWidth + deltaX;
+                anchor = corner === 'ne' ? 1 : (corner === 'se' ? 3 : 0);
+            } else if (edge === 'w' || corner === 'nw' || corner === 'sw') {
+                // Resizing from left edge
+                newWidth = resizeStartWidth - deltaX;
+                anchor = corner === 'nw' ? 0 : (corner === 'sw' ? 2 : 1);
+            }
+            
+            if (edge === 's' || corner === 'sw' || corner === 'se') {
+                // Resizing from bottom edge
+                newHeight = resizeStartHeight + deltaY;
+                anchor = corner === 'sw' ? 2 : (corner === 'se' ? 3 : 0);
+            } else if (edge === 'n' || corner === 'nw' || corner === 'ne') {
+                // Resizing from top edge
+                newHeight = resizeStartHeight - deltaY;
+                anchor = corner === 'nw' ? 0 : (corner === 'ne' ? 1 : 2);
+            }
+            
+            // Minimum window size
+            newWidth = Math.max(400, newWidth);
+            newHeight = Math.max(300, newHeight);
+            
+            try {
+                await Pytonium.window.resize(newWidth, newHeight, anchor);
+            } catch (err) {}
+        });
+        
+        document.addEventListener('mouseup', function() {
+            isResizing = false;
+            currentResizeHandle = null;
+        });
+    }
+    
+    // =========================================================================
     // Test Function Calls
     // =========================================================================
     function callTestFunc() {
@@ -565,6 +663,10 @@
         // Initialize draggable title bar
         initDraggableTitlebar();
         log('Title bar is draggable - click and drag to move');
+        
+        // Initialize resize handles
+        initResizeHandles();
+        log('Window edges are resizable - drag edges/corners to resize');
         
         // Register for state updates
         try {

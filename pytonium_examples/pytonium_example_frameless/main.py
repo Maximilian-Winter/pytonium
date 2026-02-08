@@ -107,12 +107,7 @@ def window_set_size(width: int, height: int):
 
 def window_resize(new_width: int, new_height: int, anchor: int):
     """Resize the window from an anchor point."""
-    print(f"Python: Resizing window to {new_width}x{new_height}, anchor={anchor}")
-    try:
-        pytonium.resize_window(new_width, new_height, anchor)
-        print(f"Python: Resize completed")
-    except Exception as e:
-        print(f"Python: Resize failed: {e}")
+    pytonium.resize_window(new_width, new_height, anchor)
 
 
 # ============================================================================
