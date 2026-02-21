@@ -58,6 +58,38 @@ def window_resize(new_width: int, new_height: int, anchor: int):
 
 
 # ============================================================================
+# Native File Dialog (since CEF doesn't expose file paths to JS)
+# ============================================================================
+
+@returns_value_to_javascript("string")
+def open_file_dialog() -> str:
+    """
+    Open a native file dialog and return the selected file path.
+    This is needed because CEF doesn't expose file paths to JavaScript.
+    """
+    import tkinter as tk
+    from tkinter import filedialog
+    
+    # Create hidden root window
+    root = tk.Tk()
+    root.withdraw()
+    root.wm_attributes('-topmost', 1)
+    
+    # Open dialog
+    file_path = filedialog.askopenfilename(
+        title="Select CSV or Excel file",
+        filetypes=[
+            ("CSV files", "*.csv"),
+            ("Excel files", "*.xlsx *.xls"),
+            ("All files", "*.*")
+        ]
+    )
+    
+    root.destroy()
+    return file_path if file_path else ""
+
+
+# ============================================================================
 # Data Management API (Using Data Handle Pattern)
 # ============================================================================
 
@@ -131,6 +163,9 @@ def main():
     pytonium.bind_function_to_javascript(window_close, "close", "window")
     pytonium.bind_function_to_javascript(window_drag, "drag", "window")
     pytonium.bind_function_to_javascript(window_resize, "resize", "window")
+    
+    # File dialog
+    pytonium.bind_function_to_javascript(open_file_dialog, "openFileDialog", "data")
     
     # Data API (using data handle pattern)
     pytonium.bind_function_to_javascript(load_file, "loadFile", "data")
