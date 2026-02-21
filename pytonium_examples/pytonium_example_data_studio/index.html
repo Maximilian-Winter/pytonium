@@ -557,11 +557,12 @@
             <div class="drop-zone-icon">📁</div>
             <h3>Drop a CSV or Excel file here</h3>
             <p>or click to browse. Get instant analysis with auto-generated charts.</p>
-            <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+            <button class="btn btn-primary" onclick="selectFileNative()">
                 Select File
             </button>
-            <input type="file" id="file-input" class="file-input" 
-                   accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
+            <p style="font-size: 12px; margin-top: 12px; opacity: 0.6;">
+                💡 Note: In CEF, drag-drop may not provide file paths. Use the button for reliable file selection.
+            </p>
         </div>
         
         <!-- File Banner (hidden initially) -->
@@ -790,24 +791,47 @@
             
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                loadFile(files[0].path);
+                const file = files[0];
+                console.log('Dropped file:', file);
+                console.log('File name:', file.name);
+                console.log('File path:', file.path);  // Will be undefined in CEF
+                
+                // CEF doesn't expose file paths for security
+                if (!file.path) {
+                    alert('Drag & drop file paths are not available in CEF.\n\nPlease use the "Select File" button to browse for files.');
+                    return;
+                }
+                loadFile(file.path);
             }
         });
         
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
-                loadFile(file.path);
+        async function selectFileNative() {
+            try {
+                const filePath = await Pytonium.data.openFileDialog();
+                if (filePath) {
+                    loadFile(filePath);
+                }
+            } catch (e) {
+                console.error('Failed to open file dialog:', e);
+                alert('Error opening file dialog: ' + e.message);
             }
         }
         
         // Load File
         async function loadFile(filePath) {
+            console.log('Loading file:', filePath);
+            
+            if (!filePath) {
+                alert('No file path provided');
+                return;
+            }
+            
             // Show loading
             dropZone.innerHTML = '<div class="loading"><div class="spinner"></div>Loading file...</div>';
             
             try {
                 const result = await Pytonium.data.loadFile(filePath);
+                console.log('Load result:', result);
                 
                 if (result.error) {
                     alert('Error loading file: ' + result.error);
@@ -840,8 +864,10 @@
                 <div class="drop-zone-icon">📁</div>
                 <h3>Drop a CSV or Excel file here</h3>
                 <p>or click to browse. Get instant analysis with auto-generated charts.</p>
-                <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">Select File</button>
-                <input type="file" id="file-input" class="file-input" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
+                <button class="btn btn-primary" onclick="selectFileNative()">Select File</button>
+                <p style="font-size: 12px; margin-top: 12px; opacity: 0.6;">
+                    💡 Note: In CEF, drag-drop may not provide file paths. Use the button for reliable file selection.
+                </p>
             `;
         }
         
