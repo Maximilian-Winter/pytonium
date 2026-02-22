@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dakini Wallpaper</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body {
+      background: #06030a;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script>
+(function() {
+  "use strict";
+
+  var canvas = document.getElementById("canvas");
+  var ctx = canvas.getContext("2d");
+  var W, H, time = 0;
+  var dpr = window.devicePixelRatio || 1;
+
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ═══════════════════════════════════════════════════════════
+  // COLOR PALETTE — Charnel ground: crimsons, golds, deep purples
+  // ═══════════════════════════════════════════════════════════
+
+  var CRIMSON     = [180, 30, 55];
+  var DEEP_RED    = [130, 20, 50];
+  var GOLD        = [210, 165, 100];
+  var AMBER       = [200, 120, 60];
+  var DARK_PURPLE = [70, 25, 65];
+  var DEEP_BLUE   = [25, 15, 55];
+  var EMBER_BRIGHT= [255, 140, 60];
+  var EMBER_RED   = [240, 70, 50];
+
+  function rgba(c, a) {
+    return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")";
+  }
+
+  function lerpColor(c1, c2, t) {
+    return [
+      c1[0] + (c2[0] - c1[0]) * t,
+      c1[1] + (c2[1] - c1[1]) * t,
+      c1[2] + (c2[2] - c1[2]) * t
+    ];
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // SIMPLEX-LIKE NOISE (lightweight)
+  // ═══════════════════════════════════════════════════════════
+
+  // Simple hash-based noise for organic movement
+  function hash(x, y) {
+    var n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return n - Math.floor(n);
+  }
+
+  function smoothNoise(x, y) {
+    var ix = Math.floor(x), iy = Math.floor(y);
+    var fx = x - ix, fy = y - iy;
+    fx = fx * fx * (3 - 2 * fx);
+    fy = fy * fy * (3 - 2 * fy);
+    var a = hash(ix, iy), b = hash(ix + 1, iy);
+    var c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
+    return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+  }
+
+  function fbm(x, y, octaves) {
+    var val = 0, amp = 0.5, freq = 1;
+    for (var i = 0; i < octaves; i++) {
+      val += amp * smoothNoise(x * freq, y * freq);
+      amp *= 0.5;
+      freq *= 2.1;
+    }
+    return val;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LAYER 1: BREATHING BACKGROUND GRADIENT
+  // ═══════════════════════════════════════════════════════════
+
+  function drawBackground() {
+    // Slowly shifting radial gradient center
+    var cx = W * 0.5 + Math.sin(time * 0.08) * W * 0.15;
+    var cy = H * 0.6 + Math.cos(time * 0.06) * H * 0.1;
+    var breathe = 0.5 + Math.sin(time * 0.15) * 0.15;
+
+    var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.9);
+    grad.addColorStop(0, rgba(DARK_PURPLE, 0.25 * breathe));
+    grad.addColorStop(0.3, rgba(DEEP_RED, 0.08 * breathe));
+    grad.addColorStop(0.7, rgba(DEEP_BLUE, 0.05));
+    grad.addColorStop(1, "#06030a");
+
+    ctx.fillStyle = "#06030a";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LAYER 2: ENERGY AURORA — flowing ribbons of crimson light
+  // ═══════════════════════════════════════════════════════════
+
+  var NUM_RIBBONS = 5;
+  var ribbons = [];
+  for (var r = 0; r < NUM_RIBBONS; r++) {
+    ribbons.push({
+      yBase: 0.35 + r * 0.1,       // vertical position (0-1)
+      speed: 0.012 + r * 0.004,     // animation speed
+      amplitude: 30 + r * 15,       // wave height
+      wavelength: 0.003 + r * 0.001,// wave frequency
+      thickness: 60 + r * 20,       // ribbon thickness
+      color1: r < 2 ? CRIMSON : (r < 4 ? AMBER : GOLD),
+      color2: r < 2 ? DEEP_RED : (r < 4 ? CRIMSON : AMBER),
+      alpha: 0.04 + (NUM_RIBBONS - r) * 0.008,
+      offset: r * 1.7               // phase offset
+    });
+  }
+
+  function drawAurora() {
+    for (var r = 0; r < ribbons.length; r++) {
+      var rb = ribbons[r];
+      var baseY = H * rb.yBase;
+      var phase = time * rb.speed + rb.offset;
+
+      ctx.beginPath();
+      ctx.moveTo(-10, H);
+
+      // Top edge of ribbon (wavy)
+      for (var x = -10; x <= W + 10; x += 8) {
+        var noise = fbm(x * rb.wavelength + phase, r * 3.7 + time * 0.02, 3);
+        var y = baseY + Math.sin(x * 0.005 + phase * 3) * rb.amplitude
+                + (noise - 0.5) * rb.amplitude * 1.5;
+        if (x === -10) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+
+      // Bottom edge (offset)
+      for (var x2 = W + 10; x2 >= -10; x2 -= 8) {
+        var noise2 = fbm(x2 * rb.wavelength + phase + 5, r * 3.7 + time * 0.02 + 2, 3);
+        var y2 = baseY + rb.thickness
+                 + Math.sin(x2 * 0.005 + phase * 3 + 1) * rb.amplitude * 0.6
+                 + (noise2 - 0.5) * rb.amplitude;
+        ctx.lineTo(x2, y2);
+      }
+
+      ctx.closePath();
+
+      // Gradient fill along the ribbon
+      var breathe = 0.7 + Math.sin(time * 0.2 + r) * 0.3;
+      var g = ctx.createLinearGradient(0, baseY - rb.amplitude, 0, baseY + rb.thickness + rb.amplitude);
+      g.addColorStop(0, rgba(rb.color1, 0));
+      g.addColorStop(0.3, rgba(rb.color1, rb.alpha * breathe));
+      g.addColorStop(0.5, rgba(lerpColor(rb.color1, rb.color2, 0.5), rb.alpha * 1.2 * breathe));
+      g.addColorStop(0.7, rgba(rb.color2, rb.alpha * breathe));
+      g.addColorStop(1, rgba(rb.color2, 0));
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LAYER 3: RISING EMBERS — sparks drifting upward
+  // ═══════════════════════════════════════════════════════════
+
+  var NUM_EMBERS = 90;
+  var embers = [];
+
+  function spawnEmber(i) {
+    var isGold = Math.random() > 0.6;
+    return {
+      x: Math.random() * (W + 200) - 100,
+      y: H + Math.random() * 100,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -(0.3 + Math.random() * 0.8),
+      size: 1 + Math.random() * 2.5,
+      life: 0,
+      maxLife: 400 + Math.random() * 600,
+      color: isGold ? GOLD : EMBER_BRIGHT,
+      glowColor: isGold ? AMBER : EMBER_RED,
+      wobbleSpeed: 0.5 + Math.random() * 2,
+      wobbleAmp: 0.3 + Math.random() * 0.8,
+      pulseSpeed: 2 + Math.random() * 3,
+      brightness: 0.5 + Math.random() * 0.5
+    };
+  }
+
+  for (var e = 0; e < NUM_EMBERS; e++) {
+    var em = spawnEmber(e);
+    em.y = Math.random() * H;  // spread initially
+    em.life = Math.random() * em.maxLife;
+    embers.push(em);
+  }
+
+  function drawEmbers() {
+    for (var i = 0; i < embers.length; i++) {
+      var em = embers[i];
+
+      // Physics
+      em.x += em.vx + Math.sin(time * em.wobbleSpeed + i) * em.wobbleAmp;
+      em.y += em.vy;
+      em.life++;
+
+      // Respawn when dead or off-screen
+      if (em.life > em.maxLife || em.y < -20) {
+        embers[i] = spawnEmber(i);
+        continue;
+      }
+
+      // Fade in/out lifecycle
+      var lifePct = em.life / em.maxLife;
+      var fadeIn = Math.min(1, em.life / 40);
+      var fadeOut = Math.max(0, 1 - (lifePct - 0.7) / 0.3);
+      var alpha = fadeIn * (lifePct > 0.7 ? fadeOut : 1) * em.brightness;
+
+      // Pulsing glow
+      var pulse = 0.6 + Math.sin(time * em.pulseSpeed + i * 2) * 0.4;
+      var glowSize = em.size * (3 + pulse * 3);
+
+      // Outer glow
+      var glow = ctx.createRadialGradient(em.x, em.y, 0, em.x, em.y, glowSize);
+      glow.addColorStop(0, rgba(em.glowColor, alpha * 0.3 * pulse));
+      glow.addColorStop(0.5, rgba(em.glowColor, alpha * 0.08));
+      glow.addColorStop(1, rgba(em.glowColor, 0));
+      ctx.fillStyle = glow;
+      ctx.fillRect(em.x - glowSize, em.y - glowSize, glowSize * 2, glowSize * 2);
+
+      // Core
+      ctx.beginPath();
+      ctx.arc(em.x, em.y, em.size * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = rgba(em.color, alpha * 0.9);
+      ctx.fill();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LAYER 4: SACRED GEOMETRY — slowly rotating mandala
+  // ═══════════════════════════════════════════════════════════
+
+  function drawSacredGeometry() {
+    var cx = W * 0.5;
+    var cy = H * 0.5;
+    var baseRadius = Math.min(W, H) * 0.18;
+    var breathe = 1 + Math.sin(time * 0.12) * 0.08;
+    var rotation = time * 0.015;
+    var alpha = 0.04 + Math.sin(time * 0.1) * 0.015;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.strokeStyle = rgba(CRIMSON, alpha);
+    ctx.lineWidth = 0.8;
+
+    // Outer circle
+    var r = baseRadius * breathe;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner circle
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.618, 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(GOLD, alpha * 0.8);
+    ctx.stroke();
+
+    // Downward-pointing triangle (Vajrayogini's symbol)
+    ctx.beginPath();
+    var triR = r * 0.85;
+    // Points of downward triangle (rotated 180 degrees from standard)
+    for (var t = 0; t < 3; t++) {
+      var angle = (t * 2 * Math.PI / 3) + Math.PI / 2; // start from bottom
+      var px = Math.cos(angle) * triR;
+      var py = Math.sin(angle) * triR;
+      if (t === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = rgba(CRIMSON, alpha * 1.2);
+    ctx.stroke();
+
+    // Upward-pointing triangle (interpenetrating)
+    ctx.beginPath();
+    var triR2 = r * 0.85;
+    for (var t2 = 0; t2 < 3; t2++) {
+      var angle2 = (t2 * 2 * Math.PI / 3) - Math.PI / 2;
+      var px2 = Math.cos(angle2) * triR2;
+      var py2 = Math.sin(angle2) * triR2;
+      if (t2 === 0) ctx.moveTo(px2, py2);
+      else ctx.lineTo(px2, py2);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = rgba(GOLD, alpha * 0.9);
+    ctx.stroke();
+
+    // Petal pattern — 8 petals
+    ctx.strokeStyle = rgba(DARK_PURPLE, alpha * 1.5);
+    for (var p = 0; p < 8; p++) {
+      var pAngle = (p * Math.PI / 4) + time * 0.008;
+      ctx.save();
+      ctx.rotate(pAngle);
+
+      ctx.beginPath();
+      var petalW = r * 0.25;
+      var petalH = r * 0.6;
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(petalW, petalH * 0.3, petalW, petalH * 0.7, 0, petalH);
+      ctx.bezierCurveTo(-petalW, petalH * 0.7, -petalW, petalH * 0.3, 0, 0);
+      ctx.strokeStyle = rgba(lerpColor(CRIMSON, GOLD, p / 8), alpha * 0.7);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // Central dot — bindu
+    var binduPulse = 0.6 + Math.sin(time * 0.3) * 0.4;
+    var binduGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.12);
+    binduGlow.addColorStop(0, rgba(GOLD, alpha * 3 * binduPulse));
+    binduGlow.addColorStop(0.4, rgba(CRIMSON, alpha * 1.5 * binduPulse));
+    binduGlow.addColorStop(1, rgba(CRIMSON, 0));
+    ctx.fillStyle = binduGlow;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LAYER 5: ENERGY VEINS — thin flowing lines across screen
+  // ═══════════════════════════════════════════════════════════
+
+  var NUM_VEINS = 6;
+
+  function drawEnergyVeins() {
+    for (var v = 0; v < NUM_VEINS; v++) {
+      var phase = time * 0.03 + v * 2.5;
+      var yBase = H * (0.15 + v * 0.13);
+      var alpha = 0.025 + Math.sin(time * 0.15 + v * 1.3) * 0.015;
+      var col = v % 2 === 0 ? CRIMSON : AMBER;
+
+      ctx.beginPath();
+      ctx.moveTo(-10, yBase);
+      for (var x = 0; x <= W + 10; x += 4) {
+        var n = fbm(x * 0.002 + phase, v * 5 + time * 0.01, 2);
+        var y = yBase + Math.sin(x * 0.003 + phase * 2) * 40 + (n - 0.5) * 80;
+        ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = rgba(col, alpha);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LAYER 6: SUBTLE VIGNETTE — darken edges
+  // ═══════════════════════════════════════════════════════════
+
+  function drawVignette() {
+    var grad = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
+    grad.addColorStop(0, "rgba(6, 3, 10, 0)");
+    grad.addColorStop(0.6, "rgba(6, 3, 10, 0)");
+    grad.addColorStop(1, "rgba(6, 3, 10, 0.5)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // MAIN ANIMATION LOOP
+  // ═══════════════════════════════════════════════════════════
+
+  function draw() {
+    time += 0.016; // ~60fps time step
+
+    drawBackground();
+    drawEnergyVeins();
+    drawAurora();
+    drawSacredGeometry();
+    drawEmbers();
+    drawVignette();
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+
+})();
+</script>
+</body>
+</html>

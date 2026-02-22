@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Taijitu Symbol</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stars-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+
+        .star.small {
+            width: 1px;
+            height: 1px;
+            opacity: 0.6;
+        }
+
+        .star.medium {
+            width: 2px;
+            height: 2px;
+            opacity: 0.8;
+        }
+
+        .star.large {
+            width: 3px;
+            height: 3px;
+            opacity: 1;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+        }
+
+        .big-dipper {
+            position: absolute;
+            top: 15%;
+            right: 20%;
+        }
+
+        .constellation-star {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+            animation: twinkle 4s infinite;
+        }
+
+        .constellation-line {
+            position: absolute;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.3);
+            transform-origin: left center;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .taijitu-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+        }
+
+        .taijitu {
+            animation: rotate 8s linear infinite, pulse 4s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .controls-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .toggle-button {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px 15px 15px 15px;
+            width: 60px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-button:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .arrow {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+            user-select: none;
+        }
+
+        .arrow.rotated {
+            transform: rotate(180deg);
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 600px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: top center;
+            opacity: 1;
+            max-height: 500px;
+            overflow: hidden;
+        }
+
+        .controls.hidden {
+            opacity: 0;
+            transform: translateY(-20px) scaleY(0.8);
+            max-height: 0;
+            padding: 0 30px;
+            margin: 0;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-group label {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .color-input {
+            width: 100%;
+            height: 50px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: none;
+            outline: none;
+        }
+
+        .size-input {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .size-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .size-input::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .size-display {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .title {
+            color: #ffffff;
+            font-size: 2.5em;
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: -20px;
+            letter-spacing: 3px;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .controls {
+                max-width: 90vw;
+                grid-template-columns: 1fr;
+            }
+            
+            .title {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="stars-background" id="starsBackground"></div>
+    
+    <div class="container">
+        <h1 class="title">太极</h1>
+        
+        <div class="taijitu-container">
+            <svg class="taijitu" width="200" height="200" viewBox="0 0 200 200" id="taijituSvg">
+                <!-- Outer circle background -->
+                <circle cx="100" cy="100" r="90" fill="white" stroke="none" id="outerCircle"/>
+                
+                <!-- Yin half - proper S-curve shape -->
+                <path d="M 100 10 A 90 90 0 0 1 100 190 A 45 45 0 0 1 100 100 A 45 45 0 0 0 100 10 Z" 
+                      fill="black" id="yinHalf"/>
+                
+                <!-- Yang dot (small white circle in yin section) -->
+                <circle cx="100" cy="145" r="20" fill="white" id="yangDot"/>
+                
+                <!-- Yin dot (small black circle in yang section) -->
+                <circle cx="100" cy="55" r="20" fill="black" id="yinDot"/>
+            </svg>
+        </div>
+
+        <div class="controls-wrapper">
+            <div class="toggle-button" id="toggleButton">
+                <span class="arrow" id="arrow">▼</span>
+            </div>
+            
+            <div class="controls" id="controls">
+                <div class="control-group">
+                    <label for="yinColor">Yin Color</label>
+                    <input type="color" id="yinColor" class="color-input" value="#000000">
+                </div>
+                
+                <div class="control-group">
+                    <label for="yangColor">Yang Color</label>
+                    <input type="color" id="yangColor" class="color-input" value="#ffffff">
+                </div>
+                
+                <div class="control-group">
+                    <label for="sizeSlider">Size</label>
+                    <input type="range" id="sizeSlider" class="size-input" min="100" max="400" value="200">
+                    <div class="size-display" id="sizeDisplay">200px</div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="gradientColor1">Sky Color 1</label>
+                    <input type="color" id="gradientColor1" class="color-input" value="#1a1a2e">
+                </div>
+                
+                <div class="control-group">
+                    <label for="gradientColor2">Sky Color 2</label>
+                    <input type="color" id="gradientColor2" class="color-input" value="#16213e">
+                </div>
+                
+                <div class="control-group">
+                    <label for="gradientColor3">Sky Color 3</label>
+                    <input type="color" id="gradientColor3" class="color-input" value="#0f3460">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const yinColorInput = document.getElementById('yinColor');
+        const yangColorInput = document.getElementById('yangColor');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeDisplay = document.getElementById('sizeDisplay');
+        const taijituSvg = document.getElementById('taijituSvg');
+        const yinHalf = document.getElementById('yinHalf');
+        const yangDot = document.getElementById('yangDot');
+        const yinDot = document.getElementById('yinDot');
+        const toggleButton = document.getElementById('toggleButton');
+        const controls = document.getElementById('controls');
+        const arrow = document.getElementById('arrow');
+        const gradientColor1 = document.getElementById('gradientColor1');
+        const gradientColor2 = document.getElementById('gradientColor2');
+        const gradientColor3 = document.getElementById('gradientColor3');
+        const starsBackground = document.getElementById('starsBackground');
+
+        let controlsVisible = true;
+
+        // Create random stars
+        function createStars() {
+            const starCount = 150;
+            
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                
+                // Random size class
+                const sizes = ['small', 'small', 'small', 'medium', 'medium', 'large'];
+                star.classList.add(sizes[Math.floor(Math.random() * sizes.length)]);
+                
+                // Random position
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                
+                // Random animation delay
+                star.style.animationDelay = Math.random() * 3 + 's';
+                
+                starsBackground.appendChild(star);
+            }
+        }
+
+        // Create Big Dipper constellation
+        function createBigDipper() {
+            const bigDipper = document.createElement('div');
+            bigDipper.className = 'big-dipper';
+            
+            // Big Dipper star positions (relative to container)
+            const stars = [
+                { x: 0, y: 0, name: 'Dubhe' },
+                { x: 25, y: -5, name: 'Merak' },
+                { x: 50, y: 10, name: 'Phecda' },
+                { x: 75, y: 15, name: 'Megrez' },
+                { x: 100, y: 5, name: 'Alioth' },
+                { x: 125, y: -10, name: 'Mizar' },
+                { x: 150, y: -25, name: 'Alkaid' }
+            ];
+            
+            // Create constellation lines
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]
+            ];
+            
+            // Draw lines first (so they appear behind stars)
+            connections.forEach(([start, end]) => {
+                const line = document.createElement('div');
+                line.className = 'constellation-line';
+                
+                const startStar = stars[start];
+                const endStar = stars[end];
+                
+                const dx = endStar.x - startStar.x;
+                const dy = endStar.y - startStar.y;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                line.style.left = startStar.x + 'px';
+                line.style.top = startStar.y + 'px';
+                line.style.width = length + 'px';
+                line.style.transform = `rotate(${angle}deg)`;
+                
+                bigDipper.appendChild(line);
+            });
+            
+            // Create stars
+            stars.forEach((star, index) => {
+                const starElement = document.createElement('div');
+                starElement.className = 'constellation-star';
+                starElement.style.left = star.x + 'px';
+                starElement.style.top = star.y + 'px';
+                starElement.style.animationDelay = index * 0.2 + 's';
+                starElement.title = star.name;
+                
+                bigDipper.appendChild(starElement);
+            });
+            
+            starsBackground.appendChild(bigDipper);
+        }
+
+        // Update background gradient
+        function updateBackground() {
+            const color1 = gradientColor1.value;
+            const color2 = gradientColor2.value;
+            const color3 = gradientColor3.value;
+            
+            document.body.style.background = `linear-gradient(135deg, ${color1}, ${color2}, ${color3})`;
+        }
+
+        // Toggle controls visibility
+        function toggleControls() {
+            controlsVisible = !controlsVisible;
+            
+            if (controlsVisible) {
+                controls.classList.remove('hidden');
+                arrow.textContent = '▼';
+                arrow.classList.remove('rotated');
+            } else {
+                controls.classList.add('hidden');
+                arrow.textContent = '▲';
+                arrow.classList.add('rotated');
+            }
+        }
+
+        // Update colors
+        function updateColors() {
+            const yinColor = yinColorInput.value;
+            const yangColor = yangColorInput.value;
+            
+            // Update the outer circle (yang background)
+            document.getElementById('outerCircle').setAttribute('fill', yangColor);
+            
+            // Update yin half
+            yinHalf.setAttribute('fill', yinColor);
+            
+            // Update dots (opposite colors)
+            yangDot.setAttribute('fill', yangColor);
+            yinDot.setAttribute('fill', yinColor);
+        }
+
+        // Update size
+        function updateSize() {
+            const size = sizeSlider.value;
+            taijituSvg.setAttribute('width', size);
+            taijituSvg.setAttribute('height', size);
+            sizeDisplay.textContent = size + 'px';
+        }
+
+        // Event listeners
+        toggleButton.addEventListener('click', toggleControls);
+        yinColorInput.addEventListener('input', updateColors);
+        yangColorInput.addEventListener('input', updateColors);
+        sizeSlider.addEventListener('input', updateSize);
+        gradientColor1.addEventListener('input', updateBackground);
+        gradientColor2.addEventListener('input', updateBackground);
+        gradientColor3.addEventListener('input', updateBackground);
+
+        // Keyboard shortcut (Space bar to toggle)
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space') {
+                event.preventDefault();
+                toggleControls();
+            }
+        });
+
+        // Initialize
+        createStars();
+        createBigDipper();
+        updateColors();
+        updateSize();
+        updateBackground();
+    </script>
+</body>
+</html>
