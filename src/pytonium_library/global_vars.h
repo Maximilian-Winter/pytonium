@@ -1,6 +1,8 @@
 ﻿#ifndef GLOBAL_VARS_H
 #define GLOBAL_VARS_H
 
-inline bool g_IsRunning = false;
+#include <atomic>
+
+inline std::atomic<bool> g_IsRunning{false};
 
 #endif // GLOBAL_VARS_H

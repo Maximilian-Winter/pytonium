@@ -90,13 +90,17 @@ public:
     }
 
     void ResolvePromise(int request_id, const CefRefPtr<CefValue>& value) {
-        std::pair<CefRefPtr<CefV8Context>, CefRefPtr<CefV8Value>> pair = promiseMap[request_id];
+        auto it = promiseMap.find(request_id);
+        if (it == promiseMap.end()) {
+            return;  // Promise not found — already resolved or invalid ID
+        }
 
+        auto& pair = it->second;
         pair.first->Enter();
         pair.second->ResolvePromise(CefValueWrapperHelper::ConvertCefValueToV8Value(value));
         pair.first->Exit();
 
-        promiseMap.erase(request_id);
+        promiseMap.erase(it);
     }
     uint64_t nextRequestId = 0;
     std::unordered_map<uint64_t, std::pair<CefRefPtr<CefV8Context>, CefRefPtr<CefV8Value>>> promiseMap;

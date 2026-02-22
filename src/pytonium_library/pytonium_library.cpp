@@ -162,7 +162,10 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
   }
 
   //settings.log_severity = LOGSEVERITY_VERBOSE;
-  CefInitialize(main_args, settings, m_App.get(), sandbox_info);
+  if (!CefInitialize(main_args, settings, m_App.get(), sandbox_info)) {
+    std::cerr << "CefInitialize failed!" << std::endl;
+    return;
+  }
   g_IsRunning = true;
 
   if(m_UseCustomIcon)

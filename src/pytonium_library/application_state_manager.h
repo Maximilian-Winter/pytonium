@@ -13,6 +13,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <string>
+#include <mutex>
 #include "nlohmann/json.hpp"
 #include "cef_value_wrapper.h"
 
@@ -232,6 +233,7 @@ public:
 class ApplicationStateManager {
 private:
     std::unordered_map<std::string, std::unordered_map<std::string, nlohmann::json>> namespaces;
+    mutable std::mutex m_mutex;
 
     void ensureNamespaceExists(const std::string& namespaceName) {
         if (namespaces.find(namespaceName) == namespaces.end()) {
@@ -241,12 +243,14 @@ private:
 
 public:
     void setState(const std::string& namespaceName, const std::string& key, const nlohmann::json& value) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         ensureNamespaceExists(namespaceName);
         namespaces[namespaceName][key] = value;
     }
 
 
     nlohmann::json getState(const std::string& namespaceName, const std::string& key) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         ensureNamespaceExists(namespaceName);
         if (namespaces[namespaceName].find(key) != namespaces[namespaceName].end()) {
             return namespaces[namespaceName][key];
@@ -255,6 +259,7 @@ public:
     }
 
     void removeState(const std::string& namespaceName, const std::string& key) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         ensureNamespaceExists(namespaceName);
         if (namespaces[namespaceName].find(key) != namespaces[namespaceName].end()) {
             namespaces[namespaceName].erase(key);
@@ -262,28 +267,63 @@ public:
     }
 
     std::string serializeToJson() {
+        std::lock_guard<std::mutex> lock(m_mutex);
         nlohmann::json jsonObj = namespaces;
         return jsonObj.dump();
     }
 
     void deserializeFromJson(const std::string& jsonStr) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         nlohmann::json jsonObj = nlohmann::json::parse(jsonStr);
         namespaces = jsonObj.get<decltype(namespaces)>();
     }
 
     std::string serializeNamespaceToJson(const std::string& namespaceName) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         ensureNamespaceExists(namespaceName);  // Make sure the namespace exists
         nlohmann::json jsonObj = namespaces[namespaceName];
         return jsonObj.dump();
     }
 
     void deserializeNamespaceFromJson(const std::string& namespaceName, const std::string& jsonStr) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         nlohmann::json jsonObj = nlohmann::json::parse(jsonStr);
         auto namespaceMap = jsonObj.get<std::unordered_map<std::string, nlohmann::json>>();
         namespaces[namespaceName] = namespaceMap;  // This will create or update the namespace
     }
 
     CefValueWrapper namespaceToCefValueWrapper(const std::string& namespaceName) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        return namespaceToCefValueWrapperUnlocked(namespaceName);
+    }
+
+    CefValueWrapper allNamespacesToCefValueWrapper(const std::string& globalNamespaceName) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        // Create an empty CefValueWrapper object to hold all namespaces
+        CefValueWrapper globalCefNamespace;
+        std::map<std::string, CefValueWrapper> globalCefObject;
+
+        // Iterate over each namespace in the StateManager and convert it to a CefValueWrapper
+        for (const auto& [namespaceName, namespaceMap] : namespaces) {
+            CefValueWrapper cefNamespace = namespaceToCefValueWrapperUnlocked(namespaceName);
+            globalCefObject[namespaceName] = cefNamespace;
+        }
+
+        // Set the global namespace name and bundle all the individual namespaces under it
+        globalCefNamespace.SetObject(globalCefObject);
+
+        // Create another CefValueWrapper object to hold the global namespace
+        CefValueWrapper rootCefObject;
+        std::map<std::string, CefValueWrapper> rootCefMap;
+        rootCefMap[globalNamespaceName] = globalCefNamespace;
+        rootCefObject.SetObject(rootCefMap);
+
+        return rootCefObject;
+    }
+
+private:
+    CefValueWrapper namespaceToCefValueWrapperUnlocked(const std::string& namespaceName) {
         ensureNamespaceExists(namespaceName);  // Make sure the namespace exists
 
         // Create an empty CefValueWrapper object to hold the converted namespace
@@ -298,29 +338,6 @@ public:
         // Set the object to the CefValueWrapper and return
         cefNamespace.SetObject(cefObject);
         return cefNamespace;
-    }
-
-    CefValueWrapper allNamespacesToCefValueWrapper(const std::string& globalNamespaceName) {
-        // Create an empty CefValueWrapper object to hold all namespaces
-        CefValueWrapper globalCefNamespace;
-        std::map<std::string, CefValueWrapper> globalCefObject;
-
-        // Iterate over each namespace in the StateManager and convert it to a CefValueWrapper
-        for (const auto& [namespaceName, namespaceMap] : namespaces) {
-            CefValueWrapper cefNamespace = namespaceToCefValueWrapper(namespaceName);
-            globalCefObject[namespaceName] = cefNamespace;
-        }
-
-        // Set the global namespace name and bundle all the individual namespaces under it
-        globalCefNamespace.SetObject(globalCefObject);
-
-        // Create another CefValueWrapper object to hold the global namespace
-        CefValueWrapper rootCefObject;
-        std::map<std::string, CefValueWrapper> rootCefMap;
-        rootCefMap[globalNamespaceName] = globalCefNamespace;
-        rootCefObject.SetObject(rootCefMap);
-
-        return rootCefObject;
     }
 
 };

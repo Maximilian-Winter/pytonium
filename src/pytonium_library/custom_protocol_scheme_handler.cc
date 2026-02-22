@@ -48,15 +48,35 @@ public:
         mime_type_ = "text/html";
         status_ = 500;
       } else {
-        std::string absoluteFilePath = contentRootFolder+ "\\" + filePath;
-        if(std::filesystem::exists(absoluteFilePath))
-        {
-            data_ = file_contents_binary(absoluteFilePath);
+        // Use std::filesystem::path for cross-platform path handling
+        std::filesystem::path rootPath = std::filesystem::path(contentRootFolder).lexically_normal();
+        std::filesystem::path resolvedPath = (rootPath / filePath).lexically_normal();
+
+        // Path traversal check: resolved path must stay within root
+        std::string rootStr = rootPath.string();
+        std::string resolvedStr = resolvedPath.string();
+
+        if (resolvedStr.find(rootStr) != 0) {
+            // Path escape attempt blocked
             handled = true;
-            status_ = 200;
-        }
-        else
-        {
+            data_ = "Error: Access denied!";
+            mime_type_ = "text/html";
+            status_ = 403;
+        } else if (std::filesystem::exists(resolvedPath)) {
+            // File size limit: 100MB
+            constexpr std::uintmax_t MAX_FILE_SIZE = 100 * 1024 * 1024;
+            auto fileSize = std::filesystem::file_size(resolvedPath);
+            if (fileSize > MAX_FILE_SIZE) {
+                handled = true;
+                data_ = "Error: File too large!";
+                mime_type_ = "text/html";
+                status_ = 413;
+            } else {
+                data_ = file_contents_binary(resolvedPath);
+                handled = true;
+                status_ = 200;
+            }
+        } else {
             handled = true;
             data_ = "Error: File not found!";
             mime_type_ = "text/html";

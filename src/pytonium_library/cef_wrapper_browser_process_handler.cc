@@ -3,6 +3,7 @@
 #include "cef_wrapper_browser_process_handler.h"
 
 #include <cstring>
+#include <iostream>
 #include <utility>
 #include "cef_wrapper_client_handler.h"
 #include "cef_wrapper_render_process_handler.h"
@@ -173,6 +174,10 @@ void CefWrapperBrowserProcessHandler::OnContextInitialized()
 
     Browser = CefBrowserHost::CreateBrowserSync(window_info, handler, url,
                                                 browser_settings, extra, nullptr);
+    if (!Browser) {
+        std::cerr << "CreateBrowserSync failed!" << std::endl;
+        return;
+    }
 
     // m_Browser->GetHost()->ShowDevTools(window_info, nullptr, browser_settings,
     // CefPoint());
@@ -185,9 +190,10 @@ void CefWrapperBrowserProcessHandler::SetStartUrl(std::string url)
 
 void CefWrapperBrowserProcessHandler::LoadUrl(std::string url)
 {
-    CefWrapperBrowserProcessHandler::GetInstance()
-            ->Browser->GetMainFrame()
-            ->LoadURL(url);
+    auto browser = CefWrapperBrowserProcessHandler::GetInstance()->Browser;
+    if (browser && browser->GetMainFrame()) {
+        browser->GetMainFrame()->LoadURL(url);
+    }
 }
 
 void CefWrapperBrowserProcessHandler::SetInitialResolution(int width,

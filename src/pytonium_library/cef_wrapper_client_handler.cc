@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "global_vars.h"
 #include "include/base/cef_callback.h"
@@ -353,7 +354,7 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
         // void* args = nullptr;
         int argsSize = (int) javascript_args->GetSize();
 
-        auto *valueWrapper = new CefValueWrapper[argsSize];
+        std::vector<CefValueWrapper> valueWrapper(argsSize);
         for (int i = 0; i < (int) javascript_args->GetSize(); ++i)
         {
             std::string type = javascript_arg_types->GetString(i);
@@ -365,10 +366,9 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
         {
             if (m_JavascriptBindings[i].functionName == funcName)
             {
-                m_JavascriptBindings[i].function(argsSize, valueWrapper);
+                m_JavascriptBindings[i].function(argsSize, valueWrapper.data());
             }
         }
-        delete[] valueWrapper;
 
 
         return true;
@@ -381,7 +381,7 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
         // void* args = nullptr;
         int argsSize = (int) javascript_args->GetSize();
 
-        auto *valueWrapper = new CefValueWrapper[argsSize];
+        std::vector<CefValueWrapper> valueWrapper(argsSize);
         for (int i = 0; i < (int) javascript_args->GetSize(); ++i)
         {
             std::string type = javascript_arg_types->GetString(i);
@@ -393,11 +393,10 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
         {
             if (m_JavascriptPythonBindings[i].FunctionName == funcName)
             {
-                m_JavascriptPythonBindings[i].CallHandler(argsSize, valueWrapper, argList->GetInt(3));
+                m_JavascriptPythonBindings[i].CallHandler(argsSize, valueWrapper.data(), argList->GetInt(3));
                 break;
             }
         }
-        delete[] valueWrapper;
         return true;
     } else if (message_name == "push-app-state-update")
     {
