@@ -18,6 +18,25 @@
 #include <string>
 #include <utility>
 
+inline std::string EscapeJsString(const std::string& input) {
+    std::string result;
+    result.reserve(input.size() + 8);
+    for (char c : input) {
+        switch (c) {
+            case '\\': result += "\\\\"; break;
+            case '\'': result += "\\'"; break;
+            case '"':  result += "\\\""; break;
+            case '\n': result += "\\n"; break;
+            case '\r': result += "\\r"; break;
+            case '\0': result += "\\0"; break;
+            case '<':  result += "\\x3C"; break;
+            case '>':  result += "\\x3E"; break;
+            default:   result += c; break;
+        }
+    }
+    return result;
+}
+
 class JavascriptStateUpdateSubscription
 {
 public:
@@ -174,13 +193,13 @@ public:
     {
         // Serialize the updated state (or namespace) to JSON string
         auto state = m_ApplicationStateManager->getState(stateNamespace, stateName);
-        std::string serialisedState = state.dump();
-        // Construct JavaScript code to trigger custom event
+        std::string serialisedState = state.dump();  // json::dump() output is already safe for JS embedding
+        // Construct JavaScript code to trigger custom event — escape user-controlled strings
         std::stringstream jsCodeStream;
-        jsCodeStream << "triggerCustomStateChangePytoniumEvent('"<< eventName <<"', {";
-        jsCodeStream << "'namespace': '" << stateNamespace << "', ";
-        jsCodeStream << "'key': '" << stateName << "', ";
-        jsCodeStream << "'value': " << serialisedState;  // Inserting serialized JSON string directly
+        jsCodeStream << "triggerCustomStateChangePytoniumEvent('" << EscapeJsString(eventName) << "', {";
+        jsCodeStream << "'namespace': '" << EscapeJsString(stateNamespace) << "', ";
+        jsCodeStream << "'key': '" << EscapeJsString(stateName) << "', ";
+        jsCodeStream << "'value': " << serialisedState;
         jsCodeStream << "});";
 
         std::string jsCode = jsCodeStream.str();

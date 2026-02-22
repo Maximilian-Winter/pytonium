@@ -67,7 +67,7 @@ if(OS_WINDOWS)
   add_dependencies(${CEF_TARGET} pytonium_library)
   target_include_directories(${CEF_TARGET} PUBLIC ${CEF_INCLUDE_PATH})
   target_link_libraries(${CEF_TARGET} pytonium_library libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS})
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../..)
+  include_directories(${CMAKE_SOURCE_DIR})
   if(USE_SANDBOX)
     # Logical target used to link the cef_sandbox library.
     ADD_LOGICAL_TARGET("cef_sandbox_lib" "${CEF_SANDBOX_LIB_DEBUG}" "${CEF_SANDBOX_LIB_RELEASE}")
@@ -81,22 +81,12 @@ if(OS_WINDOWS)
   COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
   COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
 
- # COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../pytonium_cpp_librarytest/debug/pytonium_subprocess/")
- # COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../pytonium_cpp_librarytest/debug/pytonium_subprocess")
- COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "../pytonium_library_test/debug/bin")
-#
- # COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../pytonium_cpp_librarytest/release/pytonium_subprocess/")
- # COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../pytonium_cpp_librarytest/release/pytonium_subprocess")
- COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "../pytonium_library_test/release/bin")
+  COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_library_test/debug/bin")
+  COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_library_test/release/bin")
 
-
-
-  COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_win/")
-  COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_win/")
-
-  #COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/PytoniumLibrary/pytonium_subprocess/")
-  #COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/PytoniumLibrary/pytonium_subprocess/")
-  COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_win/")
+  COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/bin_win/")
+  COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/bin_win/")
+  COPY_FILES("${CEF_TARGET}" "pytonium_subprocess.exe" "${CEF_TARGET_OUT_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/bin_win/")
 endif()
 
 if(OS_LINUX)
@@ -108,7 +98,7 @@ if(OS_LINUX)
     add_dependencies(${CEF_TARGET} pytonium_library)
     target_include_directories(${CEF_TARGET} PUBLIC ${CEF_INCLUDE_PATH})
     target_link_libraries(${CEF_TARGET} pytonium_library libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS})
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../..)
+    include_directories(${CMAKE_SOURCE_DIR})
     # Set rpath so that libraries can be placed next to the executable.
     set_target_properties(${CEF_TARGET} PROPERTIES INSTALL_RPATH "$ORIGIN")
     set_target_properties(${CEF_TARGET} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE)
@@ -127,21 +117,11 @@ if(OS_LINUX)
     endif()
     # Set SUID permissions on the chrome-sandbox target.
     SET_LINUX_SUID_PERMISSIONS("${CEF_TARGET}" "${CEF_TARGET_OUT_DIR}/chrome-sandbox")
-#
-    ## COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../pytonium_cpp_librarytest/debug/pytonium_subprocess/")
-    ## COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../pytonium_cpp_librarytest/debug/pytonium_subprocess")
-    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "../pytonium_library_test/debug")
-    ##
-    ## COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../pytonium_cpp_librarytest/release/pytonium_subprocess/")
-    ## COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../pytonium_cpp_librarytest/release/pytonium_subprocess")
-    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "../pytonium_library_test/release")
-#
-#
-#
-    COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_linux/")
-    COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_linux/")
-#
-    ##COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "../../../src/pytonium_python_framework/PytoniumLibrary/pytonium_subprocess/")
-    ##COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "../../../src/pytonium_python_framework/PytoniumLibrary/pytonium_subprocess/")
-    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "../../../src/pytonium_python_framework/Pytonium/bin_linux/")
+
+    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_library_test/debug")
+    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_library_test/release")
+
+    COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/bin_linux/")
+    COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/bin_linux/")
+    COPY_FILES("${CEF_TARGET}" "pytonium_subprocess" "${CEF_TARGET_OUT_DIR}" "${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/Pytonium/bin_linux/")
 endif()

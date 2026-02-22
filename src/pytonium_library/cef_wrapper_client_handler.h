@@ -11,6 +11,9 @@
 #include "application_state_python.h"
 #include "application_context_menu_binding.h"
 
+// Callback typedefs for window events
+using window_event_string_callback_ptr = void (*)(void* user_data, const char* value);
+using window_event_bool_callback_ptr = void (*)(void* user_data, bool value);
 
 class CefWrapperClientHandler : public CefClient,
                                 public CefDisplayHandler,
@@ -64,6 +67,11 @@ public:
     // CefDisplayHandler methods:
     void OnTitleChange(CefRefPtr<CefBrowser> browser,
                        const CefString &title) override;
+    void OnAddressChange(CefRefPtr<CefBrowser> browser,
+                         CefRefPtr<CefFrame> frame,
+                         const CefString &url) override;
+    void OnFullscreenModeChange(CefRefPtr<CefBrowser> browser,
+                                bool fullscreen) override;
 
     // CefLifeSpanHandler methods:
     void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
@@ -126,6 +134,12 @@ public:
     void SetShowDebugContextMenu(bool show);
 
     void SetContextMenuBindings(std::vector<ContextMenuBinding> contextMenuBindings);
+
+    // Window event callback setters
+    void SetOnTitleChangeCallback(window_event_string_callback_ptr callback, void* user_data);
+    void SetOnAddressChangeCallback(window_event_string_callback_ptr callback, void* user_data);
+    void SetOnFullscreenChangeCallback(window_event_bool_callback_ptr callback, void* user_data);
+
 private:
     // Platform-specific implementation.
     void PlatformTitleChange(CefRefPtr<CefBrowser> browser,
@@ -151,6 +165,14 @@ private:
     std::string m_CurrentContextMenuNamespace = "app";
     bool is_closing_;
     bool m_ShowDebugContextMenu;
+
+    // Window event callbacks
+    window_event_string_callback_ptr m_OnTitleChangeCallback = nullptr;
+    void* m_OnTitleChangeUserData = nullptr;
+    window_event_string_callback_ptr m_OnAddressChangeCallback = nullptr;
+    void* m_OnAddressChangeUserData = nullptr;
+    window_event_bool_callback_ptr m_OnFullscreenChangeCallback = nullptr;
+    void* m_OnFullscreenChangeUserData = nullptr;
 
     // Include the default reference counting implementation.
 IMPLEMENT_REFCOUNTING(CefWrapperClientHandler);

@@ -4,6 +4,7 @@
 
 
 import inspect
+import warnings
 
 from .pytonium_library cimport PytoniumLibrary, CefValueWrapper, state_callback_object_ptr
 from libcpp.string cimport string
@@ -283,23 +284,66 @@ cpdef vector[string] convert_list_of_strings_to_vector(list py_list):
         cpp_vector.push_back(item.encode("utf-8"))
     return cpp_vector
 
-cdef inline void javascript_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args, int message_id) noexcept:
-    arg_list = get_javascript_binding_arg_list(args, size, message_id)
+cdef inline void javascript_binding_object_callback(void *python_function_object, int size, CefValueWrapper* args, int message_id) noexcept with gil:
+    try:
+        arg_list = get_javascript_binding_arg_list(args, size, message_id)
 
-    if (<PytoniumFunctionBindingWrapper> python_function_object).returns_value:
-        convert = PytoniumValueWrapper()
-        return_value = (<PytoniumFunctionBindingWrapper> python_function_object)(*arg_list)
-        (<Pytonium> (<PytoniumFunctionBindingWrapper> python_function_object).pytonium_instance).pytonium_library.ReturnValueToJavascript(message_id, convert.PythonType_to_CefValueWrapper(return_value))
-    else:
-        (<PytoniumFunctionBindingWrapper> python_function_object)(*arg_list)
+        if (<PytoniumFunctionBindingWrapper> python_function_object).returns_value:
+            convert = PytoniumValueWrapper()
+            return_value = (<PytoniumFunctionBindingWrapper> python_function_object)(*arg_list)
+            (<Pytonium> (<PytoniumFunctionBindingWrapper> python_function_object).pytonium_instance).pytonium_library.ReturnValueToJavascript(message_id, convert.PythonType_to_CefValueWrapper(return_value))
+        else:
+            (<PytoniumFunctionBindingWrapper> python_function_object)(*arg_list)
+    except Exception:
+        import traceback
+        traceback.print_exc()
 
-cdef inline void context_menu_binding_object_callback(void *python_function_object, string entryNamespace, int command_id) noexcept:
-    (<PytoniumContextMenuWrapper> python_function_object)(entryNamespace, command_id)
+cdef inline void context_menu_binding_object_callback(void *python_function_object, string entryNamespace, int command_id) noexcept with gil:
+    try:
+        (<PytoniumContextMenuWrapper> python_function_object)(entryNamespace, command_id)
+    except Exception:
+        import traceback
+        traceback.print_exc()
 
-cdef inline void state_handler_callback(state_callback_object_ptr python_callback_object, string stateNamespace, string stateKey, CefValueWrapper callback_args) noexcept:
-    converter = PytoniumValueWrapper()
-    arg = converter.CefValueWrapper_to_PythonType(callback_args)
-    (<PytoniumStateHandlerWrapper> python_callback_object)(bytes.decode(stateNamespace, "utf-8"), bytes.decode(stateKey, "utf-8"), arg)
+cdef inline void state_handler_callback(state_callback_object_ptr python_callback_object, string stateNamespace, string stateKey, CefValueWrapper callback_args) noexcept with gil:
+    try:
+        converter = PytoniumValueWrapper()
+        arg = converter.CefValueWrapper_to_PythonType(callback_args)
+        (<PytoniumStateHandlerWrapper> python_callback_object)(bytes.decode(stateNamespace, "utf-8"), bytes.decode(stateKey, "utf-8"), arg)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+cdef class PytoniumWindowEventCallbackWrapper:
+    """Wraps a Python callable for window event callbacks."""
+    cdef object python_callback
+
+    def __init__(self, callback):
+        self.python_callback = callback
+
+    def __call__(self, value):
+        self.python_callback(value)
+
+cdef inline void _on_title_change_callback(void* user_data, const char* value) noexcept with gil:
+    try:
+        (<PytoniumWindowEventCallbackWrapper>user_data)(value.decode("utf-8"))
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+cdef inline void _on_address_change_callback(void* user_data, const char* value) noexcept with gil:
+    try:
+        (<PytoniumWindowEventCallbackWrapper>user_data)(value.decode("utf-8"))
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+cdef inline void _on_fullscreen_change_callback(void* user_data, boolie value) noexcept with gil:
+    try:
+        (<PytoniumWindowEventCallbackWrapper>user_data)(bool(value))
+    except Exception:
+        import traceback
+        traceback.print_exc()
 
 cdef str _global_pytonium_subprocess_path = ""
 
@@ -319,12 +363,14 @@ cdef class Pytonium:
     cdef list _pytonium_api
     cdef list _pytonium_state_handler
     cdef PytoniumContextMenuWrapper _pytonium_context_menu
+    cdef list _event_callback_wrappers
 
     def __init__(self):
         global _global_pytonium_subprocess_path
         self._pytonium_api = []
         self._pytonium_state_handler = []
         self._pytonium_context_menu = PytoniumContextMenuWrapper()
+        self._event_callback_wrappers = []
         self.pytonium_library = PytoniumLibrary()
         self.pytonium_library.SetCustomSubprocessPath(_global_pytonium_subprocess_path.encode('utf-8'))
 
@@ -339,17 +385,45 @@ cdef class Pytonium:
         _global_pytonium_subprocess_path = value
 
 
-    def initialize(self, start_url: str, init_width: int, init_height: int):
+    def initialize(self, start_url: str, init_width: int, init_height: int) -> None:
+        """Initialize the Pytonium browser window.
+
+        Args:
+            start_url: The URL to load when the browser window opens.
+            init_width: Initial window width in pixels.
+            init_height: Initial window height in pixels.
+        """
         self.pytonium_library.InitPytonium(start_url.encode("utf-8"), init_width, init_height)
 
-    def return_value_to_javascript(self, message_id: int, value):
+    def return_value_to_javascript(self, message_id: int, value: object) -> None:
+        """Return a value from Python to a JavaScript promise.
+
+        Args:
+            message_id: The message ID associated with the JavaScript call.
+            value: The Python value to return (int, float, str, bool, dict, or list).
+        """
         cdef PytoniumValueWrapper pyth_value = PytoniumValueWrapper()
         self.pytonium_library.ReturnValueToJavascript(message_id, pyth_value.PythonType_to_CefValueWrapper(value))
 
-    def execute_javascript(self, code: str):
+    def execute_javascript(self, code: str) -> None:
+        """Execute JavaScript code in the browser.
+
+        Args:
+            code: The JavaScript code string to execute.
+        """
         self.pytonium_library.ExecuteJavascript(code.encode("utf-8"))
 
-    def bind_function_to_javascript(self, function_to_bind: callable, name="", javascript_object="") :
+    def bind_function_to_javascript(self, function_to_bind, name: str = "", javascript_object: str = "") -> None:
+        """Bind a Python function so it can be called from JavaScript.
+
+        Args:
+            function_to_bind: A callable Python function. Use the ``@returns_value_to_javascript``
+                decorator if the function should return a value to JS.
+            name: The name to expose in JavaScript. Defaults to the function's ``__name__``.
+            javascript_object: Optional JS object namespace to attach the function to.
+        """
+        if not callable(function_to_bind):
+            raise TypeError(f"function_to_bind must be callable, got {type(function_to_bind).__name__}")
         cdef should_return = hasattr(function_to_bind, 'returns_value_to_javascript') and function_to_bind.returns_value_to_javascript
         return_value_type = "void"
         if should_return:
@@ -361,7 +435,21 @@ cdef class Pytonium:
         self._pytonium_api.append(py_meth_wrapper)
         self.pytonium_library.AddJavascriptPythonBinding(name.encode("utf-8"), javascript_binding_object_callback, <void *>self._pytonium_api[len(self._pytonium_api)-1], javascript_object.encode("utf-8"), should_return)
 
-    def bind_functions_to_javascript(self, functions_to_bind: list[callable], names=[], javascript_object=""):
+    def bind_functions_to_javascript(self, functions_to_bind: list, names: list = None, javascript_object: str = "") -> None:
+        """Bind multiple Python functions so they can be called from JavaScript.
+
+        Args:
+            functions_to_bind: A list of callable Python functions.
+            names: Optional list of names to expose in JavaScript. Defaults to each function's ``__name__``.
+            javascript_object: Optional JS object namespace to attach the functions to.
+        """
+        if not isinstance(functions_to_bind, list):
+            raise TypeError(f"functions_to_bind must be a list, got {type(functions_to_bind).__name__}")
+        for fn in functions_to_bind:
+            if not callable(fn):
+                raise TypeError(f"All items in functions_to_bind must be callable, got {type(fn).__name__}")
+        if names is None:
+            names = []
         name_index = 0
         for meth in functions_to_bind:
             should_return = hasattr(meth, 'returns_value_to_javascript') and meth.returns_value_to_javascript
@@ -381,7 +469,18 @@ cdef class Pytonium:
             name_index += 1
 
 
-    def bind_object_methods_to_javascript(self, obj: object, names=[], javascript_object=""):
+    def bind_object_methods_to_javascript(self, obj: object, names: list = None, javascript_object: str = "") -> None:
+        """Bind all public methods of an object so they can be called from JavaScript.
+
+        Args:
+            obj: A Python object whose public methods will be bound.
+            names: Optional list of JS names for the methods.
+            javascript_object: Optional JS object namespace to attach the methods to.
+        """
+        if obj is None:
+            raise ValueError("obj must not be None")
+        if names is None:
+            names = []
         methods = [a for a in dir(obj) if not a.startswith('__') and callable(getattr(obj, a))]
         name_index = 0
         for method in methods:
@@ -402,7 +501,16 @@ cdef class Pytonium:
                 self.pytonium_library.AddJavascriptPythonBinding(method.encode("utf-8"), javascript_binding_object_callback, <void *> self._pytonium_api[size_methods - 1], javascript_object.encode("utf-8"), should_return)
             name_index += 1
 
-    def add_context_menu_entry(self, context_menu_entry_function, display_name="", context_menu_namespace=""):
+    def add_context_menu_entry(self, context_menu_entry_function, display_name: str = "", context_menu_namespace: str = "") -> None:
+        """Add a custom entry to the browser context (right-click) menu.
+
+        Args:
+            context_menu_entry_function: A callable invoked when the menu entry is clicked.
+            display_name: The label shown in the context menu. Defaults to the function's ``__name__``.
+            context_menu_namespace: Namespace for grouping menu entries. Defaults to ``"app"``.
+        """
+        if not callable(context_menu_entry_function):
+            raise TypeError(f"context_menu_entry_function must be callable, got {type(context_menu_entry_function).__name__}")
         if display_name == "":
             display_name = context_menu_entry_function.__name__
         if context_menu_namespace == "":
@@ -412,7 +520,16 @@ cdef class Pytonium:
         self._pytonium_context_menu.add_menu_entry(context_menu_namespace, context_menu_entry)
         self.pytonium_library.AddContextMenuEntry(context_menu_binding_object_callback, <void *>self._pytonium_context_menu, context_menu_namespace.encode("utf-8"), display_name.encode("utf-8"), entry_index)
 
-    def add_context_menu_entries(self, context_menu_entry_functions: list[callable], display_names=[], context_menu_namespace=""):
+    def add_context_menu_entries(self, context_menu_entry_functions: list, display_names: list = None, context_menu_namespace: str = "") -> None:
+        """Add multiple custom entries to the browser context menu.
+
+        Args:
+            context_menu_entry_functions: A list of callables for each menu entry.
+            display_names: Optional list of display labels. Defaults to each function's ``__name__``.
+            context_menu_namespace: Namespace for grouping menu entries. Defaults to ``"app"``.
+        """
+        if display_names is None:
+            display_names = []
         if context_menu_namespace == "":
             context_menu_namespace = "app"
         name_index = 0
@@ -431,7 +548,16 @@ cdef class Pytonium:
             name_index += 1
 
 
-    def add_context_menu_entries_from_object(self, context_menu_entries_object: object, display_names=[], context_menu_namespace=""):
+    def add_context_menu_entries_from_object(self, context_menu_entries_object: object, display_names: list = None, context_menu_namespace: str = "") -> None:
+        """Add context menu entries from all public methods of an object.
+
+        Args:
+            context_menu_entries_object: A Python object whose public methods become menu entries.
+            display_names: Optional list of display labels.
+            context_menu_namespace: Namespace for grouping menu entries. Defaults to ``"app"``.
+        """
+        if display_names is None:
+            display_names = []
         if context_menu_namespace == "":
             context_menu_namespace = "app"
         methods = [a for a in dir(context_menu_entries_object) if not a.startswith('__') and callable(getattr(context_menu_entries_object, a))]
@@ -451,8 +577,23 @@ cdef class Pytonium:
                 self.pytonium_library.AddContextMenuEntry(context_menu_binding_object_callback, <void *>self._pytonium_context_menu, context_menu_namespace.encode("utf-8"), name.encode("utf-8"), entry_index)
             name_index += 1
 
-    def add_state_handler(self, state_handler: object, namespaces: list[str]) :
+    def add_state_handler(self, state_handler: object, namespaces: list) -> None:
+        """Register a state handler that receives state change notifications.
+
+        The ``state_handler`` object must have an ``update_state(namespace, key, value)`` method.
+
+        Args:
+            state_handler: An object with an ``update_state`` method.
+            namespaces: List of state namespace strings to subscribe to.
+        """
         cdef has_update = hasattr(state_handler, 'update_state')
+        if not has_update:
+            warnings.warn(
+                f"State handler {type(state_handler).__name__} has no 'update_state' method and will be ignored.",
+                UserWarning,
+                stacklevel=2
+            )
+            return
         if has_update:
             state_handler_meth = getattr(state_handler, 'update_state')
             py_meth_wrapper = PytoniumStateHandlerWrapper(state_handler_meth)
@@ -460,34 +601,80 @@ cdef class Pytonium:
             self._pytonium_state_handler.append(py_meth_wrapper)
             self.pytonium_library.AddStateHandlerPythonBinding(state_handler_callback, <void *>self._pytonium_state_handler[len(self._pytonium_state_handler)-1], namespaces_converted)
 
-    def set_context_menu_namespace(self, context_menu_namespace: str):
+    def set_context_menu_namespace(self, context_menu_namespace: str) -> None:
+        """Set the active context menu namespace.
+
+        Args:
+            context_menu_namespace: The namespace whose entries will appear in the context menu.
+        """
         self.pytonium_library.SetCurrentContextMenuNamespace(context_menu_namespace.encode("utf-8"))
 
-    def set_show_debug_context_menu(self, show: bool):
+    def set_show_debug_context_menu(self, show: bool) -> None:
+        """Enable or disable the debug context menu (DevTools entries).
+
+        Args:
+            show: True to show DevTools entries in the context menu.
+        """
         self.pytonium_library.SetShowDebugContextMenu(show)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
+        """Shut down the Pytonium browser and CEF framework."""
         self.pytonium_library.ShutdownPytonium()
 
-    def is_running(self):
+    def is_running(self) -> bool:
+        """Check if the browser is currently running.
+
+        Returns:
+            True if the browser window is open and running.
+        """
         return self.pytonium_library.IsRunning()
 
-    def update_message_loop(self):
-        return self.pytonium_library.UpdateMessageLoop()
+    def update_message_loop(self) -> None:
+        """Process pending CEF messages. Call this in your main loop."""
+        self.pytonium_library.UpdateMessageLoop()
 
-    def add_custom_scheme(self, scheme_identifier: str, scheme_content_root_folder: str):
-            return self.pytonium_library.AddCustomScheme(scheme_identifier.encode("utf-8"), scheme_content_root_folder.encode("utf-8"))
+    def add_custom_scheme(self, scheme_identifier: str, scheme_content_root_folder: str) -> None:
+        """Register a custom URL scheme for serving local content.
 
-    def add_mime_type_mapping(self, file_extension: str, mime_type: str):
-            return self.pytonium_library.AddMimeTypeMapping(file_extension.encode("utf-8"), mime_type.encode("utf-8"))
+        Must be called before ``initialize()``.
 
-    def set_cache_path(self, path: str):
+        Args:
+            scheme_identifier: The scheme name (e.g. ``"app"`` for ``app://``).
+            scheme_content_root_folder: Absolute path to the folder serving as content root.
+        """
+        self.pytonium_library.AddCustomScheme(scheme_identifier.encode("utf-8"), scheme_content_root_folder.encode("utf-8"))
+
+    def add_mime_type_mapping(self, file_extension: str, mime_type: str) -> None:
+        """Add a custom file extension to MIME type mapping for custom schemes.
+
+        Args:
+            file_extension: The file extension (e.g. ``".wasm"``).
+            mime_type: The MIME type (e.g. ``"application/wasm"``).
+        """
+        self.pytonium_library.AddMimeTypeMapping(file_extension.encode("utf-8"), mime_type.encode("utf-8"))
+
+    def set_cache_path(self, path: str) -> None:
+        """Set the path for the browser cache. Must be called before ``initialize()``.
+
+        Args:
+            path: Absolute path to the cache directory.
+        """
         self.pytonium_library.SetCustomCachePath(path.encode("utf-8"))
 
-    def set_custom_icon_path(self, path: str):
+    def set_custom_icon_path(self, path: str) -> None:
+        """Set a custom window icon. Must be called before ``initialize()``.
+
+        Args:
+            path: Absolute path to the icon file (.ico on Windows).
+        """
         self.pytonium_library.SetCustomIconPath(path.encode("utf-8"))
 
-    def load_url(self, url: str):
+    def load_url(self, url: str) -> None:
+        """Navigate the browser to a new URL.
+
+        Args:
+            url: The URL to load.
+        """
         self.pytonium_library.LoadUrl(url.encode("utf-8"))
 
     # Window control methods
@@ -552,74 +739,130 @@ cdef class Pytonium:
         """
         self.pytonium_library.ResizeWindow(new_width, new_height, anchor)
 
-    def set_state(self, namespace: str, key: str, value: object):
+    def get_native_window_handle(self) -> int:
+        """Get the native OS window handle.
+
+        Returns:
+            The window handle as an integer (HWND on Windows, X11 window ID on Linux).
+            Returns 0 if the browser is not initialized.
+        """
+        cdef void* handle = self.pytonium_library.GetNativeWindowHandle()
+        return <unsigned long long>handle
+
+    def on_title_change(self, callback) -> None:
+        """Register a callback for browser title changes.
+
+        Args:
+            callback: A callable that receives the new title string.
+        """
+        if not callable(callback):
+            raise TypeError(f"callback must be callable, got {type(callback).__name__}")
+        wrapper = PytoniumWindowEventCallbackWrapper(callback)
+        self._event_callback_wrappers.append(wrapper)
+        self.pytonium_library.SetOnTitleChangeCallback(_on_title_change_callback, <void*>wrapper)
+
+    def on_address_change(self, callback) -> None:
+        """Register a callback for browser URL changes.
+
+        Args:
+            callback: A callable that receives the new URL string.
+        """
+        if not callable(callback):
+            raise TypeError(f"callback must be callable, got {type(callback).__name__}")
+        wrapper = PytoniumWindowEventCallbackWrapper(callback)
+        self._event_callback_wrappers.append(wrapper)
+        self.pytonium_library.SetOnAddressChangeCallback(_on_address_change_callback, <void*>wrapper)
+
+    def on_fullscreen_change(self, callback) -> None:
+        """Register a callback for fullscreen mode changes.
+
+        Args:
+            callback: A callable that receives a boolean (True if entering fullscreen).
+        """
+        if not callable(callback):
+            raise TypeError(f"callback must be callable, got {type(callback).__name__}")
+        wrapper = PytoniumWindowEventCallbackWrapper(callback)
+        self._event_callback_wrappers.append(wrapper)
+        self.pytonium_library.SetOnFullscreenChangeCallback(_on_fullscreen_change_callback, <void*>wrapper)
+
+    def set_state(self, namespace: str, key: str, value: object) -> None:
+        """Set a value in the application state, notifying subscribed handlers.
+
+        Args:
+            namespace: The state namespace.
+            key: The state key within the namespace.
+            value: The value to store (int, float, str, bool, dict, or list).
+        """
         converter = PytoniumValueWrapper()
         self.pytonium_library.SetState(namespace.encode("utf-8"), key.encode("utf-8"), converter.PythonType_to_CefValueWrapper(value))
 
-    def generate_typescript_definitions(self, filename: str):
-       ts_definitions = []
-       ts_definitions.append("declare namespace Pytonium {")
+    def generate_typescript_definitions(self, filename: str) -> None:
+        """Generate TypeScript definition file for bound JavaScript functions.
 
-       object_map = {}  # To group functions under the same javascript_object_name
+        Args:
+            filename: Path to the ``.d.ts`` file to write.
+        """
+        ts_definitions = []
+        ts_definitions.append("declare namespace Pytonium {")
 
-       for py_meth_wrapper in self._pytonium_api:
-           func_name = py_meth_wrapper.get_function_name_in_javascript
-           sig = inspect.signature(py_meth_wrapper.get_python_method)
-           arg_names = ', '.join([f"{name}: {python_type_to_ts_type(param.annotation)}"
-                                   for name, param in sig.parameters.items()])
-           javascript_object_name = py_meth_wrapper.get_javascript_object_name
+        object_map = {}  # To group functions under the same javascript_object_name
 
-           if py_meth_wrapper.get_returns_value:
-               return_type = py_meth_wrapper.get_return_value_type
-           else:
-               return_type = 'void'
+        for py_meth_wrapper in self._pytonium_api:
+            func_name = py_meth_wrapper.get_function_name_in_javascript
+            sig = inspect.signature(py_meth_wrapper.get_python_method)
+            arg_names = ', '.join([f"{name}: {python_type_to_ts_type(param.annotation)}"
+                                    for name, param in sig.parameters.items()])
+            javascript_object_name = py_meth_wrapper.get_javascript_object_name
 
-           # Organize by javascript_object_name
-           if javascript_object_name not in object_map:
-               object_map[javascript_object_name] = []
+            if py_meth_wrapper.get_returns_value:
+                return_type = py_meth_wrapper.get_return_value_type
+            else:
+                return_type = 'void'
 
-           object_map[javascript_object_name].append(
-               f"function {func_name}({arg_names}): {return_type};"
-           )
+            # Organize by javascript_object_name
+            if javascript_object_name not in object_map:
+                object_map[javascript_object_name] = []
 
-       object_map["appState"] = []
+            object_map[javascript_object_name].append(
+                f"function {func_name}({arg_names}): {return_type};"
+            )
 
-       object_map["appState"].append(
-                             f"function registerForStateUpdates(eventName: string, namespaces: string[], getUpdatesFromJavascript: boolean, getUpdatesFromPytonium: boolean): void;"
-                         )
-       object_map["appState"].append(
-                      f"function setState(namespace: string, key: string, value: any): void;"
-                  )
-       object_map["appState"].append(
-                     f"function getState(namespace: string, key: string): any;"
-                 )
-       object_map["appState"].append(
-                    f"function removeState(namespace: string, key: string): void;"
-                )
+        object_map["appState"] = []
+        object_map["appState"].append(
+            "function registerForStateUpdates(eventName: string, namespaces: string[], getUpdatesFromJavascript: boolean, getUpdatesFromPytonium: boolean): void;"
+        )
+        object_map["appState"].append(
+            "function setState(namespace: string, key: string, value: any): void;"
+        )
+        object_map["appState"].append(
+            "function getState(namespace: string, key: string): any;"
+        )
+        object_map["appState"].append(
+            "function removeState(namespace: string, key: string): void;"
+        )
 
+        # Generate the TypeScript definitions
+        for obj_name, functions in object_map.items():
+            if obj_name:  # Skip if empty, means these functions are directly under Pytonium
+                ts_definitions.append(f"  export namespace {obj_name} {{")
 
-       # Generate the TypeScript definitions
-       for obj_name, functions in object_map.items():
-           if obj_name:  # Skip if empty, means these functions are directly under Pytonium
-               ts_definitions.append(f"  export namespace {obj_name} {{")
+            for func in functions:
+                ts_definitions.append(f"    {func}")
 
-           for func in functions:
-               ts_definitions.append(f"    {func}")
+            if obj_name:
+                ts_definitions.append("  }")
+        ts_definitions.append("}")
 
-           if obj_name:
-               ts_definitions.append("  }")
-       ts_definitions.append("}")
+        ts_definitions.append("interface Window {")
+        ts_definitions.append("  PytoniumReady: boolean;")
+        ts_definitions.append("}")
 
-       ts_definitions.append("interface Window {")
-       ts_definitions.append("  PytoniumReady: boolean;")
-       ts_definitions.append("}")
+        ts_definitions.append("interface WindowEventMap {")
+        ts_definitions.append("  PytoniumReady: Event;")
+        ts_definitions.append("}")
 
-       ts_definitions.append("interface WindowEventMap {")
-       ts_definitions.append("  PytoniumReady: Event;")
-       ts_definitions.append("}")
+        # Writing to a .d.ts file for IDE to pick up
+        with open(filename, "w") as f:
+            f.write('\n'.join(ts_definitions))
 
-       # Writing to a .d.ts file for IDE to pick up
-       with open(filename, "w") as f:
-           f.write('\n'.join(ts_definitions))
-
-       print("TypeScript definitions generated.")
+        print("TypeScript definitions generated.")

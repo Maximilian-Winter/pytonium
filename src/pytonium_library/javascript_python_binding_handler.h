@@ -5,11 +5,17 @@
 
 #include <list>
 #include <iostream>
+#include <chrono>
 
 #include "include/cef_render_process_handler.h"
 #include "include/wrapper/cef_helpers.h"
 #include "javascript_binding.h"
 
+struct PromiseEntry {
+    CefRefPtr<CefV8Context> context;
+    CefRefPtr<CefV8Value> promise;
+    std::chrono::steady_clock::time_point created;
+};
 
 class JavascriptPythonBindingsHandler : public CefV8Handler
 {
@@ -27,6 +33,8 @@ public:
                          CefRefPtr<CefV8Value> &retval,
                          CefString &exception) override
     {
+        // Clean up any stale promises before processing
+        CleanupStalePromises();
 
         for (int i = 0; i < (int) m_PythonBindings.size(); ++i)
         {
@@ -59,7 +67,6 @@ public:
                     int request_id = nextRequestId++;
                     retval = CreatePromise(request_id);
 
-                    //promiseMap[request_id]->ResolvePromise(arguments[0]);
                     // Modify the message to include request_id
                     javascript_binding_message_args->SetInt(3, request_id);
                 }
@@ -76,15 +83,16 @@ public:
         // Function does not exist.
         return false;
     }
-    CefRefPtr<CefV8Value> CreatePromise(int request_id) {
-        // Create a new Promise and return it
-        CefRefPtr<CefV8Context> context = CefV8Context::GetCurrentContext();
 
-        // Create a new Promise object
+    CefRefPtr<CefV8Value> CreatePromise(int request_id) {
+        CefRefPtr<CefV8Context> context = CefV8Context::GetCurrentContext();
         CefRefPtr<CefV8Value> promise = context->GetGlobal()->CreatePromise();
 
-        // Store the promise object for later reference using request_id
-        promiseMap[request_id] = std::make_pair(context, promise);
+        PromiseEntry entry;
+        entry.context = context;
+        entry.promise = promise;
+        entry.created = std::chrono::steady_clock::now();
+        promiseMap[request_id] = std::move(entry);
 
         return promise;
     }
@@ -95,15 +103,33 @@ public:
             return;  // Promise not found — already resolved or invalid ID
         }
 
-        auto& pair = it->second;
-        pair.first->Enter();
-        pair.second->ResolvePromise(CefValueWrapperHelper::ConvertCefValueToV8Value(value));
-        pair.first->Exit();
+        auto& entry = it->second;
+        entry.context->Enter();
+        entry.promise->ResolvePromise(CefValueWrapperHelper::ConvertCefValueToV8Value(value));
+        entry.context->Exit();
 
         promiseMap.erase(it);
     }
+
+    void CleanupStalePromises(int timeoutSeconds = 30) {
+        auto now = std::chrono::steady_clock::now();
+        for (auto it = promiseMap.begin(); it != promiseMap.end(); ) {
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - it->second.created).count();
+            if (elapsed > timeoutSeconds) {
+                // Reject the stale promise
+                auto& entry = it->second;
+                entry.context->Enter();
+                entry.promise->RejectPromise("Pytonium: Promise timed out");
+                entry.context->Exit();
+                it = promiseMap.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
     uint64_t nextRequestId = 0;
-    std::unordered_map<uint64_t, std::pair<CefRefPtr<CefV8Context>, CefRefPtr<CefV8Value>>> promiseMap;
+    std::unordered_map<uint64_t, PromiseEntry> promiseMap;
     CefRefPtr<CefBrowser> m_Browser;
     std::vector<JavascriptPythonBinding> m_PythonBindings;
     // Provide the reference counting implementation for this class.

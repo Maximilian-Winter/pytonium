@@ -52,3 +52,29 @@ from .pytonium import Pytonium as Pytonium
 
 # Initialize the class-level attribute upon import
 Pytonium.set_subprocess_path(pytonium_process_path)
+
+
+async def run_pytonium_async(pytonium, interval=0.016):
+    """Run the Pytonium message loop as an async coroutine.
+
+    This allows integrating Pytonium into an asyncio event loop.
+    Call this from an async context instead of writing your own
+    ``while is_running: update_message_loop; sleep`` loop.
+
+    Args:
+        pytonium: A Pytonium instance (must already be initialized).
+        interval: Seconds between message loop updates (default ~60fps).
+
+    Example::
+
+        import asyncio
+        from Pytonium import Pytonium, run_pytonium_async
+
+        p = Pytonium()
+        p.initialize("https://example.com", 800, 600)
+        asyncio.run(run_pytonium_async(p))
+    """
+    import asyncio
+    while pytonium.is_running():
+        pytonium.update_message_loop()
+        await asyncio.sleep(interval)

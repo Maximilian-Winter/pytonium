@@ -19,10 +19,10 @@ if(OS_WINDOWS)
 
     COPY_FILES(${CEF_TARGET} "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
     COPY_FILES(${CEF_TARGET} "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
-    COPY_SINGLE_FILE(${CEF_TARGET} "../../../readme.md" "../../../src/pytonium_python_framework/README.md")
+    COPY_SINGLE_FILE(${CEF_TARGET} "${CMAKE_SOURCE_DIR}/readme.md" "${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/README.md")
 
-    COPY_SINGLE_FILE(${CEF_TARGET} "../../../src/pytonium_library_test/index.html"  "${CEF_TARGET_OUT_DIR}/index.html")
-    COPY_SINGLE_FILE(${CEF_TARGET} "../../../src/pytonium_library_test/radioactive.ico"  "${CEF_TARGET_OUT_DIR}/radioactive.ico")
+    COPY_SINGLE_FILE(${CEF_TARGET} "${CMAKE_SOURCE_DIR}/src/pytonium_library_test/index.html"  "${CEF_TARGET_OUT_DIR}/index.html")
+    COPY_SINGLE_FILE(${CEF_TARGET} "${CMAKE_SOURCE_DIR}/src/pytonium_library_test/radioactive.ico"  "${CEF_TARGET_OUT_DIR}/radioactive.ico")
 endif()
 
 if(OS_LINUX)
@@ -47,7 +47,7 @@ if(OS_LINUX)
     # Set SUID permissions on the chrome-sandbox target.
     SET_LINUX_SUID_PERMISSIONS("${CEF_TARGET}" "${CEF_TARGET_OUT_DIR}/chrome-sandbox")
 
-    COPY_SINGLE_FILE(pytonium_library_test "../../../readme.md" "../../../src/pytonium_python_framework/README.md")
-    COPY_SINGLE_FILE(pytonium_library_test "../../../src/pytonium_library_test/index.html"  "${CEF_TARGET_OUT_DIR}/index.html")
-    COPY_SINGLE_FILE(pytonium_library_test "../../../src/pytonium_library_test/radioactive.ico"  "${CEF_TARGET_OUT_DIR}/radioactive.ico")
+    COPY_SINGLE_FILE(pytonium_library_test "${CMAKE_SOURCE_DIR}/readme.md" "${CMAKE_SOURCE_DIR}/src/pytonium_python_framework/README.md")
+    COPY_SINGLE_FILE(pytonium_library_test "${CMAKE_SOURCE_DIR}/src/pytonium_library_test/index.html"  "${CEF_TARGET_OUT_DIR}/index.html")
+    COPY_SINGLE_FILE(pytonium_library_test "${CMAKE_SOURCE_DIR}/src/pytonium_library_test/radioactive.ico"  "${CEF_TARGET_OUT_DIR}/radioactive.ico")
 endif()

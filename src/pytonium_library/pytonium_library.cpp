@@ -26,9 +26,9 @@ std::string ExePath() {
   possiblePaths.push_back(std::filesystem::current_path() / "pytonium_subprocess.exe");
   
   // From executable directory
-  char exePath[MAX_PATH];
-  if (GetModuleFileNameA(NULL, exePath, MAX_PATH) > 0) {
-    std::filesystem::path exeDir = std::filesystem::path(exePath).parent_path();
+  wchar_t exePathW[MAX_PATH];
+  if (GetModuleFileNameW(NULL, exePathW, MAX_PATH) > 0) {
+    std::filesystem::path exeDir = std::filesystem::path(exePathW).parent_path();
     possiblePaths.push_back(exeDir / "pytonium_subprocess.exe");
     possiblePaths.push_back(exeDir / "bin" / "pytonium_subprocess.exe");
     possiblePaths.push_back(exeDir.parent_path() / "pytonium_subprocess.exe");
@@ -66,7 +66,21 @@ std::string CachePath() {
 }
 
 void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int init_height) {
-  //CefEnableHighDPISupport();
+#if defined(OS_WIN)
+  // Enable per-monitor DPI awareness (graceful fallback on older Windows)
+  {
+    HMODULE hUser32 = LoadLibraryW(L"user32.dll");
+    if (hUser32) {
+      typedef BOOL (WINAPI *SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
+      auto pSetDpiContext = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(
+          GetProcAddress(hUser32, "SetProcessDpiAwarenessContext"));
+      if (pSetDpiContext) {
+        pSetDpiContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+      }
+      FreeLibrary(hUser32);
+    }
+  }
+#endif
 
   void *sandbox_info = nullptr;
 
@@ -171,14 +185,14 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
   if(m_UseCustomIcon)
   {
 #if defined(OS_WIN)
-    std::wstring temp = std::wstring(m_CustomIconPath.begin(), m_CustomIconPath.end());
-    LPCWSTR w_icon_path = temp.c_str();
+    std::filesystem::path iconFsPath(m_CustomIconPath);
+    LPCWSTR w_icon_path = iconFsPath.c_str();
 
     CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
 
     if (hwnd)
     {
-      HICON hIcon = (HICON)LoadImage(NULL, w_icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+      HICON hIcon = (HICON)LoadImageW(NULL, w_icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
       SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
     }
 
@@ -292,6 +306,9 @@ void PytoniumLibrary::SetState(const std::string& stateNamespace, const std::str
 
 void PytoniumLibrary::RemoveState(const std::string& stateNamespace, const std::string& key)
 {
+    if(!g_IsRunning)
+        return;
+
     CefRefPtr<CefProcessMessage> return_to_javascript_message =
             CefProcessMessage::Create("remove-app-state");
 
@@ -474,6 +491,38 @@ void PytoniumLibrary::SetWindowSize(int width, int height)
     SetWindowPos(hwnd, NULL, 0, 0, width, height, 
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 #endif
+}
+
+void PytoniumLibrary::SetOnTitleChangeCallback(void (*callback)(void*, const char*), void* user_data)
+{
+    CefWrapperClientHandler* client = CefWrapperClientHandler::GetInstance();
+    if (client) {
+        client->SetOnTitleChangeCallback(callback, user_data);
+    }
+}
+
+void PytoniumLibrary::SetOnAddressChangeCallback(void (*callback)(void*, const char*), void* user_data)
+{
+    CefWrapperClientHandler* client = CefWrapperClientHandler::GetInstance();
+    if (client) {
+        client->SetOnAddressChangeCallback(callback, user_data);
+    }
+}
+
+void PytoniumLibrary::SetOnFullscreenChangeCallback(void (*callback)(void*, bool), void* user_data)
+{
+    CefWrapperClientHandler* client = CefWrapperClientHandler::GetInstance();
+    if (client) {
+        client->SetOnFullscreenChangeCallback(callback, user_data);
+    }
+}
+
+void* PytoniumLibrary::GetNativeWindowHandle()
+{
+    if (!m_App || !m_App->GetBrowser() || !m_App->GetBrowser()->GetHost()) {
+        return nullptr;
+    }
+    return reinterpret_cast<void*>(m_App->GetBrowser()->GetHost()->GetWindowHandle());
 }
 
 void PytoniumLibrary::ResizeWindow(int newWidth, int newHeight, int anchor)

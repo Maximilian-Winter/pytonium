@@ -1,5 +1,6 @@
 #include "cef_wrapper_client_handler.h"
 
+#include <atomic>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -26,7 +27,7 @@ namespace
         CLIENT_ID_INSPECT_ELEMENT,
         CLIENT_ID_PYTONIUM_CUSTOM_FIRST
     };
-    CefWrapperClientHandler *g_instance = nullptr;
+    std::atomic<CefWrapperClientHandler*> g_instance{nullptr};
 
 
     std::string GetDataURI(const std::string &data, const std::string &mime_type)
@@ -56,16 +57,24 @@ CefWrapperClientHandler::CefWrapperClientHandler(
 
     m_IsReadyToExecuteJs = false;
     m_ShowDebugContextMenu = false;
-    g_instance = this;
+    g_instance.store(this, std::memory_order_release);
 
 }
 
 CefWrapperClientHandler::~CefWrapperClientHandler()
-{ g_instance = nullptr; }
+{ g_instance.store(nullptr, std::memory_order_release); }
 
 
 CefWrapperClientHandler *CefWrapperClientHandler::GetInstance()
-{ return g_instance; }
+{
+    CefWrapperClientHandler* instance = g_instance.load(std::memory_order_acquire);
+    if (!instance) {
+        // Single-instance limitation: only one Pytonium browser window is supported.
+        // A multi-instance refactor is planned for PytoniumShell.
+        return nullptr;
+    }
+    return instance;
+}
 
 void CefWrapperClientHandler::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
                                                   CefRefPtr<CefFrame> frame,
@@ -167,6 +176,34 @@ void CefWrapperClientHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
     {
         // Set the title of the window using platform APIs.
         PlatformTitleChange(browser, title);
+    }
+
+    // Fire user callback if set
+    if (m_OnTitleChangeCallback) {
+        std::string titleStr = title.ToString();
+        m_OnTitleChangeCallback(m_OnTitleChangeUserData, titleStr.c_str());
+    }
+}
+
+void CefWrapperClientHandler::OnAddressChange(CefRefPtr<CefBrowser> browser,
+                                               CefRefPtr<CefFrame> frame,
+                                               const CefString &url)
+{
+    CEF_REQUIRE_UI_THREAD();
+
+    if (m_OnAddressChangeCallback && frame->IsMain()) {
+        std::string urlStr = url.ToString();
+        m_OnAddressChangeCallback(m_OnAddressChangeUserData, urlStr.c_str());
+    }
+}
+
+void CefWrapperClientHandler::OnFullscreenModeChange(CefRefPtr<CefBrowser> browser,
+                                                      bool fullscreen)
+{
+    CEF_REQUIRE_UI_THREAD();
+
+    if (m_OnFullscreenChangeCallback) {
+        m_OnFullscreenChangeCallback(m_OnFullscreenChangeUserData, fullscreen);
     }
 }
 
@@ -461,4 +498,22 @@ void CefWrapperClientHandler::SetContextMenuBindings(std::vector<ContextMenuBind
     {
         m_ContextMenuBindingsMap[contextMenuEntry.Namespace].emplace_back(contextMenuEntry);
     }
+}
+
+void CefWrapperClientHandler::SetOnTitleChangeCallback(window_event_string_callback_ptr callback, void* user_data)
+{
+    m_OnTitleChangeCallback = callback;
+    m_OnTitleChangeUserData = user_data;
+}
+
+void CefWrapperClientHandler::SetOnAddressChangeCallback(window_event_string_callback_ptr callback, void* user_data)
+{
+    m_OnAddressChangeCallback = callback;
+    m_OnAddressChangeUserData = user_data;
+}
+
+void CefWrapperClientHandler::SetOnFullscreenChangeCallback(window_event_bool_callback_ptr callback, void* user_data)
+{
+    m_OnFullscreenChangeCallback = callback;
+    m_OnFullscreenChangeUserData = user_data;
 }

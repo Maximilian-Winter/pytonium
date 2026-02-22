@@ -110,3 +110,7 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         void GetWindowSize(int& width, int& height);
         void SetWindowSize(int width, int height);
         void ResizeWindow(int newWidth, int newHeight, int anchor);
+        void* GetNativeWindowHandle();
+        void SetOnTitleChangeCallback(void (*callback)(void*, const char*), void* user_data);
+        void SetOnAddressChangeCallback(void (*callback)(void*, const char*), void* user_data);
+        void SetOnFullscreenChangeCallback(void (*callback)(void*, bool), void* user_data);

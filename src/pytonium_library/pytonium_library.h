@@ -98,6 +98,14 @@ public:
     // Resize window from a specific edge/corner (anchor: 0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right)
     void ResizeWindow(int newWidth, int newHeight, int anchor);
 
+    // Get the native window handle (HWND on Windows, X11 window on Linux)
+    void* GetNativeWindowHandle();
+
+    // Window event callback setters
+    void SetOnTitleChangeCallback(void (*callback)(void*, const char*), void* user_data);
+    void SetOnAddressChangeCallback(void (*callback)(void*, const char*), void* user_data);
+    void SetOnFullscreenChangeCallback(void (*callback)(void*, bool), void* user_data);
+
 private:
 
     CefRefPtr<CefWrapperApp> m_App;
