@@ -11,8 +11,6 @@ import sys
 import os
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "pytonium_python_framework"))
-
 from Pytonium import Pytonium
 
 

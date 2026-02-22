@@ -234,3 +234,4 @@ cef-binaries-windows/.bazelrc
 cef-binaries-windows/CREDITS.html
 cef-binaries-windows/MODULE.bazel
 cef-binaries-windows/README.txt
+/tests
