@@ -1,15 +1,15 @@
 Chromium Embedded Framework (CEF) Standard Binary Distribution for Windows
 -------------------------------------------------------------------------------
 
-Date:             December 20, 2025
+Date:             February 20, 2026
 
-CEF Version:      143.0.13+g30cb3bd+chromium-143.0.7499.170
-CEF URL:          https://bitbucket.org/chromiumembedded/cef.git
-                  @30cb3bdf337b9c32016d8b892d39d2f2df135ce6
+CEF Version:      145.0.26+g6ed7554+chromium-145.0.7632.110
+CEF URL:          https://github.com/chromiumembedded/cef.git
+                  @6ed7554bb3a1cf0b37b7efa4f6da427a0e1aa93a
 
-Chromium Version: 143.0.7499.170
+Chromium Version: 145.0.7632.110
 Chromium URL:     https://chromium.googlesource.com/chromium/src.git
-                  @81613192193ccffe8b499e9ddd97f85f85c3da25
+                  @26962b44c2d9a1f7ef8e24dd9e3c9151ea8bd463
 
 This distribution contains all components necessary to build and distribute an
 application using CEF on the Windows platform. Please see the LICENSING
@@ -53,6 +53,9 @@ tests/      Directory of tests that demonstrate CEF usage.
             the minimal functionality required to create a browser window.
 
   ceftests  Contains unit tests that exercise the CEF APIs.
+
+  gmock     Contains the Google C++ Mocking Framework used by the ceftests
+            target.
 
   gtest     Contains the Google C++ Testing Framework used by the ceftests
             target.

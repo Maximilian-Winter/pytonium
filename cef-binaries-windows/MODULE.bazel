@@ -2,7 +2,7 @@
 # reserved. Use of this source code is governed by a BSD-style license that
 # can be found in the LICENSE file.
 
-module(name = "cef", version = "143.0.13")
+module(name = "cef", version = "145.0.26")
 
 # Configure local MacOS toolchain.
 # See https://github.com/bazelbuild/apple_support/releases
