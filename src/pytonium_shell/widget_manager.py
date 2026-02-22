@@ -54,9 +54,6 @@ class WidgetManager:
         # All shell widgets are frameless
         p.set_frameless_window(True)
 
-        # Register custom scheme to serve widget files
-        p.add_custom_scheme("widget", widget_path)
-
         # Load and bind backend module if specified
         backend_module = None
         if backend_file:
@@ -73,8 +70,12 @@ class WidgetManager:
         width = window_config.get("width", 300)
         height = window_config.get("height", 200)
 
+        # Build file:/// URL for the entry point
+        entry_path = os.path.abspath(os.path.join(widget_path, entry_file))
+        entry_url = "file:///" + entry_path.replace("\\", "/")
+
         # Initialize the browser
-        p.initialize(f"widget://{entry_file}", width, height)
+        p.initialize(entry_url, width, height)
 
         # Apply Win32 window flags after initialization
         hwnd = p.get_native_window_handle()
