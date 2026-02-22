@@ -1,7 +1,7 @@
 #ifndef OSR_RENDER_HANDLER_DISPATCHER_H_
 #define OSR_RENDER_HANDLER_DISPATCHER_H_
 
-#if defined(OS_WIN)
+#if defined(_WIN32)
 
 #include <unordered_map>
 #include "include/cef_render_handler.h"
@@ -27,5 +27,5 @@ private:
     IMPLEMENT_REFCOUNTING(OsrRenderHandlerDispatcher);
 };
 
-#endif // OS_WIN
+#endif // _WIN32
 #endif // OSR_RENDER_HANDLER_DISPATCHER_H_

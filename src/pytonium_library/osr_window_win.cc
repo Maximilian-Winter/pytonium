@@ -1,6 +1,7 @@
-#if defined(OS_WIN)
-
 #include "osr_window_win.h"
+
+#if defined(_WIN32)
+
 #include <iostream>
 
 const wchar_t* OsrWindowWin::kWindowClass = L"PytoniumOsrWindow";
@@ -404,4 +405,4 @@ LRESULT CALLBACK OsrWindowWin::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
-#endif // OS_WIN
+#endif // _WIN32

@@ -1,7 +1,7 @@
 #ifndef OSR_WINDOW_WIN_H_
 #define OSR_WINDOW_WIN_H_
 
-#if defined(OS_WIN)
+#if defined(_WIN32)
 
 #include <Windows.h>
 #include "include/cef_render_handler.h"
@@ -65,5 +65,5 @@ private:
     IMPLEMENT_REFCOUNTING(OsrWindowWin);
 };
 
-#endif // OS_WIN
+#endif // _WIN32
 #endif // OSR_WINDOW_WIN_H_
