@@ -171,6 +171,16 @@ if os.name == "nt":
     user32.MoveWindow.argtypes = [HWND, INT, INT, INT, INT, BOOL]
     user32.MoveWindow.restype = BOOL
 
+    # BOOL SetLayeredWindowAttributes(HWND, COLORREF, BYTE, DWORD)
+    user32.SetLayeredWindowAttributes.argtypes = [
+        HWND, ctypes.wintypes.COLORREF, ctypes.wintypes.BYTE, ctypes.wintypes.DWORD,
+    ]
+    user32.SetLayeredWindowAttributes.restype = BOOL
+
+    # HWND GetWindow(HWND, UINT) — for z-order queries
+    user32.GetWindow.argtypes = [HWND, UINT]
+    user32.GetWindow.restype = HWND
+
 # Window style constants
 GWL_STYLE = -16
 GWL_EXSTYLE = -20
@@ -185,6 +195,13 @@ WS_EX_TOOLWINDOW = 0x00000080
 WS_EX_APPWINDOW = 0x00040000
 WS_EX_TRANSPARENT = 0x00000020
 WS_EX_LAYERED = 0x00080000
+WS_EX_NOACTIVATE = 0x08000000
+
+# SetLayeredWindowAttributes flags
+LWA_ALPHA = 0x00000002
+
+# GetWindow constants (for z-order queries)
+GW_HWNDNEXT = 2  # window below in z-order
 
 # SetWindowPos constants
 HWND_TOPMOST = -1
@@ -212,6 +229,22 @@ class MonitorInfo:
     work_height: int     # work area height
     is_primary: bool
     device_name: str = ""
+
+
+@dataclass
+class WallpaperInfo:
+    """Handles discovered for wallpaper embedding in the desktop hierarchy.
+
+    On Win11 24H2, the desktop hierarchy under Progman is:
+        Progman
+        ├── SHELLDLL_DefView  (desktop icons, interactive, on top)
+        ├── <YOUR WINDOW>     (live wallpaper, layered child)
+        └── WorkerW           (system wallpaper image, at bottom)
+    """
+    progman: int       # Progman HWND — always the parent for our window
+    shell_view: int    # SHELLDLL_DefView HWND — z-order anchor (icons)
+    worker_w: int      # WorkerW HWND — system wallpaper (pushed behind us)
+    strategy: str      # "win11_24h2", "win10_toplevel", "progman_fallback"
 
 
 class Win32WindowHelper:
@@ -452,29 +485,32 @@ class Win32WindowHelper:
         if abd:
             shell32.SHAppBarMessage(ABM_REMOVE, ctypes.byref(abd))
 
-    # -- Wallpaper mode (WorkerW) ----------------------------------------------
+    # -- Wallpaper mode (Progman / WorkerW / ShellDLL_DefView) ----------------
 
     @staticmethod
-    def find_wallpaper_worker_w():
-        """Find the correct parent window for wallpaper embedding.
+    def find_desktop_windows():
+        """Discover the desktop window hierarchy for wallpaper embedding.
 
-        Sends the undocumented 0x052C message to Progman, then searches
-        for the wallpaper canvas using multiple strategies:
+        Sends the undocumented 0x052C message to Progman to ensure the
+        wallpaper layer is active, then locates the key windows:
 
-        - **Win11**: WorkerW is a *child* of Progman (found via
-          EnumChildWindows), sitting behind SHELLDLL_DefView.
-        - **Win10**: WorkerW is a *top-level* window (found via
-          EnumWindows), sibling of Progman.
+        **Win11 24H2 hierarchy** (primary strategy):
+            Progman
+            ├── SHELLDLL_DefView  (desktop icons, interactive)
+            ├── <YOUR WINDOW>     (injected here via z-order)
+            └── WorkerW           (system wallpaper image)
+
+        **Win10 hierarchy** (fallback):
+            Top-level WorkerW siblings of Progman, one containing
+            SHELLDLL_DefView.
 
         Returns:
-            (parent_hwnd, strategy) tuple. Strategy is one of:
-            'progman_child_worker', 'toplevel_worker', 'progman'.
-            Returns (0, None) on failure.
+            WallpaperInfo with handles and strategy, or None on failure.
         """
         progman = user32.FindWindowW("Progman", None)
         if not progman:
             print("  Wallpaper: Progman not found")
-            return 0, None
+            return None
 
         # Send undocumented message to enable wallpaper layering
         result = ctypes.wintypes.DWORD(0)
@@ -483,42 +519,61 @@ class Win32WindowHelper:
             SMTO_NORMAL, 1000, ctypes.byref(result),
         )
 
-        # --- Strategy 1 (Win11): WorkerW as a CHILD of Progman ---
-        # On Windows 11, the desktop hierarchy is:
-        #   Progman
-        #   ├── SHELLDLL_DefView (icons, on top)
-        #   └── WorkerW (wallpaper canvas, behind icons)
-        # The WorkerW child is visible and spans the full desktop.
-        progman_child_worker = [0]
+        # --- Strategy 1 (Win11 24H2): Both as CHILDREN of Progman ---
+        # WorkerW and SHELLDLL_DefView are both direct children of Progman.
+        # We parent our window to Progman and z-order it between them.
+        child_shell_view = [0]
+        child_worker_w = [0]
 
-        def _enum_children(hwnd, lparam):
+        def _enum_progman_children(hwnd, lparam):
             class_buf = ctypes.create_unicode_buffer(64)
             user32.GetClassNameW(hwnd, class_buf, 64)
-            if class_buf.value == "WorkerW":
-                # Verify it's visible and has a real size
+            name = class_buf.value
+            if name == "SHELLDLL_DefView" and not child_shell_view[0]:
+                child_shell_view[0] = hwnd
+            elif name == "WorkerW" and not child_worker_w[0]:
+                # Verify it's visible and spans a real area
                 if user32.IsWindowVisible(hwnd):
                     rect = ctypes.wintypes.RECT()
                     user32.GetWindowRect(hwnd, ctypes.byref(rect))
                     w = rect.right - rect.left
                     h = rect.bottom - rect.top
                     if w > 100 and h > 100:
-                        progman_child_worker[0] = hwnd
-                        return False  # stop enumeration
-            return True
+                        child_worker_w[0] = hwnd
+            return True  # continue to find both
 
-        cb_child = WNDENUMPROC(_enum_children)
+        cb_child = WNDENUMPROC(_enum_progman_children)
         user32.EnumChildWindows(progman, cb_child, 0)
 
-        if progman_child_worker[0]:
-            target = progman_child_worker[0]
-            print(f"  Wallpaper strategy: progman_child_worker, "
-                  f"target={target:#x}")
-            return target, "progman_child_worker"
+        if child_shell_view[0] and child_worker_w[0]:
+            info = WallpaperInfo(
+                progman=progman,
+                shell_view=child_shell_view[0],
+                worker_w=child_worker_w[0],
+                strategy="win11_24h2",
+            )
+            print(f"  Wallpaper strategy: win11_24h2, progman={progman:#x}, "
+                  f"shell_view={info.shell_view:#x}, worker_w={info.worker_w:#x}")
+            return info
 
-        # --- Strategy 2 (Win10): Top-level WorkerW sibling ---
-        # On Windows 10, 0x052C creates a top-level WorkerW.
-        # SHELLDLL_DefView moves into one WorkerW; the other is our canvas.
+        # If we found SHELLDLL_DefView as child but no WorkerW, still use
+        # Progman strategy — WorkerW may not exist yet or is invisible.
+        if child_shell_view[0]:
+            info = WallpaperInfo(
+                progman=progman,
+                shell_view=child_shell_view[0],
+                worker_w=0,
+                strategy="win11_24h2",
+            )
+            print(f"  Wallpaper strategy: win11_24h2 (no WorkerW child), "
+                  f"progman={progman:#x}, shell_view={info.shell_view:#x}")
+            return info
+
+        # --- Strategy 2 (Win10): Top-level WorkerW siblings ---
+        # 0x052C creates top-level WorkerW windows. SHELLDLL_DefView
+        # moves into one; the other is the wallpaper canvas.
         toplevel_worker_with_shell = []
+        toplevel_shell_in_worker = []
         toplevel_worker_without_shell = []
 
         def _enum_toplevel(hwnd, lparam):
@@ -530,6 +585,7 @@ class Win32WindowHelper:
                 )
                 if shell:
                     toplevel_worker_with_shell.append(hwnd)
+                    toplevel_shell_in_worker.append(shell)
                 elif user32.IsWindowVisible(hwnd):
                     rect = ctypes.wintypes.RECT()
                     user32.GetWindowRect(hwnd, ctypes.byref(rect))
@@ -543,84 +599,162 @@ class Win32WindowHelper:
         user32.EnumWindows(cb_top, 0)
 
         if toplevel_worker_with_shell and toplevel_worker_without_shell:
-            target = toplevel_worker_without_shell[0]
-            print(f"  Wallpaper strategy: toplevel_worker (classic), "
-                  f"target={target:#x}")
-            return target, "toplevel_worker"
-
-        if toplevel_worker_without_shell:
-            target = toplevel_worker_without_shell[0]
-            print(f"  Wallpaper strategy: toplevel_worker (visible), "
-                  f"target={target:#x}")
-            return target, "toplevel_worker"
+            # Classic Win10: parent to the empty WorkerW (canvas)
+            # shell_view is inside the other WorkerW
+            info = WallpaperInfo(
+                progman=progman,
+                shell_view=toplevel_shell_in_worker[0],
+                worker_w=toplevel_worker_without_shell[0],
+                strategy="win10_toplevel",
+            )
+            print(f"  Wallpaper strategy: win10_toplevel, "
+                  f"canvas={info.worker_w:#x}, "
+                  f"shell_view={info.shell_view:#x}")
+            return info
 
         # --- Strategy 3: Fallback to Progman ---
-        print(f"  Wallpaper strategy: progman (fallback), "
+        info = WallpaperInfo(
+            progman=progman,
+            shell_view=0,
+            worker_w=0,
+            strategy="progman_fallback",
+        )
+        print(f"  Wallpaper strategy: progman_fallback, "
               f"target={progman:#x}")
-        return progman, "progman"
+        return info
+
+    @staticmethod
+    def find_wallpaper_worker_w():
+        """Legacy wrapper — returns (parent_hwnd, strategy) tuple.
+
+        Prefer find_desktop_windows() which returns full WallpaperInfo.
+        """
+        info = Win32WindowHelper.find_desktop_windows()
+        if info is None:
+            return 0, None
+        if info.strategy == "win11_24h2":
+            return info.progman, "progman"
+        elif info.strategy == "win10_toplevel":
+            return info.worker_w, "toplevel_worker"
+        else:
+            return info.progman, "progman"
+
+    @staticmethod
+    def setup_wallpaper_zorder(hwnd, info):
+        """Apply z-order choreography for wallpaper embedding.
+
+        After the window has been created as a child of Progman (or
+        WorkerW on Win10), this sets up the layered window attributes
+        and positions the window between SHELLDLL_DefView (icons on top)
+        and WorkerW (system wallpaper at bottom).
+
+        Args:
+            hwnd: The widget window handle (already parented).
+            info: WallpaperInfo from find_desktop_windows().
+        """
+        # -- Make window layered and fully opaque for proper compositing --
+        ex_style = user32.GetWindowLongPtrW(hwnd, GWL_EXSTYLE)
+        ex_style |= WS_EX_LAYERED | WS_EX_NOACTIVATE
+        ex_style &= ~WS_EX_APPWINDOW  # no taskbar entry
+        user32.SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style)
+
+        # Fully opaque — required for WS_EX_LAYERED to composite properly
+        user32.SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA)
+
+        # -- Z-order choreography --
+        if info.strategy == "win11_24h2" and info.shell_view:
+            # Place our window just BEHIND SHELLDLL_DefView (icons)
+            # hWndInsertAfter = shell_view means "insert after this window"
+            # i.e., below it in z-order
+            user32.SetWindowPos(
+                hwnd, info.shell_view,
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            )
+
+            # Push WorkerW behind our window
+            if info.worker_w:
+                user32.SetWindowPos(
+                    info.worker_w, hwnd,
+                    0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                )
+
+            print(f"  Wallpaper z-order: ShellView > hwnd({hwnd:#x}) > "
+                  f"WorkerW({info.worker_w:#x})")
+
+        elif info.strategy == "win10_toplevel":
+            # Win10: window is parented to the empty WorkerW canvas.
+            # No z-order manipulation needed — it fills the canvas.
+            user32.SetWindowPos(
+                hwnd, 0,
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE
+                | SWP_FRAMECHANGED,
+            )
+            print(f"  Wallpaper z-order: win10 canvas mode (no z-order needed)")
+
+        else:
+            # Progman fallback: put at bottom of z-order
+            user32.SetWindowPos(
+                hwnd, HWND_BOTTOM,
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            )
+            print(f"  Wallpaper z-order: progman fallback (HWND_BOTTOM)")
+
+        # Force show (SetParent can hide the window on some builds)
+        user32.ShowWindow(hwnd, 5)  # SW_SHOW
 
     @staticmethod
     def make_wallpaper(hwnd, monitor=None):
-        """Parent the window to the WorkerW behind desktop icons.
+        """Parent the window into the desktop hierarchy as a live wallpaper.
 
-        Converts the window from WS_POPUP to WS_CHILD before calling
-        SetParent so that it properly nests behind desktop icons
-        instead of floating on top as an owned popup.
+        Converts the window from WS_POPUP to WS_CHILD, reparents it to
+        Progman, and applies the correct z-order choreography.
 
         Args:
             hwnd: The widget window handle.
             monitor: Optional MonitorInfo to position on a specific monitor.
 
         Returns:
-            True if successful, False otherwise.
+            WallpaperInfo if successful, None otherwise.
         """
-        parent_hwnd, strategy = Win32WindowHelper.find_wallpaper_worker_w()
-        if not parent_hwnd:
-            print("Win32WindowHelper: Failed to find parent for wallpaper mode")
-            return False
+        info = Win32WindowHelper.find_desktop_windows()
+        if info is None:
+            print("Win32WindowHelper: Failed to find desktop windows")
+            return None
 
         if monitor is None:
             monitor = Win32WindowHelper.get_primary_monitor()
 
+        # Determine the actual parent window
+        if info.strategy == "win10_toplevel":
+            parent = info.worker_w  # Win10: parent to the empty WorkerW
+        else:
+            parent = info.progman   # Win11 24H2 / fallback: parent to Progman
+
         # -- Convert WS_POPUP → WS_CHILD before SetParent --
-        # CEF frameless windows use WS_POPUP. SetParent on a WS_POPUP
-        # creates an "owned popup" that floats above siblings (including
-        # SHELLDLL_DefView → desktop icons). Converting to WS_CHILD
-        # ensures true child window z-order nesting.
         style = user32.GetWindowLongPtrW(hwnd, GWL_STYLE)
         original_style = style
         style = (style & ~WS_POPUP) | WS_CHILD
         user32.SetWindowLongPtrW(hwnd, GWL_STYLE, style)
-        print(f"  Wallpaper style: {original_style:#010x} → {style:#010x}")
+        print(f"  Wallpaper style: {original_style:#010x} -> {style:#010x}")
 
         # SetParent into the target
-        prev_parent = user32.SetParent(hwnd, parent_hwnd)
-        print(f"  Wallpaper SetParent: hwnd={hwnd:#x} → parent={parent_hwnd:#x} "
+        prev_parent = user32.SetParent(hwnd, parent)
+        print(f"  Wallpaper SetParent: hwnd={hwnd:#x} -> parent={parent:#x} "
               f"(prev={prev_parent:#x})")
 
-        # -- Position to fill the target monitor --
-        # After SetParent, coordinates are relative to the parent's
-        # client area. WorkerW spans the virtual desktop, so
-        # monitor.x/y are correct offsets within it.
-        # Use SWP_FRAMECHANGED to force Windows to recalculate the frame
-        # after the style change.
-        if strategy == "progman":
-            # When parented to Progman, put at BOTTOM of z-order
-            # so we sit behind SHELLDLL_DefView (desktop icons).
-            user32.SetWindowPos(
-                hwnd, HWND_BOTTOM,
-                monitor.x, monitor.y, monitor.width, monitor.height,
-                SWP_NOACTIVATE | SWP_FRAMECHANGED,
-            )
-        else:
-            user32.SetWindowPos(
-                hwnd, 0,
-                monitor.x, monitor.y, monitor.width, monitor.height,
-                SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
-            )
+        # Position to fill the target monitor (parent-relative coords)
+        user32.SetWindowPos(
+            hwnd, 0,
+            monitor.x, monitor.y, monitor.width, monitor.height,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+        )
 
-        # Force show (SetParent can hide the window on some builds)
-        user32.ShowWindow(hwnd, 5)  # SW_SHOW
+        # Apply z-order choreography
+        Win32WindowHelper.setup_wallpaper_zorder(hwnd, info)
 
         # -- Verify actual position --
         rect = ctypes.wintypes.RECT()
@@ -641,25 +775,25 @@ class Win32WindowHelper:
                 monitor.width, monitor.height,
                 True,
             )
-            user32.GetWindowRect(hwnd, ctypes.byref(rect))
-            actual_w = rect.right - rect.left
-            actual_h = rect.bottom - rect.top
-            print(f"  Wallpaper after MoveWindow: {rect.left},{rect.top} "
-                  f"{actual_w}x{actual_h}")
 
-        return True
+        return info
 
     @staticmethod
     def restore_from_wallpaper(hwnd):
-        """Unparent the window from WorkerW (restore to normal desktop).
+        """Unparent the window from the desktop (restore to normal).
 
         Restores WS_POPUP style (from WS_CHILD) before unparenting
         so the window can exist as a standalone top-level window again.
         """
-        # Restore WS_POPUP before unparenting
         style = user32.GetWindowLongPtrW(hwnd, GWL_STYLE)
         style = (style & ~WS_CHILD) | WS_POPUP
         user32.SetWindowLongPtrW(hwnd, GWL_STYLE, style)
+
+        # Remove wallpaper-specific extended styles (including click-through)
+        ex_style = user32.GetWindowLongPtrW(hwnd, GWL_EXSTYLE)
+        ex_style &= ~(WS_EX_NOACTIVATE | WS_EX_LAYERED | WS_EX_TRANSPARENT)
+        user32.SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style)
+
         user32.SetParent(hwnd, None)
 
     @staticmethod
@@ -672,23 +806,53 @@ class Win32WindowHelper:
         )
 
     @staticmethod
-    def reparent_wallpaper(hwnd, new_parent, strategy="worker_w"):
-        """Re-parent a wallpaper widget to a new Progman/WorkerW.
+    def reparent_wallpaper(hwnd, info):
+        """Re-parent a wallpaper widget after explorer.exe restarts.
 
-        Used by the health check when explorer.exe restarts.
         The window is already WS_CHILD, so just SetParent + z-order.
+
+        Args:
+            hwnd: The widget window handle.
+            info: Fresh WallpaperInfo from find_desktop_windows().
         """
-        user32.SetParent(hwnd, new_parent)
-        if strategy == "progman":
-            user32.SetWindowPos(
-                hwnd, HWND_BOTTOM,
-                0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-            )
+        if info.strategy == "win10_toplevel":
+            parent = info.worker_w
+        else:
+            parent = info.progman
+
+        user32.SetParent(hwnd, parent)
+        Win32WindowHelper.setup_wallpaper_zorder(hwnd, info)
+
+    @staticmethod
+    def verify_wallpaper_zorder(hwnd, info):
+        """Check and re-apply wallpaper z-order if it drifted.
+
+        Theme changes, wallpaper transitions, or virtual-desktop
+        switches can recreate WorkerW or shuffle z-order.
+
+        Args:
+            hwnd: The widget window handle.
+            info: WallpaperInfo with current handle references.
+
+        Returns:
+            True if z-order was correct, False if it was repaired.
+        """
+        if info.strategy != "win11_24h2" or not info.shell_view:
+            return True  # nothing to verify for other strategies
+
+        # Check: is our window the next sibling below SHELLDLL_DefView?
+        next_after_shell = user32.GetWindow(info.shell_view, GW_HWNDNEXT)
+        if next_after_shell == hwnd:
+            return True  # z-order is correct
+
+        # Z-order drifted — re-apply
+        print(f"  Wallpaper z-order drifted for {hwnd:#x}, re-applying")
+        Win32WindowHelper.setup_wallpaper_zorder(hwnd, info)
+        return False
 
     @staticmethod
     def is_wallpaper_parent_valid(hwnd):
-        """Check if a wallpaper widget's parent WorkerW is still alive."""
+        """Check if a wallpaper widget's parent is still alive."""
         parent = user32.GetParent(hwnd)
         if not parent:
             return False

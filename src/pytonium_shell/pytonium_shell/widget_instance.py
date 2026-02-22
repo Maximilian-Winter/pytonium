@@ -18,5 +18,8 @@ class WidgetInstance:
         # Bar mode: keep APPBARDATA reference for cleanup
         self.appbar_data = None
 
-        # Wallpaper mode: flag for health-check and cleanup
+        # Wallpaper mode: flag and handles for health-check and cleanup
         self.is_wallpaper = False
+        self.wallpaper_shell_view = 0   # SHELLDLL_DefView HWND (icons)
+        self.wallpaper_worker_w = 0     # WorkerW HWND (system wallpaper)
+        self.wallpaper_strategy = None  # strategy string for z-order

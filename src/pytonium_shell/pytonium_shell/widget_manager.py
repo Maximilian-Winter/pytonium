@@ -8,7 +8,7 @@ import time
 from Pytonium import Pytonium
 
 from .widget_instance import WidgetInstance
-from .win32_window_helper import Win32WindowHelper, MonitorInfo
+from .win32_window_helper import Win32WindowHelper, MonitorInfo, WallpaperInfo
 from .hot_reload import start_watching
 
 
@@ -200,9 +200,11 @@ class WidgetManager:
     def _setup_wallpaper_mode(self, widget, window_config, entry_url):
         """Set up a wallpaper widget behind desktop icons.
 
-        Uses the native set_parent_window() API so CEF creates the browser
-        as WS_CHILD of Progman/WorkerW from the start — no post-creation
-        reparenting needed.
+        On Win11 24H2, parents the CEF window to Progman and uses z-order
+        choreography to position it between SHELLDLL_DefView (icons) and
+        WorkerW (system wallpaper).
+
+        On Win10, parents to the empty WorkerW canvas (classic approach).
         """
         p = widget.pytonium
         monitor = self._resolve_monitor(window_config.get("monitor", "primary"))
@@ -210,12 +212,19 @@ class WidgetManager:
         print(f"  Wallpaper setup: monitor {monitor.index} "
               f"({monitor.width}x{monitor.height} @ {monitor.x},{monitor.y})")
 
-        # Find wallpaper parent (Progman on Win11, WorkerW on Win10)
-        parent_hwnd, strategy = Win32WindowHelper.find_wallpaper_worker_w()
-        if not parent_hwnd:
-            print(f"  Warning: wallpaper parent not found for '{widget.name}', "
-                  f"falling back to widget mode")
-            return
+        # Discover the desktop window hierarchy
+        info = Win32WindowHelper.find_desktop_windows()
+        if info is None:
+            raise RuntimeError(
+                f"desktop windows not found for '{widget.name}' "
+                f"— cannot set up wallpaper mode"
+            )
+
+        # Determine parent: Progman for Win11 24H2, WorkerW for Win10
+        if info.strategy == "win10_toplevel":
+            parent_hwnd = info.worker_w
+        else:
+            parent_hwnd = info.progman
 
         # Tell CEF to create the browser as WS_CHILD of the parent
         p.set_parent_window(parent_hwnd)
@@ -226,17 +235,19 @@ class WidgetManager:
             # Position on the correct monitor (parent-relative coordinates)
             p.set_window_position(monitor.x, monitor.y)
 
-            # For Progman strategy, put behind SHELLDLL_DefView (desktop icons)
-            if strategy == "progman":
-                Win32WindowHelper.set_window_z_bottom(hwnd)
+            # Apply z-order choreography (layered window + z-ordering)
+            Win32WindowHelper.setup_wallpaper_zorder(hwnd, info)
 
             widget.is_wallpaper = True
+            widget.wallpaper_shell_view = info.shell_view
+            widget.wallpaper_worker_w = info.worker_w
+            widget.wallpaper_strategy = info.strategy
 
             # Wallpaper widgets are click-through by default
             if window_config.get("click_through", True):
                 Win32WindowHelper.make_click_through(hwnd)
 
-            print(f"  Wallpaper embedded: strategy={strategy}, "
+            print(f"  Wallpaper embedded: strategy={info.strategy}, "
                   f"parent={parent_hwnd:#x}, hwnd={hwnd:#x}")
 
     # -- Helpers ---------------------------------------------------------------
@@ -365,25 +376,43 @@ class WidgetManager:
     # -- Wallpaper health check ------------------------------------------------
 
     def _check_wallpaper_health(self):
-        """Re-parent wallpaper widgets if explorer.exe restarted.
+        """Verify wallpaper widgets are still correctly embedded.
 
         Called periodically (every ~5 seconds) from update().
-        The window is already WS_CHILD, so we just need to SetParent
-        to the new Progman/WorkerW and reposition.
+        Handles two failure modes:
+        1. Parent gone (explorer.exe restarted) → re-parent + z-order
+        2. Z-order drifted (theme/wallpaper change) → re-apply z-order
         """
         for w in self.active_widgets:
             if w.is_wallpaper:
                 hwnd = w.pytonium.get_native_window_handle()
-                if hwnd and not Win32WindowHelper.is_wallpaper_parent_valid(hwnd):
+                if not hwnd:
+                    continue
+
+                if not Win32WindowHelper.is_wallpaper_parent_valid(hwnd):
+                    # Explorer restarted — find new desktop windows
                     print(f"  Wallpaper health: re-parenting '{w.name}'")
-                    parent_hwnd, strategy = Win32WindowHelper.find_wallpaper_worker_w()
-                    if parent_hwnd:
-                        Win32WindowHelper.reparent_wallpaper(hwnd, parent_hwnd, strategy)
+                    info = Win32WindowHelper.find_desktop_windows()
+                    if info:
+                        Win32WindowHelper.reparent_wallpaper(hwnd, info)
                         monitor_spec = w.manifest.get("window", {}).get("monitor", "primary")
                         monitor = self._resolve_monitor(monitor_spec)
                         Win32WindowHelper.set_position(
                             hwnd, monitor.x, monitor.y, monitor.width, monitor.height,
                         )
+                        # Update stored handles
+                        w.wallpaper_shell_view = info.shell_view
+                        w.wallpaper_worker_w = info.worker_w
+                        w.wallpaper_strategy = info.strategy
+                elif w.wallpaper_strategy == "win11_24h2" and w.wallpaper_shell_view:
+                    # Check z-order hasn't drifted (theme change, etc.)
+                    info = WallpaperInfo(
+                        progman=0,  # not needed for z-order check
+                        shell_view=w.wallpaper_shell_view,
+                        worker_w=w.wallpaper_worker_w,
+                        strategy=w.wallpaper_strategy,
+                    )
+                    Win32WindowHelper.verify_wallpaper_zorder(hwnd, info)
 
     # -- Update loop -----------------------------------------------------------
 
