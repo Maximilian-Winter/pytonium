@@ -1,22 +1,30 @@
 """Entry point for running PytoniumShell as a module.
 
 Usage:
-    python -m pytonium_shell --widgets-dir ./example_widgets
+    pytonium-shell                              # run bundled example widgets
+    pytonium-shell --widgets-dir ./my_widgets   # run custom widgets
+    python -m pytonium_shell --widgets-dir ./my_widgets
 """
 
 import argparse
+import importlib.resources
 import os
 import sys
 
 from .shell_manager import ShellManager
 
 
+def _bundled_widgets_dir():
+    """Return the path to the bundled example widgets."""
+    return str(importlib.resources.files("pytonium_shell") / "example_widgets")
+
+
 def main():
     parser = argparse.ArgumentParser(description="PytoniumShell - Desktop Widget Framework")
     parser.add_argument(
         "--widgets-dir",
-        default=os.path.join(os.getcwd(), "widgets"),
-        help="Path to the widgets directory (default: ./widgets)"
+        default=None,
+        help="Path to the widgets directory (default: bundled examples)"
     )
     parser.add_argument(
         "--config",
@@ -30,12 +38,14 @@ def main():
     )
     args = parser.parse_args()
 
-    if not os.path.isdir(args.widgets_dir):
-        print(f"Error: Widgets directory not found: {args.widgets_dir}")
+    widgets_dir = args.widgets_dir or _bundled_widgets_dir()
+
+    if not os.path.isdir(widgets_dir):
+        print(f"Error: Widgets directory not found: {widgets_dir}")
         sys.exit(1)
 
     shell = ShellManager(
-        widgets_dir=args.widgets_dir,
+        widgets_dir=widgets_dir,
         config_path=args.config,
         theme_name=args.theme,
     )
