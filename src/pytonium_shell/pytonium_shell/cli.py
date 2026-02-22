@@ -19,7 +19,7 @@ def _bundled_widgets_dir():
     return str(importlib.resources.files("pytonium_shell") / "example_widgets")
 
 
-def main():
+def pythonium_shell_main():
     parser = argparse.ArgumentParser(description="PytoniumShell - Desktop Widget Framework")
     parser.add_argument(
         "--widgets-dir",

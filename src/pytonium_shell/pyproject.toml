@@ -18,11 +18,8 @@ reload = ["watchdog>=3.0"]
 all = ["psutil>=5.9", "watchdog>=3.0"]
 
 [project.scripts]
-pytonium-shell = "pytonium_shell.__main__:main"
+pytonium-shell = "pytonium_shell.cli:pythonium_shell_main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["pytonium_shell*"]
-
-[tool.setuptools.package-data]
-"pytonium_shell" = ["example_widgets/**/*"]
+include = ["pytonium_shell"]
