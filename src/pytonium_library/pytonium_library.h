@@ -85,6 +85,11 @@ public:
 
     void SetFramelessWindow(bool frameless);
 
+    // Set a parent window — browser will be created as WS_CHILD of this handle.
+    // Used for wallpaper mode (embedding behind desktop icons).
+    // Must be called before CreateBrowser(). Pass nullptr to reset.
+    void SetParentWindow(void* parentHwnd);
+
     // OSR (off-screen rendering) mode for transparent windows
     void SetOsrMode(bool osr);
 #if defined(OS_WIN)
@@ -153,6 +158,7 @@ private:
 
     bool m_FramelessWindow = false;
     bool m_OsrMode = false;
+    void* m_ParentHwnd = nullptr;
 
 #if defined(OS_WIN)
     CefRefPtr<OsrWindowWin> m_OsrWindow;

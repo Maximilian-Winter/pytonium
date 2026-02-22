@@ -723,6 +723,20 @@ cdef class Pytonium:
         """Enable/disable off-screen rendering mode for transparent windows (must be called before initialize)."""
         self.pytonium_library.SetOsrMode(osr)
 
+    def set_parent_window(self, parent_hwnd: int):
+        """Set the parent window for child window creation.
+
+        When set, the browser window is created as WS_CHILD of the given
+        parent instead of a standalone WS_POPUP.  Used for wallpaper mode
+        (embedding behind desktop icons).  Must be called before initialize().
+
+        Args:
+            parent_hwnd: The parent window handle as an integer (HWND on Windows).
+                         Pass 0 to clear (default standalone behavior).
+        """
+        cdef void* parent_handle = <void*><unsigned long long>parent_hwnd
+        self.pytonium_library.SetParentWindow(parent_handle)
+
     def minimize_window(self):
         """Minimize the window."""
         self.pytonium_library.MinimizeWindow()

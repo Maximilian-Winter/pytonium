@@ -80,6 +80,12 @@ void CefWrapperClientHandler::PlatformSubclassWindow(CefRefPtr<CefBrowser> brows
     CefWindowHandle hwnd = browser->GetHost()->GetWindowHandle();
     if (hwnd)
     {
+        // Skip resize border subclass for child windows (wallpaper/embedded mode)
+        // — WM_NCHITTEST doesn't fire for WS_CHILD, and resize borders are meaningless.
+        LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+        if (style & WS_CHILD)
+            return;
+
         // Subclass the window to handle resize borders for frameless windows
         SetWindowSubclass(hwnd, WindowSubclassProc, 0, 0);
     }

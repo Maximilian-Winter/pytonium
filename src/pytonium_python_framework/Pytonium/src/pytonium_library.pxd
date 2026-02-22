@@ -114,7 +114,8 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         void SetOsrMode(bool osr);
 
         # Window control methods
-        void SetFramelessWindow(bool frameless);
+        void SetFramelessWindow(bool frameless)
+        void SetParentWindow(void* parent_hwnd);
         void MinimizeWindow();
         void MaximizeWindow();
         void RestoreWindow();

@@ -198,35 +198,46 @@ class WidgetManager:
                 self._position_bar_fallback(hwnd, anchor, bar_size, monitor)
 
     def _setup_wallpaper_mode(self, widget, window_config, entry_url):
-        """Set up a wallpaper widget behind desktop icons."""
+        """Set up a wallpaper widget behind desktop icons.
+
+        Uses the native set_parent_window() API so CEF creates the browser
+        as WS_CHILD of Progman/WorkerW from the start — no post-creation
+        reparenting needed.
+        """
         p = widget.pytonium
         monitor = self._resolve_monitor(window_config.get("monitor", "primary"))
-        width = monitor.width
-        height = monitor.height
 
         print(f"  Wallpaper setup: monitor {monitor.index} "
               f"({monitor.width}x{monitor.height} @ {monitor.x},{monitor.y})")
 
-        p.initialize(entry_url, width, height)
+        # Find wallpaper parent (Progman on Win11, WorkerW on Win10)
+        parent_hwnd, strategy = Win32WindowHelper.find_wallpaper_worker_w()
+        if not parent_hwnd:
+            print(f"  Warning: wallpaper parent not found for '{widget.name}', "
+                  f"falling back to widget mode")
+            return
+
+        # Tell CEF to create the browser as WS_CHILD of the parent
+        p.set_parent_window(parent_hwnd)
+        p.initialize(entry_url, monitor.width, monitor.height)
 
         hwnd = p.get_native_window_handle()
         if hwnd:
-            # Note: hide_from_taskbar is NOT called here — the WS_CHILD
-            # conversion in make_wallpaper handles taskbar visibility
-            # (child windows don't appear on the taskbar).
+            # Position on the correct monitor (parent-relative coordinates)
+            p.set_window_position(monitor.x, monitor.y)
 
-            success = Win32WindowHelper.make_wallpaper(hwnd, monitor)
-            if success:
-                widget.is_wallpaper = True
-            else:
-                print(f"  Warning: wallpaper mode failed for '{widget.name}', "
-                      f"falling back to visible widget mode")
-                # Don't apply click-through on fallback — window would be a ghost
-                return
+            # For Progman strategy, put behind SHELLDLL_DefView (desktop icons)
+            if strategy == "progman":
+                Win32WindowHelper.set_window_z_bottom(hwnd)
+
+            widget.is_wallpaper = True
 
             # Wallpaper widgets are click-through by default
             if window_config.get("click_through", True):
                 Win32WindowHelper.make_click_through(hwnd)
+
+            print(f"  Wallpaper embedded: strategy={strategy}, "
+                  f"parent={parent_hwnd:#x}, hwnd={hwnd:#x}")
 
     # -- Helpers ---------------------------------------------------------------
 
@@ -357,21 +368,22 @@ class WidgetManager:
         """Re-parent wallpaper widgets if explorer.exe restarted.
 
         Called periodically (every ~5 seconds) from update().
-        When the parent WorkerW is destroyed (explorer restart), the
-        window becomes an orphaned WS_CHILD — we must restore WS_POPUP
-        first so make_wallpaper() can convert it back cleanly.
+        The window is already WS_CHILD, so we just need to SetParent
+        to the new Progman/WorkerW and reposition.
         """
         for w in self.active_widgets:
             if w.is_wallpaper:
                 hwnd = w.pytonium.get_native_window_handle()
                 if hwnd and not Win32WindowHelper.is_wallpaper_parent_valid(hwnd):
                     print(f"  Wallpaper health: re-parenting '{w.name}'")
-                    # Restore to a valid top-level state first
-                    Win32WindowHelper.restore_from_wallpaper(hwnd)
-                    # Re-parent into the (new) WorkerW
-                    monitor_spec = w.manifest.get("window", {}).get("monitor", "primary")
-                    monitor = self._resolve_monitor(monitor_spec)
-                    Win32WindowHelper.make_wallpaper(hwnd, monitor)
+                    parent_hwnd, strategy = Win32WindowHelper.find_wallpaper_worker_w()
+                    if parent_hwnd:
+                        Win32WindowHelper.reparent_wallpaper(hwnd, parent_hwnd, strategy)
+                        monitor_spec = w.manifest.get("window", {}).get("monitor", "primary")
+                        monitor = self._resolve_monitor(monitor_spec)
+                        Win32WindowHelper.set_position(
+                            hwnd, monitor.x, monitor.y, monitor.width, monitor.height,
+                        )
 
     # -- Update loop -----------------------------------------------------------
 
@@ -408,12 +420,8 @@ class WidgetManager:
                 Win32WindowHelper.unregister_appbar(w.appbar_data)
                 w.appbar_data = None
 
-        # Restore wallpaper windows
-        for w in self.active_widgets:
-            if w.is_wallpaper:
-                hwnd = w.pytonium.get_native_window_handle()
-                if hwnd:
-                    Win32WindowHelper.restore_from_wallpaper(hwnd)
+        # Wallpaper windows: no special restore needed — close_browser() handles it.
+        # (The window was created as WS_CHILD natively, not reparented.)
 
         # Shutdown Pytonium instances
         for w in self.active_widgets:

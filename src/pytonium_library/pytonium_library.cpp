@@ -203,7 +203,14 @@ int PytoniumLibrary::CreateBrowser(const std::string& url, int width, int height
 #if defined(OS_WIN)
     window_info.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
 
-    if (frameless) {
+    if (m_ParentHwnd != nullptr) {
+        // Child window mode (wallpaper embedding, etc.)
+        // Created as WS_CHILD of the given parent — no post-creation reparenting needed.
+        window_info.parent_window = reinterpret_cast<CefWindowHandle>(m_ParentHwnd);
+        window_info.style = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+        window_info.bounds.x = 0;
+        window_info.bounds.y = 0;
+    } else if (frameless) {
         window_info.style = WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
         window_info.parent_window = nullptr;
         window_info.bounds.x = CW_USEDEFAULT;
@@ -478,6 +485,11 @@ void PytoniumLibrary::AddMimeTypeMapping(const std::string& fileExtension, std::
 void PytoniumLibrary::SetFramelessWindow(bool frameless)
 {
     m_FramelessWindow = frameless;
+}
+
+void PytoniumLibrary::SetParentWindow(void* parentHwnd)
+{
+    m_ParentHwnd = parentHwnd;
 }
 
 void PytoniumLibrary::MinimizeWindow()

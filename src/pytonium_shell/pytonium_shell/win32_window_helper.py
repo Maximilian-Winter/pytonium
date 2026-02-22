@@ -9,6 +9,25 @@ if os.name == "nt":
     user32 = ctypes.windll.user32
     shell32 = ctypes.windll.shell32
 
+    # -- Set Per-Monitor DPI awareness BEFORE any monitor/window queries --
+    # Without this, GetMonitorInfoW returns logical (scaled) coordinates
+    # instead of physical pixels.  CEF also sets this during CefInitialize,
+    # but we need it earlier for accurate monitor enumeration.
+    try:
+        # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 (Win10 1703+)
+        user32.SetProcessDpiAwarenessContext.argtypes = [ctypes.c_void_p]
+        user32.SetProcessDpiAwarenessContext.restype = ctypes.wintypes.BOOL
+        user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+    except (AttributeError, OSError):
+        try:
+            # PROCESS_PER_MONITOR_DPI_AWARE (Win 8.1+)
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        except (AttributeError, OSError):
+            try:
+                user32.SetProcessDPIAware()
+            except (AttributeError, OSError):
+                pass
+
     HWND = ctypes.wintypes.HWND
     UINT = ctypes.wintypes.UINT
     BOOL = ctypes.wintypes.BOOL
@@ -503,19 +522,21 @@ class Win32WindowHelper:
         # --- Strategy selection ---
 
         # Strategy 1: Classic (Win10) — SHELLDLL_DefView is in a WorkerW.
-        # Use the sibling WorkerW (next in z-order) or any WorkerW
-        # without SHELLDLL_DefView.
+        # The other WorkerW (without SHELLDLL_DefView) is our wallpaper surface.
         if worker_ws_with_shell and worker_ws_without_shell:
             target = worker_ws_without_shell[0]
             print(f"  Wallpaper strategy: worker_w (classic), target={target:#x}")
             return target, "worker_w"
 
         # Strategy 2: SHELLDLL_DefView is under Progman (Win11 common).
-        # Use any available empty WorkerW spawned by 0x052C.
-        if shell_view_parent[0] == progman and worker_ws_without_shell:
-            target = worker_ws_without_shell[0]
-            print(f"  Wallpaper strategy: worker_w (win11), target={target:#x}")
-            return target, "worker_w"
+        # On Windows 11, SHELLDLL_DefView stays under Progman and 0x052C
+        # may spawn many WorkerW windows for various DWM purposes.
+        # Parenting to Progman is more reliable — our child window sits
+        # above Progman's wallpaper bitmap but below SHELLDLL_DefView
+        # (using HWND_BOTTOM z-order).
+        if shell_view_parent[0] == progman:
+            print(f"  Wallpaper strategy: progman (win11), target={progman:#x}")
+            return progman, "progman"
 
         # Strategy 3: Use the sibling WorkerW found via FindWindowExW.
         if sibling_worker[0]:
@@ -523,8 +544,13 @@ class Win32WindowHelper:
             print(f"  Wallpaper strategy: worker_w (sibling), target={target:#x}")
             return target, "worker_w"
 
-        # Strategy 4: Fallback — parent directly to Progman.
-        # Our window will be a child of Progman, behind SHELLDLL_DefView.
+        # Strategy 4: Any available WorkerW.
+        if worker_ws_without_shell:
+            target = worker_ws_without_shell[0]
+            print(f"  Wallpaper strategy: worker_w (any), target={target:#x}")
+            return target, "worker_w"
+
+        # Strategy 5: Fallback — parent directly to Progman.
         if progman:
             print(f"  Wallpaper strategy: progman (fallback), target={progman:#x}")
             return progman, "progman"
@@ -634,6 +660,30 @@ class Win32WindowHelper:
         style = (style & ~WS_CHILD) | WS_POPUP
         user32.SetWindowLongPtrW(hwnd, GWL_STYLE, style)
         user32.SetParent(hwnd, None)
+
+    @staticmethod
+    def set_window_z_bottom(hwnd):
+        """Place window at the bottom of its sibling z-order."""
+        user32.SetWindowPos(
+            hwnd, HWND_BOTTOM,
+            0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+
+    @staticmethod
+    def reparent_wallpaper(hwnd, new_parent, strategy="worker_w"):
+        """Re-parent a wallpaper widget to a new Progman/WorkerW.
+
+        Used by the health check when explorer.exe restarts.
+        The window is already WS_CHILD, so just SetParent + z-order.
+        """
+        user32.SetParent(hwnd, new_parent)
+        if strategy == "progman":
+            user32.SetWindowPos(
+                hwnd, HWND_BOTTOM,
+                0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            )
 
     @staticmethod
     def is_wallpaper_parent_valid(hwnd):
