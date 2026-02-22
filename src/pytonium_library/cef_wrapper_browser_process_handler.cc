@@ -93,8 +93,3 @@ void CefWrapperBrowserProcessHandler::SetFramelessWindow(bool frameless)
 {
     GetInstance()->init_frameless = frameless;
 }
-
-void CefWrapperBrowserProcessHandler::SendReturnValueToJavascript(int message_id, CefValueWrapper returnValue)
-{
-
-}

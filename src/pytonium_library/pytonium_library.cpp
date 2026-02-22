@@ -117,7 +117,7 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
     std::cout << "Command line: " << cmdLineStr.ToString() << std::endl;
 
     s_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp(
-        std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings,
+        start_url, m_Javascript_Bindings, m_Javascript_Python_Bindings,
         m_StateHandlerPythonBindings, m_ContextMenuBindings, m_CustomSchemes, m_MimeTypeMap, m_FramelessWindow));
     CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
     CefExecuteProcess(main_args, s_App.get(), sandbox_info);

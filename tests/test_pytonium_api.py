@@ -192,6 +192,37 @@ class TestInstanceState:
         p = Pytonium()
         assert p.get_native_window_handle() == 0
 
+    def test_browser_id_before_init(self):
+        from Pytonium import Pytonium
+        p = Pytonium()
+        assert p.get_browser_id() == -1
+
+    def test_cef_not_initialized_before_init(self):
+        from Pytonium import Pytonium
+        assert Pytonium.is_cef_initialized() is False
+
+
+class TestMultiInstanceImports:
+    """Tests that multi-instance helpers are importable."""
+
+    def test_import_multi_async(self):
+        from Pytonium import run_pytonium_multi_async
+        assert callable(run_pytonium_multi_async)
+
+    def test_import_single_async(self):
+        from Pytonium import run_pytonium_async
+        assert callable(run_pytonium_async)
+
+    def test_create_two_instances(self):
+        from Pytonium import Pytonium
+        p1 = Pytonium()
+        p2 = Pytonium()
+        assert p1 is not p2
+        assert p1.get_browser_id() == -1
+        assert p2.get_browser_id() == -1
+        assert p1.is_running() is False
+        assert p2.is_running() is False
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
