@@ -1,7 +1,12 @@
-"""Global hotkey listener using Win32 RegisterHotKey API."""
+"""Global hotkey listener using Win32 RegisterHotKey API.
+
+Supports multiple named hotkeys registered before start().
+The main thread polls for triggered hotkey names via poll_triggered().
+"""
 
 import ctypes
 import ctypes.wintypes
+import queue
 import threading
 
 # Win32 constants
@@ -12,6 +17,16 @@ MOD_WIN = 0x0008
 MOD_NOREPEAT = 0x4000
 
 WM_HOTKEY = 0x0312
+
+# PostThreadMessageW — used to send WM_QUIT to the hotkey thread
+_user32 = ctypes.windll.user32
+_user32.PostThreadMessageW.argtypes = [
+    ctypes.wintypes.DWORD,
+    ctypes.wintypes.UINT,
+    ctypes.wintypes.WPARAM,
+    ctypes.wintypes.LPARAM,
+]
+_user32.PostThreadMessageW.restype = ctypes.wintypes.BOOL
 
 # Virtual key codes for common keys
 _VK_MAP = {
@@ -60,23 +75,70 @@ def _parse_hotkey(hotkey_str):
 
 
 class HotkeyListener:
-    """Listens for a global hotkey and signals via a threading.Event.
+    """Listens for multiple global hotkeys on a background thread.
 
-    Uses Win32 RegisterHotKey on a background thread with its own message loop.
-    The main thread checks `triggered` to see if the hotkey was pressed.
+    Each hotkey has a unique name (e.g., "dashboard_toggle", "widget_toggle:clock").
+    The main thread polls for triggered hotkey names.
+
+    Usage:
+        listener = HotkeyListener()
+        listener.register("dashboard_toggle", "ctrl+alt+d")
+        listener.register("widget_toggle:clock", "ctrl+alt+c")
+        listener.start()
+
+        # In main loop:
+        for name in listener.poll_triggered():
+            handle(name)
+
+        listener.stop()
     """
 
-    HOTKEY_ID = 1
-
-    def __init__(self, hotkey="ctrl+alt+d"):
-        self._modifiers, self._vk_code = _parse_hotkey(hotkey)
+    def __init__(self):
+        self._hotkeys = {}  # id -> {"name": str, "modifiers": int, "vk": int, "str": str}
+        self._next_id = 1
         self._thread = None
         self._stop_event = threading.Event()
-        self.triggered = threading.Event()
-        self._hotkey_str = hotkey
+        self._triggered = queue.Queue()
+        self._started = False
+
+    def register(self, name, hotkey_str):
+        """Register a hotkey. Must be called before start().
+
+        Args:
+            name: Unique name for this hotkey.
+            hotkey_str: Key combination (e.g., "ctrl+alt+d").
+
+        Returns:
+            The hotkey ID.
+
+        Raises:
+            ValueError: If hotkey_str is invalid.
+            RuntimeError: If called after start().
+        """
+        if self._started:
+            raise RuntimeError("Cannot register hotkeys after start()")
+
+        modifiers, vk_code = _parse_hotkey(hotkey_str)
+        hotkey_id = self._next_id
+        self._next_id += 1
+        self._hotkeys[hotkey_id] = {
+            "name": name,
+            "modifiers": modifiers,
+            "vk": vk_code,
+            "str": hotkey_str,
+        }
+        return hotkey_id
+
+    @property
+    def registered_hotkeys(self):
+        """Return a dict of name -> hotkey_str for all registered hotkeys."""
+        return {info["name"]: info["str"] for info in self._hotkeys.values()}
 
     def start(self):
-        """Start listening for the hotkey on a background thread."""
+        """Start listening for all registered hotkeys."""
+        if not self._hotkeys:
+            return
+        self._started = True
         self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._run, daemon=True, name="HotkeyListener"
@@ -84,41 +146,62 @@ class HotkeyListener:
         self._thread.start()
 
     def stop(self):
-        """Stop the hotkey listener."""
+        """Stop the hotkey listener and unregister all hotkeys."""
         self._stop_event.set()
         if self._thread and self._thread.is_alive():
-            # Post WM_QUIT to break the message loop
             thread_id = self._thread.ident
             if thread_id:
-                ctypes.windll.user32.PostThreadMessageW(
+                _user32.PostThreadMessageW(
                     thread_id, 0x0012, 0, 0  # WM_QUIT
                 )
             self._thread.join(timeout=2.0)
         self._thread = None
+        self._started = False
+
+    def poll_triggered(self):
+        """Return a list of hotkey names triggered since last poll.
+
+        Non-blocking. Returns an empty list if none triggered.
+        """
+        triggered = []
+        while True:
+            try:
+                triggered.append(self._triggered.get_nowait())
+            except queue.Empty:
+                break
+        return triggered
 
     def check_and_clear(self):
-        """Check if the hotkey was triggered and clear the event. Returns True if triggered."""
-        if self.triggered.is_set():
-            self.triggered.clear()
-            return True
-        return False
+        """Check if any hotkey was triggered. Returns the name, or None.
+
+        Backward-compatible convenience method.
+        """
+        triggered = self.poll_triggered()
+        return triggered[0] if triggered else None
 
     def _run(self):
-        """Background thread: register hotkey, pump messages, unregister on exit."""
+        """Background thread: register all hotkeys, pump messages, unregister on exit."""
         user32 = ctypes.windll.user32
+        registered_ids = []
 
-        if not user32.RegisterHotKey(None, self.HOTKEY_ID, self._modifiers, self._vk_code):
-            print(f"HotkeyListener: Failed to register hotkey '{self._hotkey_str}' "
-                  f"(error {ctypes.GetLastError()}). It may be in use by another application.")
-            return
+        for hk_id, info in self._hotkeys.items():
+            if user32.RegisterHotKey(None, hk_id, info["modifiers"], info["vk"]):
+                registered_ids.append(hk_id)
+            else:
+                print(
+                    f"HotkeyListener: Failed to register '{info['name']}' "
+                    f"({info['str']}) — error {ctypes.GetLastError()}. "
+                    f"It may be in use by another application."
+                )
 
         msg = ctypes.wintypes.MSG()
         try:
             while not self._stop_event.is_set():
                 # PeekMessage with PM_REMOVE — non-blocking
                 if user32.PeekMessageW(ctypes.byref(msg), None, 0, 0, 1):
-                    if msg.message == WM_HOTKEY and msg.wParam == self.HOTKEY_ID:
-                        self.triggered.set()
+                    if msg.message == WM_HOTKEY and msg.wParam in self._hotkeys:
+                        name = self._hotkeys[msg.wParam]["name"]
+                        self._triggered.put(name)
                     elif msg.message == 0x0012:  # WM_QUIT
                         break
                     user32.TranslateMessage(ctypes.byref(msg))
@@ -127,4 +210,5 @@ class HotkeyListener:
                     # Sleep briefly to avoid busy-waiting
                     self._stop_event.wait(0.05)
         finally:
-            user32.UnregisterHotKey(None, self.HOTKEY_ID)
+            for hk_id in registered_ids:
+                user32.UnregisterHotKey(None, hk_id)

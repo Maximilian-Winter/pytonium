@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        background: transparent;
+        font-family: var(--shell-font, 'Segoe UI', 'Consolas', monospace);
+        font-size: 13px;
+        color: var(--shell-foreground, #a9b1d6);
+        overflow: hidden;
+        user-select: none;
+    }
+    .bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 36px;
+        padding: 0 16px;
+        background: var(--shell-background, rgba(26, 27, 38, 0.92));
+        border-bottom: 1px solid var(--shell-border, rgba(255, 255, 255, 0.08));
+    }
+    .section {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+    .item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .label {
+        color: var(--shell-muted, #565f89);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .value {
+        color: var(--shell-foreground, #a9b1d6);
+    }
+    .accent {
+        color: var(--shell-accent, #7aa2f7);
+    }
+    .accent2 {
+        color: var(--shell-accent2, #bb9af7);
+    }
+    .success {
+        color: var(--shell-success, #9ece6a);
+    }
+    .pip {
+        width: 4px;
+        height: 14px;
+        border-radius: 2px;
+        background: var(--shell-accent, #7aa2f7);
+        opacity: 0.6;
+    }
+    .time {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--shell-foreground, #a9b1d6);
+    }
+    .date {
+        color: var(--shell-muted, #565f89);
+        font-size: 12px;
+    }
+</style>
+</head>
+<body>
+<div class="bar">
+    <!-- Left section: time and date -->
+    <div class="section">
+        <div class="item">
+            <span class="time" id="time">--:--</span>
+        </div>
+        <div class="pip"></div>
+        <div class="item">
+            <span class="date" id="date">--</span>
+        </div>
+    </div>
+
+    <!-- Center section: title -->
+    <div class="section">
+        <span class="label">PytoniumShell</span>
+    </div>
+
+    <!-- Right section: system stats -->
+    <div class="section">
+        <div class="item">
+            <span class="label">CPU</span>
+            <span class="value accent" id="cpu">0%</span>
+        </div>
+        <div class="item">
+            <span class="label">MEM</span>
+            <span class="value accent2" id="mem">0%</span>
+        </div>
+    </div>
+</div>
+
+<script>
+function init() {
+    // Subscribe to datetime updates
+    Pytonium.appState.registerForStateUpdates(
+        "datetimeUpdate", ["datetime"], true, true
+    );
+    document.addEventListener("datetimeUpdate", function(event) {
+        var key = event.detail.key;
+        var value = event.detail.value;
+        if (key === "time") {
+            document.getElementById("time").textContent = value;
+        }
+        if (key === "date") {
+            document.getElementById("date").textContent = value;
+        }
+    });
+
+    // Subscribe to system updates
+    Pytonium.appState.registerForStateUpdates(
+        "systemUpdate", ["system"], true, true
+    );
+    document.addEventListener("systemUpdate", function(event) {
+        var key = event.detail.key;
+        var value = event.detail.value;
+        if (key === "cpu_avg") {
+            document.getElementById("cpu").textContent = Math.round(value) + "%";
+        }
+        if (key === "mem_percent") {
+            document.getElementById("mem").textContent = Math.round(value) + "%";
+        }
+    });
+}
+
+if (window.PytoniumReady) { init(); }
+else { window.addEventListener("PytoniumReady", init); }
+</script>
+</body>
+</html>
