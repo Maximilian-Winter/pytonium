@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pythonium Shell — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Tokyo Night Storm palette */
+      --bg-deep: #1a1b26;
+      --bg-card: rgba(26, 27, 38, 0.92);
+      --bg-card-hover: rgba(36, 37, 50, 0.95);
+      --bg-subtle: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.06);
+      --border-hover: rgba(255, 255, 255, 0.12);
+
+      --text-primary: #c0caf5;
+      --text-secondary: #a9b1d6;
+      --text-muted: #565f89;
+      --text-dim: #3b4261;
+
+      --blue: #7aa2f7;
+      --purple: #bb9af7;
+      --green: #9ece6a;
+      --cyan: #7dcfff;
+      --orange: #ff9e64;
+      --red: #f7768e;
+      --yellow: #e0af68;
+      --teal: #73daca;
+
+      --font-display: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --radius: 14px;
+      --radius-sm: 8px;
+      --gap: 14px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ═══════════════════ TOP BAR ═══════════════════ */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      height: 48px;
+      border-bottom: 1px solid var(--border);
+      -webkit-app-region: drag;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .clock {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+
+    .clock-seconds {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 300;
+    }
+
+    .clock-date {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: 6px;
+      font-weight: 300;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .topbar-indicator {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .indicator-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    /* ═══════════════════ GRID ═══════════════════ */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: var(--gap);
+      padding: var(--gap);
+      height: calc(100vh - 48px);
+    }
+
+    /* ═══════════════════ CARDS ═══════════════════ */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: border-color 0.3s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      border-color: var(--border-hover);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+
+    .card-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .card-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    .card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* ═══════════════════ CPU CARD ═══════════════════ */
+    .cpu-value {
+      font-family: var(--font-mono);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--blue);
+      margin-bottom: 10px;
+    }
+
+    .cpu-chart {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      min-height: 0;
+    }
+
+    .cpu-bar {
+      flex: 1;
+      background: var(--blue);
+      border-radius: 2px 2px 0 0;
+      min-height: 2px;
+      transition: height 0.4s ease;
+      opacity: 0.7;
+    }
+
+    .cpu-bar:hover {
+      opacity: 1;
+    }
+
+    .cpu-badge { background: rgba(122, 162, 247, 0.15); color: var(--blue); }
+
+    /* ═══════════════════ NETWORK CARD ═══════════════════ */
+    .net-stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 12px;
+    }
+
+    .net-stat-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .net-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .net-value {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .net-download { color: var(--cyan); }
+    .net-upload { color: var(--purple); }
+
+    .net-graph-container {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+
+    .net-graph-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .net-badge { background: rgba(125, 207, 255, 0.15); color: var(--cyan); }
+
+    /* ═══════════════════ MEMORY + DISK CARD ═══════════════════ */
+    .mem-disk-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .gauge-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .gauge-ring {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      flex-shrink: 0;
+    }
+
+    .gauge-ring svg {
+      transform: rotate(-90deg);
+      width: 72px;
+      height: 72px;
+    }
+
+    .gauge-ring .track {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.05);
+      stroke-width: 5;
+    }
+
+    .gauge-ring .fill {
+      fill: none;
+      stroke-width: 5;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.6s ease;
+    }
+
+    .gauge-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .gauge-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .gauge-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .gauge-detail {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .mem-badge { background: rgba(187, 154, 247, 0.15); color: var(--purple); }
+
+    /* ═══════════════════ WEATHER CARD ═══════════════════ */
+    .weather-current {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .weather-icon {
+      font-size: 42px;
+      line-height: 1;
+    }
+
+    .weather-temp {
+      font-family: var(--font-mono);
+      font-size: 36px;
+      font-weight: 600;
+      color: var(--orange);
+    }
+
+    .weather-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .weather-location {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .weather-details {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 10px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .weather-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .weather-detail-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .weather-detail-value {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .weather-forecast {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      align-items: flex-end;
+    }
+
+    .forecast-day {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 4px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-subtle);
+    }
+
+    .forecast-name {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .forecast-icon { font-size: 18px; }
+
+    .forecast-temp {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .forecast-low {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .weather-badge { background: rgba(255, 158, 100, 0.15); color: var(--orange); }
+
+    /* ═══════════════════ NEWS CARD ═══════════════════ */
+    .news-feed {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .news-feed::-webkit-scrollbar { width: 3px; }
+    .news-feed::-webkit-scrollbar-track { background: transparent; }
+    .news-feed::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 3px; }
+
+    .news-item {
+      padding: 10px 8px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.2s ease;
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .news-item:last-child { border-bottom: none; }
+    .news-item:hover { background: var(--bg-subtle); }
+
+    .news-item-content { flex: 1; min-width: 0; }
+
+    .news-category {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    .news-category.tech { color: var(--cyan); }
+    .news-category.world { color: var(--orange); }
+    .news-category.science { color: var(--green); }
+    .news-category.culture { color: var(--purple); }
+
+    .news-headline {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .news-meta {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 3px;
+      font-family: var(--font-mono);
+    }
+
+    .news-badge { background: rgba(115, 218, 202, 0.15); color: var(--teal); }
+
+    /* ═══════════════════ PLAYER CARD ═══════════════════ */
+    .player-card {
+      grid-column: 3;
+      grid-row: 2;
+    }
+
+    .player-embed-container {
+      flex: 1;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      position: relative;
+      min-height: 0;
+      background: #000;
+    }
+
+    .player-embed-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .player-info {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .player-now-playing {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .player-playlist-name {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .player-badge { background: rgba(247, 118, 142, 0.15); color: var(--red); }
+
+    /* ═══════════════════ ANIMATIONS ═══════════════════ */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      animation: fadeIn 0.5s ease forwards;
+      opacity: 0;
+    }
+
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.1s; }
+    .card:nth-child(3) { animation-delay: 0.15s; }
+    .card:nth-child(4) { animation-delay: 0.2s; }
+    .card:nth-child(5) { animation-delay: 0.25s; }
+    .card:nth-child(6) { animation-delay: 0.3s; }
+
+    /* ═══════════════════ GLOW ACCENTS ═══════════════════ */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .card:hover::before { opacity: 1; }
+
+    .card:nth-child(1)::before { background: linear-gradient(90deg, transparent, var(--blue), transparent); }
+    .card:nth-child(2)::before { background: linear-gradient(90deg, transparent, var(--cyan), transparent); }
+    .card:nth-child(3)::before { background: linear-gradient(90deg, transparent, var(--purple), transparent); }
+    .card:nth-child(4)::before { background: linear-gradient(90deg, transparent, var(--orange), transparent); }
+    .card:nth-child(5)::before { background: linear-gradient(90deg, transparent, var(--teal), transparent); }
+    .card:nth-child(6)::before { background: linear-gradient(90deg, transparent, var(--red), transparent); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ TOP BAR ═══════════════════ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="clock" id="clock-time">00:00</span>
+    <span class="clock-seconds" id="clock-seconds">:00</span>
+    <span class="clock-date" id="clock-date">Loading...</span>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-indicator">
+      <span class="indicator-dot"></span>
+      <span>Pythonium Shell</span>
+    </div>
+    <span id="uptime">↑ 0h</span>
+  </div>
+</div>
+
+<!-- ═══════════════════ DASHBOARD GRID ═══════════════════ -->
+<div class="grid">
+
+  <!-- ── CPU ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">CPU</span>
+      <span class="card-badge cpu-badge" id="cpu-badge">0%</span>
+    </div>
+    <div class="card-body">
+      <div class="cpu-value" id="cpu-value">0%</div>
+      <div class="cpu-chart" id="cpu-chart"></div>
+    </div>
+  </div>
+
+  <!-- ── Network ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Network</span>
+      <span class="card-badge net-badge" id="net-badge">0 B/s</span>
+    </div>
+    <div class="card-body">
+      <div class="net-stats">
+        <div class="net-stat-group">
+          <span class="net-label">Download</span>
+          <span class="net-value net-download" id="net-down">0 B/s</span>
+        </div>
+        <div class="net-stat-group">
+          <span class="net-label">Upload</span>
+          <span class="net-value net-upload" id="net-up">0 B/s</span>
+        </div>
+        <div class="net-stat-group">
+          <span class="net-label">Total ↓</span>
+          <span class="net-value" id="net-total-down" style="color: var(--text-secondary); font-size: 13px;">0 MB</span>
+        </div>
+        <div class="net-stat-group">
+          <span class="net-label">Total ↑</span>
+          <span class="net-value" id="net-total-up" style="color: var(--text-secondary); font-size: 13px;">0 MB</span>
+        </div>
+      </div>
+      <div class="net-graph-container">
+        <canvas class="net-graph-canvas" id="net-graph"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Memory & Disk ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Memory & Disk</span>
+      <span class="card-badge mem-badge" id="mem-badge">0%</span>
+    </div>
+    <div class="card-body">
+      <div class="mem-disk-content">
+        <div class="gauge-section">
+          <div class="gauge-ring">
+            <svg viewBox="0 0 72 72">
+              <circle class="track" cx="36" cy="36" r="30"/>
+              <circle class="fill" id="mem-ring" cx="36" cy="36" r="30"
+                      stroke="var(--purple)"
+                      stroke-dasharray="188.5"
+                      stroke-dashoffset="188.5"/>
+            </svg>
+            <span class="gauge-center" style="color: var(--purple)" id="mem-percent">0%</span>
+          </div>
+          <div class="gauge-info">
+            <span class="gauge-title">Memory</span>
+            <span class="gauge-detail" id="mem-detail">0 / 0 GB</span>
+          </div>
+        </div>
+        <div class="gauge-section">
+          <div class="gauge-ring">
+            <svg viewBox="0 0 72 72">
+              <circle class="track" cx="36" cy="36" r="30"/>
+              <circle class="fill" id="disk-ring" cx="36" cy="36" r="30"
+                      stroke="var(--green)"
+                      stroke-dasharray="188.5"
+                      stroke-dashoffset="188.5"/>
+            </svg>
+            <span class="gauge-center" style="color: var(--green)" id="disk-percent">0%</span>
+          </div>
+          <div class="gauge-info">
+            <span class="gauge-title">Disk (C:)</span>
+            <span class="gauge-detail" id="disk-detail">0 / 0 GB</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Weather ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Weather</span>
+      <span class="card-badge weather-badge">Königswinter</span>
+    </div>
+    <div class="card-body">
+      <div class="weather-current">
+        <span class="weather-icon" id="weather-icon">☁️</span>
+        <div>
+          <div class="weather-temp" id="weather-temp">--°C</div>
+          <div class="weather-desc" id="weather-desc">Loading...</div>
+          <div class="weather-location">Königswinter, NRW</div>
+        </div>
+      </div>
+      <div class="weather-details">
+        <div class="weather-detail">
+          <span class="weather-detail-label">Humidity</span>
+          <span class="weather-detail-value" id="w-humidity">--%</span>
+        </div>
+        <div class="weather-detail">
+          <span class="weather-detail-label">Wind</span>
+          <span class="weather-detail-value" id="w-wind">-- km/h</span>
+        </div>
+        <div class="weather-detail">
+          <span class="weather-detail-label">Feels like</span>
+          <span class="weather-detail-value" id="w-feels">--°C</span>
+        </div>
+        <div class="weather-detail">
+          <span class="weather-detail-label">Pressure</span>
+          <span class="weather-detail-value" id="w-pressure">-- hPa</span>
+        </div>
+      </div>
+      <div class="weather-forecast" id="weather-forecast"></div>
+    </div>
+  </div>
+
+  <!-- ── News Feed ── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">News</span>
+      <span class="card-badge news-badge">Live</span>
+    </div>
+    <div class="card-body">
+      <div class="news-feed" id="news-feed"></div>
+    </div>
+  </div>
+
+  <!-- ── YouTube Player ── -->
+  <div class="card player-card">
+    <div class="card-header">
+      <span class="card-title">Player</span>
+      <span class="card-badge player-badge">♫ YouTube</span>
+    </div>
+    <div class="card-body">
+      <div class="player-embed-container" id="player-container">
+        <!-- YouTube embed inserted by JS -->
+      </div>
+      <div class="player-info">
+        <span class="player-now-playing" id="player-title">Playlist</span>
+        <span class="player-playlist-name" id="player-playlist">—</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════
+  // PYTHONIUM SHELL DASHBOARD — Main Script
+  // ═══════════════════════════════════════════════════════════════
+  // This runs in both Pytonium (with real state bridge) and
+  // standalone browser (with simulated data) for development.
+  // ═══════════════════════════════════════════════════════════════
+
+  const IS_PYTONIUM = typeof Pytonium !== "undefined";
+
+  // ─── CLOCK ───
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, "0");
+    const m = String(now.getMinutes()).padStart(2, "0");
+    const s = String(now.getSeconds()).padStart(2, "0");
+    const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+    document.getElementById("clock-time").textContent = h + ":" + m;
+    document.getElementById("clock-seconds").textContent = ":" + s;
+    document.getElementById("clock-date").textContent =
+            days[now.getDay()] + " · " + now.getDate() + " " + months[now.getMonth()] + " " + now.getFullYear();
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ─── CPU HISTOGRAM ───
+  const cpuHistory = new Array(48).fill(0);
+  const cpuChartEl = document.getElementById("cpu-chart");
+
+  // Create bars
+  for (let i = 0; i < 48; i++) {
+    const bar = document.createElement("div");
+    bar.className = "cpu-bar";
+    bar.style.height = "2px";
+    cpuChartEl.appendChild(bar);
+  }
+
+  function updateCPU(avg, perCore) {
+    const pct = Math.round(avg);
+    document.getElementById("cpu-value").textContent = pct + "%";
+    document.getElementById("cpu-badge").textContent = pct + "%";
+
+    cpuHistory.push(avg);
+    if (cpuHistory.length > 48) cpuHistory.shift();
+
+    const bars = cpuChartEl.children;
+    for (let i = 0; i < bars.length && i < cpuHistory.length; i++) {
+      const val = cpuHistory[i];
+      bars[i].style.height = Math.max(2, val) + "%";
+      // Color intensity based on load
+      if (val > 80) bars[i].style.background = "var(--red)";
+      else if (val > 60) bars[i].style.background = "var(--orange)";
+      else bars[i].style.background = "var(--blue)";
+    }
+  }
+
+  // ─── NETWORK GRAPH ───
+  const netDownHistory = new Array(60).fill(0);
+  const netUpHistory = new Array(60).fill(0);
+  let netPeakDown = 1024; // auto-scaling baseline
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes.toFixed(0) + " B/s";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB/s";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB/s";
+  }
+
+  function formatTotal(bytes) {
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+  }
+
+  function drawNetGraph() {
+    const canvas = document.getElementById("net-graph");
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    const w = rect.width;
+    const h = rect.height;
+    const points = netDownHistory.length;
+    const stepX = w / (points - 1);
+
+    // Auto-scale peak
+    const currentMax = Math.max(...netDownHistory, ...netUpHistory);
+    netPeakDown = Math.max(netPeakDown * 0.95, currentMax * 1.2, 1024);
+
+    // Grid lines
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      const y = (h / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+
+    // Draw area + line helper
+    function drawSeries(data, color, alpha) {
+      // Area fill
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let i = 0; i < data.length; i++) {
+        const x = i * stepX;
+        const y = h - (data[i] / netPeakDown) * h * 0.9;
+        if (i === 0) ctx.lineTo(x, y);
+        else {
+          const prevX = (i - 1) * stepX;
+          const cpx = (prevX + x) / 2;
+          const prevY = h - (data[i - 1] / netPeakDown) * h * 0.9;
+          ctx.bezierCurveTo(cpx, prevY, cpx, y, x, y);
+        }
+      }
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, color.replace("1)", alpha + ")"));
+      grad.addColorStop(1, "transparent");
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Line
+      ctx.beginPath();
+      for (let i = 0; i < data.length; i++) {
+        const x = i * stepX;
+        const y = h - (data[i] / netPeakDown) * h * 0.9;
+        if (i === 0) ctx.moveTo(x, y);
+        else {
+          const prevX = (i - 1) * stepX;
+          const cpx = (prevX + x) / 2;
+          const prevY = h - (data[i - 1] / netPeakDown) * h * 0.9;
+          ctx.bezierCurveTo(cpx, prevY, cpx, y, x, y);
+        }
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    drawSeries(netDownHistory, "rgba(125, 207, 255, 1)", 0.15);
+    drawSeries(netUpHistory, "rgba(187, 154, 247, 1)", 0.08);
+
+    // Legend dots
+    ctx.fillStyle = "rgba(125, 207, 255, 1)";
+    ctx.beginPath(); ctx.arc(w - 80, 12, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(187, 154, 247, 1)";
+    ctx.beginPath(); ctx.arc(w - 36, 12, 4, 0, Math.PI * 2); ctx.fill();
+
+    ctx.font = "10px 'JetBrains Mono'";
+    ctx.fillStyle = "rgba(86, 95, 137, 1)";
+    ctx.fillText("↓", w - 72, 16);
+    ctx.fillText("↑", w - 28, 16);
+  }
+
+  function updateNetwork(downRate, upRate, totalDown, totalUp) {
+    document.getElementById("net-down").textContent = formatBytes(downRate);
+    document.getElementById("net-up").textContent = formatBytes(upRate);
+    document.getElementById("net-badge").textContent = formatBytes(downRate);
+    if (totalDown !== undefined) {
+      document.getElementById("net-total-down").textContent = formatTotal(totalDown);
+      document.getElementById("net-total-up").textContent = formatTotal(totalUp);
+    }
+
+    netDownHistory.push(downRate);
+    netUpHistory.push(upRate);
+    if (netDownHistory.length > 60) netDownHistory.shift();
+    if (netUpHistory.length > 60) netUpHistory.shift();
+
+    drawNetGraph();
+  }
+
+  // Redraw on resize
+  window.addEventListener("resize", drawNetGraph);
+
+  // ─── MEMORY & DISK GAUGES ───
+  const CIRCUMFERENCE = 2 * Math.PI * 30; // r=30
+
+  function setGauge(ringId, percentId, pct) {
+    const offset = CIRCUMFERENCE - (pct / 100) * CIRCUMFERENCE;
+    document.getElementById(ringId).style.strokeDashoffset = offset;
+    document.getElementById(percentId).textContent = Math.round(pct) + "%";
+  }
+
+  function updateMemory(pct, used, total) {
+    setGauge("mem-ring", "mem-percent", pct);
+    document.getElementById("mem-badge").textContent = Math.round(pct) + "%";
+    if (used !== undefined) {
+      document.getElementById("mem-detail").textContent =
+              (used / 1024).toFixed(1) + " / " + (total / 1024).toFixed(1) + " GB";
+    }
+  }
+
+  function updateDisk(pct, used, total) {
+    setGauge("disk-ring", "disk-percent", pct);
+    if (used !== undefined) {
+      document.getElementById("disk-detail").textContent =
+              Math.round(used) + " / " + Math.round(total) + " GB";
+    }
+    // Color warning
+    const ring = document.getElementById("disk-ring");
+    if (pct > 90) ring.setAttribute("stroke", "var(--red)");
+    else if (pct > 75) ring.setAttribute("stroke", "var(--orange)");
+    else ring.setAttribute("stroke", "var(--green)");
+  }
+
+  // ─── WEATHER ───
+  const WEATHER_ICONS = {
+    "clear": "☀️", "sunny": "☀️",
+    "partly_cloudy": "⛅", "partly cloudy": "⛅",
+    "cloudy": "☁️", "overcast": "☁️",
+    "rain": "🌧️", "light rain": "🌦️", "drizzle": "🌦️",
+    "snow": "❄️", "sleet": "🌨️",
+    "thunderstorm": "⛈️", "storm": "⛈️",
+    "fog": "🌫️", "mist": "🌫️",
+    "wind": "💨",
+    "default": "🌤️"
+  };
+
+  function getWeatherIcon(desc) {
+    const d = desc.toLowerCase();
+    for (const [key, icon] of Object.entries(WEATHER_ICONS)) {
+      if (d.includes(key)) return icon;
+    }
+    return WEATHER_ICONS["default"];
+  }
+
+  function updateWeather(data) {
+    document.getElementById("weather-icon").textContent = getWeatherIcon(data.description || "");
+    document.getElementById("weather-temp").textContent = Math.round(data.temp) + "°C";
+    document.getElementById("weather-desc").textContent = data.description || "—";
+    document.getElementById("w-humidity").textContent = (data.humidity || "--") + "%";
+    document.getElementById("w-wind").textContent = (data.wind || "--") + " km/h";
+    document.getElementById("w-feels").textContent = Math.round(data.feels_like || data.temp) + "°C";
+    document.getElementById("w-pressure").textContent = (data.pressure || "--") + " hPa";
+
+    // Forecast
+    const container = document.getElementById("weather-forecast");
+    container.innerHTML = "";
+    if (data.forecast) {
+      data.forecast.forEach(function(day) {
+        const el = document.createElement("div");
+        el.className = "forecast-day";
+        el.innerHTML =
+                '<span class="forecast-name">' + day.name + '</span>' +
+                '<span class="forecast-icon">' + getWeatherIcon(day.desc || "") + '</span>' +
+                '<span class="forecast-temp">' + Math.round(day.high) + '°</span>' +
+                '<span class="forecast-low">' + Math.round(day.low) + '°</span>';
+        container.appendChild(el);
+      });
+    }
+  }
+
+  // ─── NEWS FEED ───
+  function updateNews(articles) {
+    const feed = document.getElementById("news-feed");
+    feed.innerHTML = "";
+    articles.forEach(function(article) {
+      const item = document.createElement("div");
+      item.className = "news-item";
+      const catClass = (article.category || "tech").toLowerCase();
+      item.innerHTML =
+              '<div class="news-item-content">' +
+              '<div class="news-category ' + catClass + '">' + (article.category || "General") + '</div>' +
+              '<div class="news-headline">' + article.title + '</div>' +
+              '<div class="news-meta">' + (article.source || "") + (article.time ? " · " + article.time : "") + '</div>' +
+              '</div>';
+      if (article.url) {
+        item.style.cursor = "pointer";
+        item.addEventListener("click", function() {
+          if (IS_PYTONIUM && Pytonium.shell) {
+            Pytonium.shell.openExternal(article.url);
+          } else {
+            window.open(article.url, "_blank");
+          }
+        });
+      }
+      feed.appendChild(item);
+    });
+  }
+
+  // ─── YOUTUBE PLAYER ───
+  function loadPlayer(playlistId) {
+    const container = document.getElementById("player-container");
+    // Use youtube-nocookie for privacy, autoplay=0 so user controls it
+    container.innerHTML =
+            '<iframe src="https://www.youtube-nocookie.com/embed/videoseries?list=' + playlistId +
+            '&rel=0&modestbranding=1&color=white&theme=dark" ' +
+            'allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+    document.getElementById("player-playlist").textContent = playlistId.substring(0, 12) + "...";
+  }
+
+  // ─── UPTIME ───
+  function updateUptime(bootTimestamp) {
+    const now = Date.now() / 1000;
+    const diff = now - bootTimestamp;
+    const hours = Math.floor(diff / 3600);
+    const days = Math.floor(hours / 24);
+    const h = hours % 24;
+    if (days > 0) {
+      document.getElementById("uptime").textContent = "↑ " + days + "d " + h + "h";
+    } else {
+      document.getElementById("uptime").textContent = "↑ " + h + "h " + Math.floor((diff % 3600) / 60) + "m";
+    }
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════
+  // PYTONIUM STATE BRIDGE — Connect to real system data
+  // ═══════════════════════════════════════════════════════════════
+
+  function initPytonium() {
+    // Register for system state updates
+    Pytonium.appState.registerForStateUpdates(
+            "dashboardSystemUpdate", ["system"], true, true
+    );
+
+    // Register for weather state updates
+    Pytonium.appState.registerForStateUpdates(
+            "dashboardWeatherUpdate", ["weather"], true, true
+    );
+
+    // Register for news state updates
+    Pytonium.appState.registerForStateUpdates(
+            "dashboardNewsUpdate", ["news"], true, true
+    );
+
+    // System state handler
+    document.addEventListener("dashboardSystemUpdate", function(event) {
+      var key = event.detail.key;
+      var value = event.detail.value;
+
+      if (key === "cpu_avg") updateCPU(value, []);
+      if (key === "cpu_per_core") {
+        // If per-core data available, use it for histogram
+      }
+      if (key === "mem_percent") updateMemory(value);
+      if (key === "mem_used") {
+        // Store for combined update
+      }
+      if (key === "disk_percent") updateDisk(value);
+      if (key === "net_download_rate") {
+        // Will be paired with upload
+      }
+      if (key === "net_upload_rate") {
+        // Network update
+      }
+      if (key === "boot_time") updateUptime(value);
+    });
+
+    // Weather state handler
+    document.addEventListener("dashboardWeatherUpdate", function(event) {
+      if (event.detail.key === "current") {
+        updateWeather(JSON.parse(event.detail.value));
+      }
+    });
+
+    // News state handler
+    document.addEventListener("dashboardNewsUpdate", function(event) {
+      if (event.detail.key === "articles") {
+        updateNews(JSON.parse(event.detail.value));
+      }
+    });
+
+    // Load player from config
+    Pytonium.callFunction("get_config", "youtube_playlist").then(function(id) {
+      if (id) loadPlayer(id);
+    }).catch(function() {
+      loadPlayer("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"); // fallback
+    });
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════
+  // SIMULATION MODE — For development outside Pytonium
+  // ═══════════════════════════════════════════════════════════════
+
+  function initSimulation() {
+    console.log("🧪 Dashboard running in simulation mode");
+
+    // Simulated CPU data
+    let cpuBase = 25;
+    setInterval(function() {
+      cpuBase += (Math.random() - 0.48) * 12;
+      cpuBase = Math.max(5, Math.min(95, cpuBase));
+      updateCPU(cpuBase, []);
+    }, 1200);
+
+    // Simulated Network data
+    let simDown = 15000;
+    let simUp = 3000;
+    let totalDown = 1024 * 1024 * 850;
+    let totalUp = 1024 * 1024 * 120;
+    setInterval(function() {
+      simDown += (Math.random() - 0.4) * 20000;
+      simDown = Math.max(0, Math.min(5000000, simDown));
+      simUp += (Math.random() - 0.45) * 5000;
+      simUp = Math.max(0, Math.min(1000000, simUp));
+      totalDown += simDown;
+      totalUp += simUp;
+      updateNetwork(simDown, simUp, totalDown, totalUp);
+    }, 1000);
+
+    // Simulated Memory & Disk
+    let memPct = 50;
+    setInterval(function() {
+      memPct += (Math.random() - 0.5) * 3;
+      memPct = Math.max(30, Math.min(85, memPct));
+      updateMemory(memPct, memPct * 327.68, 32768); // ~32 GB
+      updateDisk(96, 460, 480); // Your disk is at 96% 😅
+    }, 2000);
+
+    // Simulated Weather
+    updateWeather({
+      temp: 4,
+      feels_like: 1,
+      description: "Overcast",
+      humidity: 78,
+      wind: 14,
+      pressure: 1018,
+      forecast: [
+        { name: "Mon", desc: "cloudy", high: 5, low: 1 },
+        { name: "Tue", desc: "rain", high: 7, low: 3 },
+        { name: "Wed", desc: "partly_cloudy", high: 8, low: 2 },
+        { name: "Thu", desc: "rain", high: 6, low: 2 },
+        { name: "Fri", desc: "sunny", high: 10, low: 3 },
+        { name: "Sat", desc: "partly_cloudy", high: 9, low: 4 },
+        { name: "Sun", desc: "cloudy", high: 7, low: 3 }
+      ]
+    });
+
+    // Simulated News
+    updateNews([
+      { category: "tech", title: "Python 3.14 Release Candidate Introduces New Pattern Matching Features", source: "Ars Technica", time: "2h ago" },
+      { category: "science", title: "New Study Maps the Complete Neural Network of a Mouse Brain", source: "Nature", time: "3h ago" },
+      { category: "tech", title: "Open Source Desktop Frameworks See Surge in Developer Interest", source: "The Verge", time: "4h ago" },
+      { category: "world", title: "EU Announces New Digital Infrastructure Investment Package", source: "Reuters", time: "5h ago" },
+      { category: "culture", title: "Restored Daoist Temples Open as UNESCO Heritage Sites in Sichuan", source: "SCMP", time: "6h ago" },
+      { category: "science", title: "Quantum Computing Breakthrough Achieves Stable Qubits at Room Temperature", source: "New Scientist", time: "7h ago" },
+      { category: "tech", title: "CEF Chromium 130 Update Brings Improved Transparency Rendering", source: "Chromium Blog", time: "8h ago" },
+      { category: "world", title: "Rhine Valley Flooding Risk Assessment Updated for 2026 Season", source: "DW", time: "9h ago" },
+    ]);
+
+    // Simulated Uptime
+    const fakeBootTime = Date.now() / 1000 - 3600 * 18.5;
+    setInterval(function() { updateUptime(fakeBootTime); }, 60000);
+    updateUptime(fakeBootTime);
+
+    // Load YouTube player with a chill playlist
+    loadPlayer("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
+  }
+
+
+  // ═══════════════════════════════════════════════════════════════
+  // INIT
+  // ═══════════════════════════════════════════════════════════════
+
+  function init() {
+    if (IS_PYTONIUM) {
+      initPytonium();
+    } else {
+      initSimulation();
+    }
+  }
+
+  if (typeof Pytonium !== "undefined" && window.PytoniumReady) {
+    init();
+  } else if (typeof Pytonium !== "undefined") {
+    window.addEventListener("PytoniumReady", init);
+  } else {
+    // Browser mode — start simulation
+    window.addEventListener("DOMContentLoaded", init);
+  }
+</script>
+</body>
+</html>

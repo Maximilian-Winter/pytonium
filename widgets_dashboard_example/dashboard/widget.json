@@ -1,0 +1,33 @@
+{
+  "name": "pythonium-dashboard",
+  "version": "1.0.0",
+  "description": "Full system dashboard with CPU, network, memory, weather, news, and media player",
+  "entry": "index.html",
+
+  "window": {
+    "mode": "dashboard",
+    "transparent_background": true,
+    "show_in_taskbar": false
+  },
+
+  "permissions": [
+    "system.cpu",
+    "system.memory",
+    "system.disk",
+    "system.network",
+    "system.processes",
+    "system.boot_time",
+    "network.http"
+  ],
+
+  "state_namespaces": ["system", "weather", "news"],
+  "hot_reload": true,
+
+  "config": {
+    "youtube_playlist": "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+    "weather_location": "Königswinter,DE",
+    "news_sources": ["tech", "science", "world"],
+    "refresh_interval_weather": 1800,
+    "refresh_interval_news": 600
+  }
+}
