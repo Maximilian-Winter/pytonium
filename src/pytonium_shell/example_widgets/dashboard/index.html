@@ -5,11 +5,11 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
         background: transparent;
-        font-family: var(--shell-font, 'Segoe UI', sans-serif);
-        color: var(--shell-foreground, #c0caf5);
+        font-family: 'Segoe UI', -apple-system, sans-serif;
+        color: #c0caf5;
         overflow: hidden;
         opacity: 0;
-        transition: opacity 0.25s ease;
+        transition: opacity 0.3s ease;
     }
     body.fade-in { opacity: 1; }
     body.fade-out { opacity: 0; }
@@ -17,226 +17,543 @@
     .overlay {
         width: 100vw;
         height: 100vh;
-        background: rgba(15, 15, 25, 0.82);
+        background: rgba(10, 10, 18, 0.88);
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: auto 1fr 1fr;
+        gap: 20px;
+        padding: 40px 48px;
+    }
+
+    /* ── Header row spans full width ── */
+    .header {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .header-left { display: flex; align-items: baseline; gap: 20px; }
+    .clock { font-size: 56px; font-weight: 200; letter-spacing: 3px; }
+    .clock-seconds { font-size: 24px; font-weight: 300; color: #565f89; margin-left: 4px; }
+    .date-line { font-size: 16px; color: #565f89; letter-spacing: 1px; }
+    .header-right { text-align: right; }
+    .sys-info { font-size: 12px; color: #414868; line-height: 1.6; }
+
+    /* ── Card base ── */
+    .card {
+        background: rgba(26, 27, 42, 0.75);
+        border: 1px solid rgba(255,255,255,0.04);
+        border-radius: 14px;
+        padding: 20px;
         display: flex;
         flex-direction: column;
+    }
+    .card-header {
+        display: flex;
+        justify-content: space-between;
         align-items: center;
-        justify-content: center;
-        padding: 60px;
-    }
-
-    .header {
-        text-align: center;
-        margin-bottom: 48px;
-    }
-    .clock {
-        font-size: 72px;
-        font-weight: 200;
-        letter-spacing: 4px;
-        color: #c0caf5;
-    }
-    .date-line {
-        font-size: 18px;
-        color: var(--shell-muted, #565f89);
-        margin-top: 8px;
-        letter-spacing: 2px;
-    }
-
-    .cards {
-        display: grid;
-        grid-template-columns: repeat(4, 240px);
-        gap: 24px;
-    }
-    .card {
-        background: rgba(30, 32, 48, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 16px;
-        padding: 24px;
-        text-align: center;
+        margin-bottom: 14px;
     }
     .card-title {
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 1.5px;
-        color: var(--shell-muted, #565f89);
-        margin-bottom: 16px;
+        color: #565f89;
+        font-weight: 600;
     }
-    .card-value {
-        font-size: 40px;
+    .card-badge {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    /* ── CPU card ── */
+    .cpu-value { font-size: 36px; font-weight: 300; color: #7aa2f7; margin-bottom: 12px; }
+    .cores-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+        gap: 4px;
+        flex: 1;
+    }
+    .core-bar {
+        background: rgba(122, 162, 247, 0.1);
+        border-radius: 4px;
+        position: relative;
+        min-height: 32px;
+        overflow: hidden;
+    }
+    .core-fill {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, #7aa2f7, #89b4fa);
+        border-radius: 4px;
+        transition: height 0.5s ease;
+    }
+    .core-label {
+        position: absolute;
+        bottom: 2px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 9px;
+        color: rgba(255,255,255,0.3);
+    }
+
+    /* ── Memory card ── */
+    .mem-value { font-size: 36px; font-weight: 300; color: #bb9af7; }
+    .mem-detail { font-size: 13px; color: #565f89; margin-top: 4px; margin-bottom: 14px; }
+    .mem-ring-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+    }
+    .ring-svg { width: 120px; height: 120px; }
+    .ring-track { fill: none; stroke: rgba(187, 154, 247, 0.1); stroke-width: 8; }
+    .ring-fill {
+        fill: none;
+        stroke: #bb9af7;
+        stroke-width: 8;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.5s ease;
+    }
+    .ring-text {
+        font-size: 20px;
         font-weight: 300;
+        fill: #bb9af7;
+        text-anchor: middle;
+        dominant-baseline: central;
     }
-    .card-sub {
-        font-size: 13px;
-        color: var(--shell-muted, #565f89);
-        margin-top: 8px;
+
+    /* ── Disk card ── */
+    .disk-list { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .disk-item { }
+    .disk-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        margin-bottom: 4px;
     }
-    .bar-bg {
+    .disk-name { color: #9ece6a; }
+    .disk-pct { color: #565f89; }
+    .disk-bar-bg {
         width: 100%;
-        height: 4px;
-        background: rgba(255, 255, 255, 0.06);
-        border-radius: 2px;
-        margin-top: 16px;
+        height: 6px;
+        background: rgba(158, 206, 106, 0.1);
+        border-radius: 3px;
     }
-    .bar-fill {
+    .disk-bar-fill {
         height: 100%;
-        border-radius: 2px;
+        background: linear-gradient(to right, #9ece6a, #73daca);
+        border-radius: 3px;
         transition: width 0.5s ease;
     }
+    .disk-size { font-size: 11px; color: #414868; margin-top: 2px; }
 
-    .cpu .card-value { color: var(--shell-accent, #7aa2f7); }
-    .cpu .bar-fill { background: var(--shell-accent, #7aa2f7); }
+    /* ── Network card ── */
+    .net-stats { display: flex; gap: 24px; margin-bottom: 14px; }
+    .net-stat { }
+    .net-direction { font-size: 11px; color: #565f89; text-transform: uppercase; letter-spacing: 1px; }
+    .net-rate { font-size: 24px; font-weight: 300; margin-top: 2px; }
+    .net-rate.down { color: #f7768e; }
+    .net-rate.up { color: #ff9e64; }
+    .net-total { font-size: 11px; color: #414868; margin-top: 2px; }
+    .net-graph-container { flex: 1; position: relative; min-height: 60px; }
+    .net-graph {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+    }
 
-    .mem .card-value { color: var(--shell-accent2, #bb9af7); }
-    .mem .bar-fill { background: var(--shell-accent2, #bb9af7); }
+    /* ── Processes card ── */
+    .proc-table { width: 100%; font-size: 12px; }
+    .proc-table th {
+        text-align: left;
+        color: #565f89;
+        font-weight: 500;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .proc-table th:nth-child(3),
+    .proc-table th:nth-child(4) { text-align: right; }
+    .proc-table td {
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.02);
+    }
+    .proc-table td:nth-child(3),
+    .proc-table td:nth-child(4) { text-align: right; font-variant-numeric: tabular-nums; }
+    .proc-name { color: #a9b1d6; }
+    .proc-pid { color: #414868; font-size: 11px; }
+    .proc-cpu { color: #7aa2f7; }
+    .proc-mem { color: #bb9af7; }
 
-    .disk .card-value { color: var(--shell-success, #9ece6a); }
-    .disk .bar-fill { background: var(--shell-success, #9ece6a); }
+    /* ── Battery / extra info ── */
+    .battery-row {
+        grid-column: 1 / -1;
+        display: none;  /* shown by JS if battery exists */
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+    }
+    .battery-icon { font-size: 18px; }
+    .battery-pct { font-size: 14px; color: #9ece6a; }
+    .battery-status { font-size: 12px; color: #565f89; }
 
-    .net .card-value { color: #f7768e; }
-
+    /* ── Hint ── */
     .hint {
         position: fixed;
-        bottom: 24px;
+        bottom: 16px;
         left: 50%;
         transform: translateX(-50%);
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.2);
+        font-size: 11px;
+        color: rgba(255,255,255,0.15);
         letter-spacing: 1px;
     }
 </style>
 </head>
 <body>
 <div class="overlay">
+    <!-- Header -->
     <div class="header">
-        <div class="clock" id="clock">--:--</div>
-        <div class="date-line" id="date-line">---</div>
+        <div class="header-left">
+            <div>
+                <span class="clock" id="clock">--:--</span><span class="clock-seconds" id="clock-sec">:--</span>
+            </div>
+            <div class="date-line" id="date-line">---</div>
+        </div>
+        <div class="header-right">
+            <div class="sys-info" id="sys-info">Loading...</div>
+        </div>
     </div>
 
-    <div class="cards">
-        <div class="card cpu">
-            <div class="card-title">CPU</div>
-            <div class="card-value" id="cpu-val">0%</div>
-            <div class="bar-bg"><div class="bar-fill" id="cpu-bar" style="width: 0%"></div></div>
+    <!-- CPU -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">CPU</span>
+            <span class="card-badge" id="cpu-badge" style="background:rgba(122,162,247,0.15);color:#7aa2f7;">0%</span>
         </div>
-        <div class="card mem">
-            <div class="card-title">Memory</div>
-            <div class="card-value" id="mem-val">0%</div>
-            <div class="card-sub" id="mem-sub">-</div>
-            <div class="bar-bg"><div class="bar-fill" id="mem-bar" style="width: 0%"></div></div>
+        <div class="cpu-value" id="cpu-val">0%</div>
+        <div class="cores-grid" id="cores-grid"></div>
+    </div>
+
+    <!-- Memory -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Memory</span>
+            <span class="card-badge" id="mem-badge" style="background:rgba(187,154,247,0.15);color:#bb9af7;">0%</span>
         </div>
-        <div class="card disk">
-            <div class="card-title">Disk</div>
-            <div class="card-value" id="disk-val">0%</div>
-            <div class="card-sub" id="disk-sub">-</div>
-            <div class="bar-bg"><div class="bar-fill" id="disk-bar" style="width: 0%"></div></div>
+        <div class="mem-value" id="mem-val">0%</div>
+        <div class="mem-detail" id="mem-detail">-</div>
+        <div class="mem-ring-container">
+            <svg class="ring-svg" viewBox="0 0 120 120">
+                <circle class="ring-track" cx="60" cy="60" r="50"/>
+                <circle class="ring-fill" id="mem-ring" cx="60" cy="60" r="50"
+                    stroke-dasharray="314.16" stroke-dashoffset="314.16"
+                    transform="rotate(-90 60 60)"/>
+                <text class="ring-text" x="60" y="60" id="mem-ring-text">0%</text>
+            </svg>
         </div>
-        <div class="card net">
-            <div class="card-title">Network</div>
-            <div class="card-value" id="net-val">-</div>
-            <div class="card-sub" id="net-sub">-</div>
+    </div>
+
+    <!-- Network -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Network</span>
         </div>
+        <div class="net-stats">
+            <div class="net-stat">
+                <div class="net-direction">Download</div>
+                <div class="net-rate down" id="net-down-rate">0 B/s</div>
+                <div class="net-total" id="net-down-total">-</div>
+            </div>
+            <div class="net-stat">
+                <div class="net-direction">Upload</div>
+                <div class="net-rate up" id="net-up-rate">0 B/s</div>
+                <div class="net-total" id="net-up-total">-</div>
+            </div>
+        </div>
+        <div class="net-graph-container">
+            <svg class="net-graph" id="net-graph" preserveAspectRatio="none"></svg>
+        </div>
+    </div>
+
+    <!-- Disks -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Disks</span>
+        </div>
+        <div class="disk-list" id="disk-list">
+            <div class="disk-item">
+                <div class="disk-label"><span class="disk-name">C:\</span><span class="disk-pct" id="disk-pct-0">0%</span></div>
+                <div class="disk-bar-bg"><div class="disk-bar-fill" id="disk-bar-0" style="width:0%"></div></div>
+                <div class="disk-size" id="disk-size-0">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Processes -->
+    <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+            <span class="card-title">Top Processes</span>
+            <span class="card-badge" style="background:rgba(255,255,255,0.05);color:#565f89;" id="proc-count">-</span>
+        </div>
+        <table class="proc-table">
+            <thead><tr><th style="width:40%">Name</th><th>PID</th><th>CPU %</th><th>MEM %</th></tr></thead>
+            <tbody id="proc-body"></tbody>
+        </table>
     </div>
 </div>
 
-<div class="hint">Ctrl + Alt + D to toggle</div>
+<div class="hint">CTRL + ALT + D</div>
 
 <script>
-var memTotal = 0;
-var diskTotal = 0;
-var lastNetSent = 0;
-var lastNetRecv = 0;
+/* ── State ── */
+var memTotal = 0, memUsed = 0, diskTotal = 0;
+var lastNetSent = 0, lastNetRecv = 0;
+var netDownHistory = [], netUpHistory = [];
+var NET_HISTORY_LEN = 60;
+var dayStr = "", dateStr = "";
 
-function formatBytes(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
-    return (bytes / 1073741824).toFixed(1) + ' GB';
+/* ── Helpers ── */
+function fmt(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + " MB";
+    return (bytes / 1073741824).toFixed(1) + " GB";
+}
+function fmtRate(bytes) {
+    if (bytes < 1024) return bytes + " B/s";
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB/s";
+    return (bytes / 1048576).toFixed(1) + " MB/s";
 }
 
-function formatRate(bytes) {
-    if (bytes < 1024) return bytes + ' B/s';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB/s';
-    return (bytes / 1048576).toFixed(1) + ' MB/s';
-}
-
+/* ── Init ── */
 function init() {
-    Pytonium.appState.registerForStateUpdates(
-        "dashDatetime", ["datetime"], true, true
-    );
-    Pytonium.appState.registerForStateUpdates(
-        "dashSystem", ["system"], true, true
-    );
+    Pytonium.appState.registerForStateUpdates("dashDT", ["datetime"], true, true);
+    Pytonium.appState.registerForStateUpdates("dashSys", ["system"], true, true);
 
-    document.addEventListener("dashDatetime", function(e) {
-        var key = e.detail.key;
-        var value = e.detail.value;
-        if (key === "time") {
-            document.getElementById("clock").textContent = value;
-        }
-        if (key === "date" || key === "day") {
-            updateDateLine();
-        }
-    });
+    document.addEventListener("dashDT", onDateTime);
+    document.addEventListener("dashSys", onSystem);
 
-    document.addEventListener("dashSystem", function(e) {
-        var key = e.detail.key;
-        var value = e.detail.value;
-
-        if (key === "cpu_avg") {
-            var pct = Math.round(value);
-            document.getElementById("cpu-val").textContent = pct + "%";
-            document.getElementById("cpu-bar").style.width = pct + "%";
-        }
-        if (key === "mem_percent") {
-            var pct = Math.round(value);
-            document.getElementById("mem-val").textContent = pct + "%";
-            document.getElementById("mem-bar").style.width = pct + "%";
-        }
-        if (key === "mem_total") { memTotal = value; updateMemSub(); }
-        if (key === "mem_used") { updateMemSub(); }
-        if (key === "disk_percent") {
-            var pct = Math.round(value);
-            document.getElementById("disk-val").textContent = pct + "%";
-            document.getElementById("disk-bar").style.width = pct + "%";
-        }
-        if (key === "disk_total") { diskTotal = value; updateDiskSub(); }
-        if (key === "disk_used") { updateDiskSub(); }
-        if (key === "net_sent") {
-            var delta = lastNetSent > 0 ? value - lastNetSent : 0;
-            lastNetSent = value;
-            document.getElementById("net-val").textContent = formatRate(delta);
-            document.getElementById("net-sub").textContent =
-                "Up: " + formatBytes(value);
-        }
-        if (key === "net_recv") {
-            var delta = lastNetRecv > 0 ? value - lastNetRecv : 0;
-            lastNetRecv = value;
-            document.getElementById("net-sub").textContent =
-                "Down: " + formatRate(delta) + " / Up: " + formatRate(0);
-            // Simplified: just show total received
-            document.getElementById("net-val").textContent = formatRate(delta);
-            document.getElementById("net-sub").textContent =
-                "Total: " + formatBytes(value);
-        }
-    });
+    loadSystemInfo();
+    loadDisks();
+    pollProcesses();
+    setInterval(pollProcesses, 3000);
 }
 
+/* ── Date/Time ── */
+function onDateTime(e) {
+    var k = e.detail.key, v = e.detail.value;
+    if (k === "time") document.getElementById("clock").textContent = v;
+    if (k === "time_seconds") {
+        var sec = v.split(":")[2] || "--";
+        document.getElementById("clock-sec").textContent = ":" + sec;
+    }
+    if (k === "day") { dayStr = v; updateDateLine(); }
+    if (k === "date") { dateStr = v; updateDateLine(); }
+}
 function updateDateLine() {
-    // Will be filled by state updates
-}
-
-function updateMemSub() {
-    if (memTotal > 0) {
-        document.getElementById("mem-sub").textContent =
-            formatBytes(memTotal) + " total";
+    if (dayStr || dateStr) {
+        document.getElementById("date-line").textContent = dayStr + "  ·  " + dateStr;
     }
 }
 
-function updateDiskSub() {
+/* ── System data ── */
+function onSystem(e) {
+    var k = e.detail.key, v = e.detail.value;
+
+    // CPU
+    if (k === "cpu_avg") {
+        var pct = Math.round(v);
+        document.getElementById("cpu-val").textContent = pct + "%";
+        document.getElementById("cpu-badge").textContent = pct + "%";
+    }
+    if (k === "cpu_percent") updateCores(v);
+
+    // Memory
+    if (k === "mem_percent") {
+        var pct = Math.round(v);
+        document.getElementById("mem-val").textContent = pct + "%";
+        document.getElementById("mem-badge").textContent = pct + "%";
+        document.getElementById("mem-ring-text").textContent = pct + "%";
+        var circumference = 314.16;
+        document.getElementById("mem-ring").setAttribute(
+            "stroke-dashoffset", circumference * (1 - v / 100)
+        );
+    }
+    if (k === "mem_total") { memTotal = v; updateMemDetail(); }
+    if (k === "mem_used") { memUsed = v; updateMemDetail(); }
+
+    // Disk (from system services)
+    if (k === "disk_percent") {
+        document.getElementById("disk-pct-0").textContent = Math.round(v) + "%";
+        document.getElementById("disk-bar-0").style.width = v + "%";
+    }
+    if (k === "disk_total") { diskTotal = v; updateDiskSize(); }
+    if (k === "disk_used") { updateDiskSize(); }
+
+    // Network
+    if (k === "net_recv") {
+        var delta = lastNetRecv > 0 ? v - lastNetRecv : 0;
+        lastNetRecv = v;
+        document.getElementById("net-down-rate").textContent = fmtRate(delta);
+        document.getElementById("net-down-total").textContent = "Total: " + fmt(v);
+        netDownHistory.push(delta);
+        if (netDownHistory.length > NET_HISTORY_LEN) netDownHistory.shift();
+        drawNetGraph();
+    }
+    if (k === "net_sent") {
+        var delta = lastNetSent > 0 ? v - lastNetSent : 0;
+        lastNetSent = v;
+        document.getElementById("net-up-rate").textContent = fmtRate(delta);
+        document.getElementById("net-up-total").textContent = "Total: " + fmt(v);
+        netUpHistory.push(delta);
+        if (netUpHistory.length > NET_HISTORY_LEN) netUpHistory.shift();
+    }
+
+    // Battery
+    if (k === "battery_percent") {
+        var el = document.getElementById("battery-row");
+        if (el) { el.style.display = "flex"; }
+    }
+}
+
+function updateMemDetail() {
+    if (memTotal > 0 && memUsed > 0) {
+        document.getElementById("mem-detail").textContent =
+            fmt(memUsed) + " / " + fmt(memTotal);
+    }
+}
+
+function updateDiskSize() {
     if (diskTotal > 0) {
-        document.getElementById("disk-sub").textContent =
-            formatBytes(diskTotal) + " total";
+        document.getElementById("disk-size-0").textContent = fmt(diskTotal) + " total";
     }
+}
+
+/* ── Per-core CPU bars ── */
+var coresInitialized = false;
+function updateCores(percents) {
+    var grid = document.getElementById("cores-grid");
+    if (!coresInitialized) {
+        grid.innerHTML = "";
+        for (var i = 0; i < percents.length; i++) {
+            var bar = document.createElement("div");
+            bar.className = "core-bar";
+            bar.innerHTML =
+                '<div class="core-fill" id="core-' + i + '" style="height:0%"></div>' +
+                '<div class="core-label">' + i + '</div>';
+            grid.appendChild(bar);
+        }
+        coresInitialized = true;
+    }
+    for (var i = 0; i < percents.length; i++) {
+        var el = document.getElementById("core-" + i);
+        if (el) el.style.height = Math.round(percents[i]) + "%";
+    }
+}
+
+/* ── Network sparkline ── */
+function drawNetGraph() {
+    var svg = document.getElementById("net-graph");
+    var w = svg.clientWidth || 300;
+    var h = svg.clientHeight || 60;
+    if (netDownHistory.length < 2) return;
+
+    var maxVal = Math.max.apply(null, netDownHistory.concat(netUpHistory)) || 1;
+    maxVal = Math.max(maxVal, 1024);  // minimum 1 KB scale
+
+    function makePath(data, color) {
+        var pts = [];
+        var len = data.length;
+        var step = w / (NET_HISTORY_LEN - 1);
+        var offset = (NET_HISTORY_LEN - len) * step;
+        for (var i = 0; i < len; i++) {
+            var x = offset + i * step;
+            var y = h - (data[i] / maxVal) * (h - 4);
+            pts.push((i === 0 ? "M" : "L") + x.toFixed(1) + "," + y.toFixed(1));
+        }
+        return '<path d="' + pts.join(" ") + '" fill="none" stroke="' + color + '" stroke-width="1.5" opacity="0.6"/>';
+    }
+
+    svg.innerHTML =
+        makePath(netDownHistory, "#f7768e") +
+        makePath(netUpHistory, "#ff9e64");
+}
+
+/* ── Backend: system info ── */
+function loadSystemInfo() {
+    try {
+        var json = widget.get_system_info();
+        var info = JSON.parse(json);
+        var lines = [];
+        if (info.os) lines.push(info.os);
+        if (info.cpu_count_physical) lines.push(info.cpu_count_physical + "C / " + info.cpu_count_logical + "T");
+        if (info.ram_total_gb) lines.push(info.ram_total_gb + " GB RAM");
+        document.getElementById("sys-info").innerHTML = lines.join("&ensp;·&ensp;");
+    } catch(e) {
+        document.getElementById("sys-info").textContent = "";
+    }
+}
+
+/* ── Backend: disk partitions ── */
+function loadDisks() {
+    try {
+        var json = widget.get_disk_partitions();
+        var parts = JSON.parse(json);
+        if (parts.length === 0) return;
+        var container = document.getElementById("disk-list");
+        container.innerHTML = "";
+        for (var i = 0; i < parts.length; i++) {
+            var p = parts[i];
+            var html =
+                '<div class="disk-item">' +
+                '  <div class="disk-label">' +
+                '    <span class="disk-name">' + p.mountpoint + '</span>' +
+                '    <span class="disk-pct">' + p.percent + '%</span>' +
+                '  </div>' +
+                '  <div class="disk-bar-bg"><div class="disk-bar-fill" style="width:' + p.percent + '%"></div></div>' +
+                '  <div class="disk-size">' + fmt(p.used) + ' / ' + fmt(p.total) + '</div>' +
+                '</div>';
+            container.innerHTML += html;
+        }
+    } catch(e) {}
+}
+
+/* ── Backend: processes ── */
+function pollProcesses() {
+    try {
+        var json = widget.get_top_processes(10);
+        var procs = JSON.parse(json);
+        var tbody = document.getElementById("proc-body");
+        var rows = "";
+        for (var i = 0; i < procs.length; i++) {
+            var p = procs[i];
+            rows +=
+                '<tr>' +
+                '<td class="proc-name">' + escapeHtml(p.name) + '</td>' +
+                '<td class="proc-pid">' + p.pid + '</td>' +
+                '<td class="proc-cpu">' + p.cpu.toFixed(1) + '</td>' +
+                '<td class="proc-mem">' + p.mem.toFixed(1) + '</td>' +
+                '</tr>';
+        }
+        tbody.innerHTML = rows;
+        document.getElementById("proc-count").textContent = procs.length + " shown";
+    } catch(e) {}
+}
+
+function escapeHtml(s) {
+    var d = document.createElement("div");
+    d.textContent = s;
+    return d.innerHTML;
 }
 
 if (window.PytoniumReady) { init(); }

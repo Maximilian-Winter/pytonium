@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Full-screen dashboard overlay toggled by hotkey",
   "entry": "index.html",
+  "backend": "backend.py",
 
   "window": {
     "mode": "dashboard",
