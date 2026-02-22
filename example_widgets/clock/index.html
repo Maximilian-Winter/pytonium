@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        background: transparent;
+        font-family: var(--shell-font, 'Segoe UI', 'Consolas', monospace);
+        color: var(--shell-foreground, #a9b1d6);
+        overflow: hidden;
+        -webkit-app-region: drag;
+    }
+    .container {
+        background: var(--shell-background, rgba(26, 27, 38, 0.85));
+        border: 1px solid var(--shell-border, rgba(255, 255, 255, 0.08));
+        border-radius: var(--shell-radius, 12px);
+        padding: 16px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
+    .time {
+        font-size: 32px;
+        font-weight: 300;
+        color: var(--shell-accent, #7aa2f7);
+        letter-spacing: 2px;
+    }
+    .date {
+        font-size: 12px;
+        color: var(--shell-muted, #565f89);
+        margin-top: 4px;
+        letter-spacing: 1px;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="time" id="time">--:--</div>
+    <div class="date" id="date">---</div>
+</div>
+
+<script>
+function init() {
+    Pytonium.appState.registerForStateUpdates(
+        "datetimeUpdate", ["datetime"], true, true
+    );
+
+    document.addEventListener("datetimeUpdate", function(event) {
+        var key = event.detail.key;
+        var value = event.detail.value;
+
+        if (key === "time") {
+            document.getElementById("time").textContent = value;
+        }
+        if (key === "date") {
+            document.getElementById("date").textContent = value;
+        }
+    });
+}
+
+if (window.PytoniumReady) { init(); }
+else { window.addEventListener("PytoniumReady", init); }
+</script>
+</body>
+</html>

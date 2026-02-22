@@ -719,6 +719,10 @@ cdef class Pytonium:
         """Enable/disable frameless window mode (must be called before initialize)."""
         self.pytonium_library.SetFramelessWindow(frameless)
 
+    def set_osr_mode(self, osr: bool):
+        """Enable/disable off-screen rendering mode for transparent windows (must be called before initialize)."""
+        self.pytonium_library.SetOsrMode(osr)
+
     def minimize_window(self):
         """Minimize the window."""
         self.pytonium_library.MinimizeWindow()

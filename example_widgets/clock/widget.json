@@ -1,0 +1,19 @@
+{
+  "name": "clock",
+  "version": "1.0.0",
+  "description": "A simple transparent clock overlay",
+  "entry": "index.html",
+
+  "window": {
+    "mode": "widget",
+    "width": 220,
+    "height": 100,
+    "position": { "x": 20, "y": 20 },
+    "always_on_top": true,
+    "transparent_background": true,
+    "show_in_taskbar": false
+  },
+
+  "state_namespaces": ["datetime"],
+  "hot_reload": true
+}

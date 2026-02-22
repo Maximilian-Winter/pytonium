@@ -9,6 +9,7 @@
 #if defined(OS_WIN)
 #include <Windows.h>
 #include "include/cef_sandbox_win.h"
+#include "osr_window_win.h"
 #endif
 
 
@@ -84,6 +85,13 @@ public:
 
     void SetFramelessWindow(bool frameless);
 
+    // OSR (off-screen rendering) mode for transparent windows
+    void SetOsrMode(bool osr);
+#if defined(OS_WIN)
+    int CreateBrowserOsr(const std::string& url, int width, int height,
+                         const std::string& iconPath, bool clickThrough);
+#endif
+
     // Window control methods for frameless windows
     void MinimizeWindow();
     void MaximizeWindow();
@@ -144,6 +152,11 @@ private:
     std::string m_CustomIconPath;
 
     bool m_FramelessWindow = false;
+    bool m_OsrMode = false;
+
+#if defined(OS_WIN)
+    CefRefPtr<OsrWindowWin> m_OsrWindow;
+#endif
 
     std::vector<JavascriptBinding> m_Javascript_Bindings;
     std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;

@@ -1,0 +1,20 @@
+{
+  "name": "system-monitor",
+  "version": "1.0.0",
+  "description": "CPU, memory, and disk usage monitor",
+  "entry": "index.html",
+
+  "window": {
+    "mode": "widget",
+    "width": 280,
+    "height": 200,
+    "position": { "x": 20, "y": 140 },
+    "always_on_top": true,
+    "transparent_background": true,
+    "show_in_taskbar": false
+  },
+
+  "permissions": ["system.cpu", "system.memory", "system.disk"],
+  "state_namespaces": ["system"],
+  "hot_reload": true
+}

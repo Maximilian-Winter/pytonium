@@ -35,6 +35,10 @@ set(PYTONIUM_LIBRARY_SRCS
 
 set(PYTONIUM_LIBRARY_SRCS_WINDOWS
         cef_wrapper_client_handler_win.cc
+        osr_window_win.h
+        osr_window_win.cc
+        osr_render_handler_dispatcher.h
+        osr_render_handler_dispatcher.cc
   )
 set(PYTONIUM_LIBRARY_SRCS_LINUX
         cef_wrapper_client_handler_linux.cc

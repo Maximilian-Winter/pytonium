@@ -42,6 +42,9 @@ namespace
 CefWrapperClientHandler::CefWrapperClientHandler(bool use_views)
     : use_views_(use_views), is_closing_(false)
 {
+#if defined(OS_WIN)
+    m_OsrDispatcher = new OsrRenderHandlerDispatcher();
+#endif
     g_instance.store(this, std::memory_order_release);
 }
 
@@ -256,6 +259,16 @@ void CefWrapperClientHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
 
     // Remove window subclassing
     PlatformRemoveSubclass(browser);
+
+    // Clean up OSR dispatcher if this was an OSR browser
+    {
+        auto it = m_BrowserStates.find(browser->GetIdentifier());
+        if (it != m_BrowserStates.end() && it->second.isOsr) {
+#if defined(OS_WIN)
+            m_OsrDispatcher->UnregisterWindow(browser->GetIdentifier());
+#endif
+        }
+    }
 
     // Remove per-browser state
     m_BrowserStates.erase(browser->GetIdentifier());

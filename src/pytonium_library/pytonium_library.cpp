@@ -149,6 +149,7 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
     }
 
     settings.no_sandbox = true;
+    settings.windowless_rendering_enabled = true;
 
     if(m_UseCustomCefSubPath)
     {
@@ -175,6 +176,12 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 int PytoniumLibrary::CreateBrowser(const std::string& url, int width, int height,
                                     bool frameless, const std::string& iconPath)
 {
+#if defined(OS_WIN)
+    if (m_OsrMode) {
+        return CreateBrowserOsr(url, width, height, iconPath, false);
+    }
+#endif
+
     // Get or create the shared client handler
     CefWrapperClientHandler* handler = CefWrapperClientHandler::GetInstance();
     if (!handler) {
@@ -633,6 +640,12 @@ void PytoniumLibrary::SetOnFullscreenChangeCallback(void (*callback)(void*, bool
 
 void* PytoniumLibrary::GetNativeWindowHandle()
 {
+#if defined(OS_WIN)
+    // For OSR browsers, return the layered window handle
+    if (m_OsrMode && m_OsrWindow) {
+        return reinterpret_cast<void*>(m_OsrWindow->GetHwnd());
+    }
+#endif
     if (!m_Browser || !m_Browser->GetHost()) {
         return nullptr;
     }
@@ -670,3 +683,118 @@ void PytoniumLibrary::ResizeWindow(int newWidth, int newHeight, int anchor)
                  SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 #endif
 }
+
+void PytoniumLibrary::SetOsrMode(bool osr) {
+    m_OsrMode = osr;
+}
+
+#if defined(OS_WIN)
+int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int height,
+                                       const std::string& iconPath, bool clickThrough)
+{
+    // Get or create the shared client handler
+    CefWrapperClientHandler* handler = CefWrapperClientHandler::GetInstance();
+    if (!handler) {
+        CefRefPtr<CefCommandLine> command_line = CefCommandLine::GetGlobalCommandLine();
+        bool use_views = command_line->HasSwitch("use-views");
+        new CefWrapperClientHandler(use_views);
+        handler = CefWrapperClientHandler::GetInstance();
+    }
+
+    // Create the OSR window (layered Win32 window)
+    m_OsrWindow = new OsrWindowWin(width, height, clickThrough);
+    HWND osrHwnd = m_OsrWindow->Create();
+    if (!osrHwnd) {
+        std::cerr << "CreateBrowserOsr: Failed to create OSR window!" << std::endl;
+        m_OsrWindow = nullptr;
+        return -1;
+    }
+
+    // Configure browser settings for OSR
+    cef_browser_settings_t cefBrowserSettings;
+    memset(&cefBrowserSettings, 0, sizeof(cef_browser_settings_t));
+    cefBrowserSettings.size = sizeof(cef_browser_settings_t);
+    cefBrowserSettings.windowless_frame_rate = 60;
+    cefBrowserSettings.background_color = 0x00000000;  // Fully transparent
+    CefBrowserSettings browser_settings(cefBrowserSettings);
+
+    // Configure window info for windowless (OSR) rendering
+    CefWindowInfo window_info;
+    window_info.SetAsWindowless(osrHwnd);
+    window_info.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
+
+    // Serialize bindings into extra_info for the renderer
+    CefRefPtr<CefDictionaryValue> extra = CefDictionaryValue::Create();
+    if (!m_Javascript_Bindings.empty())
+    {
+        CefRefPtr<CefListValue> bindings = CefListValue::Create();
+        bindings->SetSize(m_Javascript_Bindings.size());
+        int listIndex = 0;
+        for (const auto &binding: m_Javascript_Bindings)
+        {
+            CefRefPtr<CefDictionaryValue> dic = CefDictionaryValue::Create();
+            dic->SetString("MessageTopic", binding.functionName);
+            dic->SetString("JavascriptObject", binding.JavascriptObject);
+            CefRefPtr<CefBinaryValue> functionPointer = CefBinaryValue::Create(
+                    &binding.function, sizeof(binding.function));
+            dic->SetBinary("FunctionPointer", functionPointer);
+            bindings->SetDictionary(listIndex, dic);
+            listIndex++;
+        }
+        extra->SetList("JavascriptBindings", bindings);
+        extra->SetInt("JavascriptBindingsSize",
+                      static_cast<int>(m_Javascript_Bindings.size()));
+    }
+
+    if (!m_Javascript_Python_Bindings.empty())
+    {
+        CefRefPtr<CefListValue> bindings = CefListValue::Create();
+        bindings->SetSize(m_Javascript_Python_Bindings.size());
+        int listIndex = 0;
+        for (const auto &binding: m_Javascript_Python_Bindings)
+        {
+            CefRefPtr<CefDictionaryValue> dic = CefDictionaryValue::Create();
+            dic->SetString("MessageTopic", binding.FunctionName);
+            dic->SetString("JavascriptObject", binding.JavascriptObject);
+            dic->SetBool("ReturnsValue", binding.ReturnsValue);
+            CefRefPtr<CefBinaryValue> handlerFunc = CefBinaryValue::Create(
+                    &binding.HandlerFunction, sizeof(binding.HandlerFunction));
+            CefRefPtr<CefBinaryValue> pythonObject = CefBinaryValue::Create(
+                    &binding.PythonCallbackObject, sizeof(binding.PythonCallbackObject));
+            dic->SetBinary("HandlerFunction", handlerFunc);
+            dic->SetBinary("PythonFunctionObject", pythonObject);
+            bindings->SetDictionary(listIndex, dic);
+            listIndex++;
+        }
+        extra->SetList("JavascriptPythonBindings", bindings);
+        extra->SetInt("JavascriptPythonBindingsSize",
+                      static_cast<int>(m_Javascript_Python_Bindings.size()));
+    }
+
+    m_Browser = CefBrowserHost::CreateBrowserSync(window_info, handler, url,
+                                                   browser_settings, extra, nullptr);
+    if (!m_Browser) {
+        std::cerr << "CreateBrowserOsr: CreateBrowserSync failed!" << std::endl;
+        m_OsrWindow->Destroy();
+        m_OsrWindow = nullptr;
+        return -1;
+    }
+
+    m_BrowserId = m_Browser->GetIdentifier();
+    s_InstanceCount++;
+
+    // Connect the browser to the OSR window
+    m_OsrWindow->SetBrowser(m_Browser);
+
+    // Register with the OSR dispatcher
+    handler->GetOsrDispatcher()->RegisterWindow(m_BrowserId, m_OsrWindow);
+
+    // Register per-browser bindings and mark as OSR
+    handler->RegisterBrowserBindings(m_BrowserId,
+        m_Javascript_Bindings, m_Javascript_Python_Bindings,
+        m_StateHandlerPythonBindings, m_ContextMenuBindings);
+    handler->GetBrowserState(m_BrowserId).isOsr = true;
+
+    return m_BrowserId;
+}
+#endif

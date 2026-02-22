@@ -12,12 +12,17 @@
 #include "application_state_python.h"
 #include "application_context_menu_binding.h"
 
+#if defined(OS_WIN)
+#include "osr_render_handler_dispatcher.h"
+#endif
+
 // Callback typedefs for window events
 using window_event_string_callback_ptr = void (*)(void* user_data, const char* value);
 using window_event_bool_callback_ptr = void (*)(void* user_data, bool value);
 
 // Per-browser state stored in the shared client handler, keyed by browser ID.
 struct PerBrowserState {
+    bool isOsr = false;
     bool isReadyToExecuteJs = false;
     std::string currentContextMenuNamespace = "app";
     bool showDebugContextMenu = false;
@@ -89,6 +94,14 @@ public:
 
     CefRefPtr<CefLoadHandler> GetLoadHandler() override
     { return this; }
+
+#if defined(OS_WIN)
+    CefRefPtr<CefRenderHandler> GetRenderHandler() override
+    { return m_OsrDispatcher; }
+
+    OsrRenderHandlerDispatcher* GetOsrDispatcher()
+    { return m_OsrDispatcher.get(); }
+#endif
 
     // CefDisplayHandler methods:
     void OnTitleChange(CefRefPtr<CefBrowser> browser,
@@ -189,6 +202,11 @@ private:
 
     // Per-browser state map, keyed by browser->GetIdentifier()
     std::unordered_map<int, PerBrowserState> m_BrowserStates;
+
+#if defined(OS_WIN)
+    // OSR render handler dispatcher (routes OnPaint by browser ID)
+    CefRefPtr<OsrRenderHandlerDispatcher> m_OsrDispatcher;
+#endif
 
     // Include the default reference counting implementation.
 IMPLEMENT_REFCOUNTING(CefWrapperClientHandler);

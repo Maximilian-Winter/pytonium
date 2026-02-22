@@ -110,6 +110,9 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         void AddCustomScheme(string schemeIdentifier, string contentRootFolder);
         void AddMimeTypeMapping(string fileExtension, string mimeType);
         
+        # OSR (off-screen rendering) mode for transparent windows
+        void SetOsrMode(bool osr);
+
         # Window control methods
         void SetFramelessWindow(bool frameless);
         void MinimizeWindow();
