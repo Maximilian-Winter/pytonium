@@ -1,7 +1,4 @@
 
-
-
-
 #include "cef_wrapper_app.h"
 
 #include <utility>
@@ -14,14 +11,8 @@
 #include "javascript_bindings_handler.h"
 #include "custom_protocol_scheme_handler.h"
 
-CefRefPtr<CefBrowser> CefWrapperApp::GetBrowser()
-{
-    return CefWrapperBrowserProcessHandler::GetInstance()->Browser;
-}
-
 void CefWrapperApp::OnBeforeCommandLineProcessing(
     const CefString &process_type, CefRefPtr<CefCommandLine> command_line) {
-  //command_line->AppendSwitch("allow-file-access-from-files");
 }
 
 CefWrapperApp::CefWrapperApp(std::string start_url, std::vector<JavascriptBinding> javascript_bindings, std::vector<JavascriptPythonBinding> javascript_python_bindings, std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings,  std::vector<ContextMenuBinding> contextMenuBindings, std::vector<CefCustomScheme> customSchemes, std::unordered_map<std::string, std::string> mimeTypeMap, bool frameless) {
@@ -35,14 +26,10 @@ CefWrapperApp::CefWrapperApp(std::string start_url, std::vector<JavascriptBindin
   CefWrapperBrowserProcessHandler::SetFramelessWindow(frameless);
 }
 
-void CefWrapperApp::LoadUrl(std::string url) {
-  CefWrapperBrowserProcessHandler::LoadUrl(std::move(url));
-}
 void CefWrapperApp::OnRegisterCustomSchemes(
     CefRawPtr<CefSchemeRegistrar> registrar) {
     for (const auto& scheme: m_CustomSchemes)
     {
         registrar->AddCustomScheme(scheme.SchemeIdentifier, CEF_SCHEME_OPTION_STANDARD | CEF_SCHEME_OPTION_CORS_ENABLED);
     }
-
 }

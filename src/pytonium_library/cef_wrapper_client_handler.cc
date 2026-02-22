@@ -39,26 +39,10 @@ namespace
 
 } // namespace
 
-CefWrapperClientHandler::CefWrapperClientHandler(
-        bool use_views, std::vector<JavascriptBinding> javascript_bindings,
-        std::vector<JavascriptPythonBinding> javascript_python_bindings,
-        std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings, std::vector<ContextMenuBinding> contextMenuBindings) : use_views_(use_views), is_closing_(false)
+CefWrapperClientHandler::CefWrapperClientHandler(bool use_views)
+    : use_views_(use_views), is_closing_(false)
 {
-    DCHECK(!g_instance);
-    m_JavascriptBindings = std::move(javascript_bindings);
-    m_JavascriptPythonBindings = std::move(javascript_python_bindings);
-    m_StateHandlerPythonBindings = std::move(stateHandlerPythonBindings);
-    m_ContextMenuBindings = std::move(contextMenuBindings);
-
-    for (const auto& contextMenuEntry: m_ContextMenuBindings)
-    {
-        m_ContextMenuBindingsMap[contextMenuEntry.Namespace].emplace_back(contextMenuEntry);
-    }
-
-    m_IsReadyToExecuteJs = false;
-    m_ShowDebugContextMenu = false;
     g_instance.store(this, std::memory_order_release);
-
 }
 
 CefWrapperClientHandler::~CefWrapperClientHandler()
@@ -69,11 +53,33 @@ CefWrapperClientHandler *CefWrapperClientHandler::GetInstance()
 {
     CefWrapperClientHandler* instance = g_instance.load(std::memory_order_acquire);
     if (!instance) {
-        // Single-instance limitation: only one Pytonium browser window is supported.
-        // A multi-instance refactor is planned for PytoniumShell.
         return nullptr;
     }
     return instance;
+}
+
+PerBrowserState& CefWrapperClientHandler::GetBrowserState(int browserId)
+{
+    return m_BrowserStates[browserId];
+}
+
+void CefWrapperClientHandler::RegisterBrowserBindings(int browserId,
+    std::vector<JavascriptBinding> jsBindings,
+    std::vector<JavascriptPythonBinding> jsPythonBindings,
+    std::vector<StateHandlerPythonBinding> stateBindings,
+    std::vector<ContextMenuBinding> contextMenuBindings)
+{
+    auto& state = GetBrowserState(browserId);
+    state.javascriptBindings = std::move(jsBindings);
+    state.javascriptPythonBindings = std::move(jsPythonBindings);
+    state.stateHandlerPythonBindings = std::move(stateBindings);
+    state.contextMenuBindings = std::move(contextMenuBindings);
+
+    state.contextMenuBindingsMap.clear();
+    for (const auto& entry : state.contextMenuBindings)
+    {
+        state.contextMenuBindingsMap[entry.Namespace].emplace_back(entry);
+    }
 }
 
 void CefWrapperClientHandler::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
@@ -82,7 +88,9 @@ void CefWrapperClientHandler::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
                                                   CefRefPtr<CefMenuModel> model)
 {
     CEF_REQUIRE_UI_THREAD();
-    if(!m_ShowDebugContextMenu)
+    auto& state = GetBrowserState(browser->GetIdentifier());
+
+    if(!state.showDebugContextMenu)
     {
         model->Clear();
     }
@@ -98,12 +106,10 @@ void CefWrapperClientHandler::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
         model->AddSeparator();
     }
 
-    for (const auto& contextMenuEntry: m_ContextMenuBindingsMap[m_CurrentContextMenuNamespace])
+    for (const auto& contextMenuEntry: state.contextMenuBindingsMap[state.currentContextMenuNamespace])
     {
         model->AddItem(contextMenuEntry.CommandId + CLIENT_ID_PYTONIUM_CUSTOM_FIRST, contextMenuEntry.DisplayName);
     }
-
-
 }
 
 bool CefWrapperClientHandler::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
@@ -113,6 +119,7 @@ bool CefWrapperClientHandler::OnContextMenuCommand(CefRefPtr<CefBrowser> browser
                                                    EventFlags event_flags)
 {
     CEF_REQUIRE_UI_THREAD();
+    auto& state = GetBrowserState(browser->GetIdentifier());
 
     switch (command_id)
     {
@@ -126,7 +133,7 @@ bool CefWrapperClientHandler::OnContextMenuCommand(CefRefPtr<CefBrowser> browser
             ShowDevTools(browser, CefPoint(params->GetXCoord(), params->GetYCoord()));
             return true;
         default:
-            m_ContextMenuBindingsMap[m_CurrentContextMenuNamespace][command_id-CLIENT_ID_PYTONIUM_CUSTOM_FIRST].OnContextMenuEntryClicked();
+            state.contextMenuBindingsMap[state.currentContextMenuNamespace][command_id-CLIENT_ID_PYTONIUM_CUSTOM_FIRST].OnContextMenuEntryClicked();
             return true;
     }
 }
@@ -179,9 +186,10 @@ void CefWrapperClientHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
     }
 
     // Fire user callback if set
-    if (m_OnTitleChangeCallback) {
+    auto& state = GetBrowserState(browser->GetIdentifier());
+    if (state.onTitleChangeCallback) {
         std::string titleStr = title.ToString();
-        m_OnTitleChangeCallback(m_OnTitleChangeUserData, titleStr.c_str());
+        state.onTitleChangeCallback(state.onTitleChangeUserData, titleStr.c_str());
     }
 }
 
@@ -190,10 +198,11 @@ void CefWrapperClientHandler::OnAddressChange(CefRefPtr<CefBrowser> browser,
                                                const CefString &url)
 {
     CEF_REQUIRE_UI_THREAD();
+    auto& state = GetBrowserState(browser->GetIdentifier());
 
-    if (m_OnAddressChangeCallback && frame->IsMain()) {
+    if (state.onAddressChangeCallback && frame->IsMain()) {
         std::string urlStr = url.ToString();
-        m_OnAddressChangeCallback(m_OnAddressChangeUserData, urlStr.c_str());
+        state.onAddressChangeCallback(state.onAddressChangeUserData, urlStr.c_str());
     }
 }
 
@@ -201,9 +210,10 @@ void CefWrapperClientHandler::OnFullscreenModeChange(CefRefPtr<CefBrowser> brows
                                                       bool fullscreen)
 {
     CEF_REQUIRE_UI_THREAD();
+    auto& state = GetBrowserState(browser->GetIdentifier());
 
-    if (m_OnFullscreenChangeCallback) {
-        m_OnFullscreenChangeCallback(m_OnFullscreenChangeUserData, fullscreen);
+    if (state.onFullscreenChangeCallback) {
+        state.onFullscreenChangeCallback(state.onFullscreenChangeUserData, fullscreen);
     }
 }
 
@@ -213,7 +223,11 @@ void CefWrapperClientHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 
     // Add to the list of existing browsers.
     browser_list_.push_back(browser);
-    
+    g_BrowserCount.fetch_add(1, std::memory_order_release);
+
+    // Initialize per-browser state
+    m_BrowserStates[browser->GetIdentifier()] = PerBrowserState{};
+
     // Subclass the window for resize border handling
     PlatformSubclassWindow(browser);
 }
@@ -243,6 +257,9 @@ void CefWrapperClientHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
     // Remove window subclassing
     PlatformRemoveSubclass(browser);
 
+    // Remove per-browser state
+    m_BrowserStates.erase(browser->GetIdentifier());
+
     // Remove from the list of existing browsers.
     BrowserList::iterator bit = browser_list_.begin();
     for (; bit != browser_list_.end(); ++bit)
@@ -253,7 +270,7 @@ void CefWrapperClientHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
             break;
         }
     }
-    g_IsRunning = false;
+    g_BrowserCount.fetch_sub(1, std::memory_order_release);
     if (browser_list_.empty())
     {
         // All browser windows have closed. Quit the application message loop.
@@ -367,46 +384,51 @@ void CefWrapperClientHandler::OnLoadEnd(CefRefPtr<CefBrowser> browser,
 {
 }
 
-bool CefWrapperClientHandler::IsReadyToExecuteJs()
-{ return m_IsReadyToExecuteJs; }
+bool CefWrapperClientHandler::IsReadyToExecuteJs(int browserId)
+{
+    auto it = m_BrowserStates.find(browserId);
+    if (it != m_BrowserStates.end()) {
+        return it->second.isReadyToExecuteJs;
+    }
+    return false;
+}
 
 void CefWrapperClientHandler::OnLoadStart(
         CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
         CefLoadHandler::TransitionType transition_type)
 {
-    m_IsReadyToExecuteJs = false;
+    GetBrowserState(browser->GetIdentifier()).isReadyToExecuteJs = false;
 }
 
 bool CefWrapperClientHandler::OnProcessMessageReceived(
         CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
         CefProcessId source_process, CefRefPtr<CefProcessMessage> message)
 {
+    auto& state = GetBrowserState(browser->GetIdentifier());
     const std::string &message_name = message->GetName();
+
     if (message_name == "javascript-binding")
     {
         CefRefPtr<CefListValue> argList = message->GetArgumentList();
         std::string funcName = argList->GetString(0);
         CefRefPtr<CefListValue> javascript_arg_types = argList->GetList(1);
         CefRefPtr<CefListValue> javascript_args = argList->GetList(2);
-        // void* args = nullptr;
         int argsSize = (int) javascript_args->GetSize();
 
         std::vector<CefValueWrapper> valueWrapper(argsSize);
-        for (int i = 0; i < (int) javascript_args->GetSize(); ++i)
+        for (int i = 0; i < argsSize; ++i)
         {
             std::string type = javascript_arg_types->GetString(i);
             valueWrapper[i] = CefValueWrapperHelper::ConvertCefValueToWrapper(javascript_args->GetValue(i));
         }
 
-
-        for (int i = 0; i < (int) m_JavascriptBindings.size(); ++i)
+        for (int i = 0; i < (int) state.javascriptBindings.size(); ++i)
         {
-            if (m_JavascriptBindings[i].functionName == funcName)
+            if (state.javascriptBindings[i].functionName == funcName)
             {
-                m_JavascriptBindings[i].function(argsSize, valueWrapper.data());
+                state.javascriptBindings[i].function(argsSize, valueWrapper.data());
             }
         }
-
 
         return true;
     } else if (message_name == "javascript-python-binding")
@@ -415,22 +437,20 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
         std::string funcName = argList->GetString(0);
         CefRefPtr<CefListValue> javascript_arg_types = argList->GetList(1);
         CefRefPtr<CefListValue> javascript_args = argList->GetList(2);
-        // void* args = nullptr;
         int argsSize = (int) javascript_args->GetSize();
 
         std::vector<CefValueWrapper> valueWrapper(argsSize);
-        for (int i = 0; i < (int) javascript_args->GetSize(); ++i)
+        for (int i = 0; i < argsSize; ++i)
         {
             std::string type = javascript_arg_types->GetString(i);
             valueWrapper[i] = CefValueWrapperHelper::ConvertCefValueToWrapper(javascript_args->GetValue(i));
         }
 
-
-        for (int i = 0; i < (int) m_JavascriptPythonBindings.size(); ++i)
+        for (int i = 0; i < (int) state.javascriptPythonBindings.size(); ++i)
         {
-            if (m_JavascriptPythonBindings[i].FunctionName == funcName)
+            if (state.javascriptPythonBindings[i].FunctionName == funcName)
             {
-                m_JavascriptPythonBindings[i].CallHandler(argsSize, valueWrapper.data(), argList->GetInt(3));
+                state.javascriptPythonBindings[i].CallHandler(argsSize, valueWrapper.data(), argList->GetInt(3));
                 break;
             }
         }
@@ -449,7 +469,7 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
             }
             CefValueWrapper wrap = CefValueWrapperHelper::ConvertCefValueToWrapper(argList->GetValue(2));
 
-            for (const auto &stateHandler: m_StateHandlerPythonBindings)
+            for (const auto &stateHandler: state.stateHandlerPythonBindings)
             {
                 stateHandler.UpdateState(namespaceName, key, wrap);
             }
@@ -461,8 +481,7 @@ bool CefWrapperClientHandler::OnProcessMessageReceived(
     } else if (message_name == "set-context-menu-namespace")
     {
         CefRefPtr<CefListValue> argList = message->GetArgumentList();
-
-        m_CurrentContextMenuNamespace = argList->GetString(0);
+        state.currentContextMenuNamespace = argList->GetString(0);
     }
     return false;
 }
@@ -471,49 +490,47 @@ void CefWrapperClientHandler::OnLoadingStateChange(
         CefRefPtr<CefBrowser> browser, bool isLoading, bool canGoBack,
         bool canGoForward)
 {
-    if (!isLoading)
+    GetBrowserState(browser->GetIdentifier()).isReadyToExecuteJs = !isLoading;
+}
+
+void CefWrapperClientHandler::SetCurrentContextMenuName(int browserId, const std::string& context_menu_namespace)
+{
+    GetBrowserState(browserId).currentContextMenuNamespace = context_menu_namespace;
+}
+
+void CefWrapperClientHandler::SetShowDebugContextMenu(int browserId, bool show)
+{
+    GetBrowserState(browserId).showDebugContextMenu = show;
+}
+
+void CefWrapperClientHandler::SetContextMenuBindings(int browserId, std::vector<ContextMenuBinding> contextMenuBindings)
+{
+    auto& state = GetBrowserState(browserId);
+    state.contextMenuBindings = std::move(contextMenuBindings);
+    state.contextMenuBindingsMap.clear();
+    for (const auto& contextMenuEntry: state.contextMenuBindings)
     {
-        m_IsReadyToExecuteJs = true;
-    } else
-    {
-        m_IsReadyToExecuteJs = false;
+        state.contextMenuBindingsMap[contextMenuEntry.Namespace].emplace_back(contextMenuEntry);
     }
 }
 
-void CefWrapperClientHandler::SetCurrentContextMenuName(const std::string& context_menu_namespace)
+void CefWrapperClientHandler::SetOnTitleChangeCallback(int browserId, window_event_string_callback_ptr callback, void* user_data)
 {
-    m_CurrentContextMenuNamespace = context_menu_namespace;
+    auto& state = GetBrowserState(browserId);
+    state.onTitleChangeCallback = callback;
+    state.onTitleChangeUserData = user_data;
 }
 
-void CefWrapperClientHandler::SetShowDebugContextMenu(bool show)
+void CefWrapperClientHandler::SetOnAddressChangeCallback(int browserId, window_event_string_callback_ptr callback, void* user_data)
 {
-    m_ShowDebugContextMenu = show;
+    auto& state = GetBrowserState(browserId);
+    state.onAddressChangeCallback = callback;
+    state.onAddressChangeUserData = user_data;
 }
 
-void CefWrapperClientHandler::SetContextMenuBindings(std::vector<ContextMenuBinding> contextMenuBindings)
+void CefWrapperClientHandler::SetOnFullscreenChangeCallback(int browserId, window_event_bool_callback_ptr callback, void* user_data)
 {
-    m_ContextMenuBindings = std::move(contextMenuBindings);
-    m_ContextMenuBindingsMap.clear();
-    for (const auto& contextMenuEntry: m_ContextMenuBindings)
-    {
-        m_ContextMenuBindingsMap[contextMenuEntry.Namespace].emplace_back(contextMenuEntry);
-    }
-}
-
-void CefWrapperClientHandler::SetOnTitleChangeCallback(window_event_string_callback_ptr callback, void* user_data)
-{
-    m_OnTitleChangeCallback = callback;
-    m_OnTitleChangeUserData = user_data;
-}
-
-void CefWrapperClientHandler::SetOnAddressChangeCallback(window_event_string_callback_ptr callback, void* user_data)
-{
-    m_OnAddressChangeCallback = callback;
-    m_OnAddressChangeUserData = user_data;
-}
-
-void CefWrapperClientHandler::SetOnFullscreenChangeCallback(window_event_bool_callback_ptr callback, void* user_data)
-{
-    m_OnFullscreenChangeCallback = callback;
-    m_OnFullscreenChangeUserData = user_data;
+    auto& state = GetBrowserState(browserId);
+    state.onFullscreenChangeCallback = callback;
+    state.onFullscreenChangeUserData = user_data;
 }

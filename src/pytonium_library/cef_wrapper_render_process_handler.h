@@ -1,12 +1,21 @@
 #ifndef CEF_WRAPPER_RENDER_PROCESS_HANDLER_H_
 #define CEF_WRAPPER_RENDER_PROCESS_HANDLER_H_
 
+#include <unordered_map>
 #include "include/cef_render_process_handler.h"
 #include "javascript_binding.h"
 #include "javascript_bindings_handler.h"
 #include "javascript_python_binding_handler.h"
 #include "application_state_javascript_handler.h"
 
+struct PerBrowserRendererState {
+    std::shared_ptr<ApplicationStateManager> applicationStateManager;
+    CefRefPtr<AppStateV8Handler> appStateV8Handler;
+    std::vector<JavascriptBinding> javascriptBindings;
+    std::vector<JavascriptPythonBinding> javascriptPythonBindings;
+    CefRefPtr<CefV8Handler> javascriptBindingHandler;
+    CefRefPtr<JavascriptPythonBindingsHandler> javascriptPythonBindingHandler;
+};
 
 class SimpleRenderProcessHandler : public CefRenderProcessHandler
 {
@@ -17,33 +26,26 @@ private:
     /* Private constructor to prevent instancing. */
     SimpleRenderProcessHandler();
 
+    std::unordered_map<int, PerBrowserRendererState> m_BrowserStates;
+
+    PerBrowserRendererState& GetState(int browserId);
+
 public:
     /* Static access method. */
     static CefRefPtr<SimpleRenderProcessHandler> getInstance();
-
-    static void
-    SetJavascriptBindings(std::vector<JavascriptBinding> javascript_bindings,
-                          std::vector<JavascriptPythonBinding> javascript_python_bindings);
-    //SimpleRenderProcessHandler::SimpleRenderProcessHandler(std::vector<JSNativeApi> nativeApi);
 
     void OnContextCreated(CefRefPtr<CefBrowser> browser,
                           CefRefPtr<CefFrame> frame,
                           CefRefPtr<CefV8Context> context) override;
 
-
     void OnBrowserCreated(CefRefPtr<CefBrowser> browser,
                           CefRefPtr<CefDictionaryValue> extra_info) override;
+
+    void OnBrowserDestroyed(CefRefPtr<CefBrowser> browser) override;
 
     bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefProcessId source_process,
                                   CefRefPtr<CefProcessMessage> message) override;
 
-    std::shared_ptr<ApplicationStateManager> m_ApplicationStateManager;
-    CefRefPtr<AppStateV8Handler> m_AppStateV8Handler;
-    std::vector<JavascriptBinding> m_Javascript_Bindings;
-    std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;
-    std::vector<JavascriptPythonEventBinding> m_Javascript_Python_Event_Bindings;
-    CefRefPtr<CefV8Handler> m_JavascriptBindingHandler;
-    CefRefPtr<JavascriptPythonBindingsHandler> m_JavascriptPythonBindingHandler;
 IMPLEMENT_REFCOUNTING(SimpleRenderProcessHandler);
 };
 

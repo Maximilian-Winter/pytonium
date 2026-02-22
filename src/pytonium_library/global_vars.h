@@ -3,6 +3,7 @@
 
 #include <atomic>
 
-inline std::atomic<bool> g_IsRunning{false};
+inline std::atomic<int> g_BrowserCount{0};
+inline bool g_CefInitialized = false;
 
 #endif // GLOBAL_VARS_H

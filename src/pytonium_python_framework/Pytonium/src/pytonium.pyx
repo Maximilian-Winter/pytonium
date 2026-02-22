@@ -617,17 +617,54 @@ cdef class Pytonium:
         """
         self.pytonium_library.SetShowDebugContextMenu(show)
 
+    def create_browser(self, url: str, width: int, height: int, frameless: bool = False, icon_path: str = "") -> int:
+        """Create an additional browser window (CEF must already be initialized).
+
+        Args:
+            url: The URL to load.
+            width: Window width in pixels.
+            height: Window height in pixels.
+            frameless: Whether the window should be frameless.
+            icon_path: Path to a custom icon file.
+
+        Returns:
+            The browser ID for the new window.
+        """
+        return self.pytonium_library.CreateBrowser(
+            url.encode("utf-8"), width, height, frameless, icon_path.encode("utf-8"))
+
+    def close_browser(self) -> None:
+        """Close this instance's browser window without shutting down CEF."""
+        self.pytonium_library.CloseBrowser()
+
+    def get_browser_id(self) -> int:
+        """Get the browser ID for this instance.
+
+        Returns:
+            The CEF browser identifier, or -1 if no browser is open.
+        """
+        return self.pytonium_library.GetBrowserId()
+
     def shutdown(self) -> None:
         """Shut down the Pytonium browser and CEF framework."""
         self.pytonium_library.ShutdownPytonium()
 
     def is_running(self) -> bool:
-        """Check if the browser is currently running.
+        """Check if this instance's browser is currently running.
 
         Returns:
             True if the browser window is open and running.
         """
-        return self.pytonium_library.IsRunning()
+        return self.pytonium_library.IsBrowserRunning()
+
+    @classmethod
+    def is_cef_initialized(cls) -> bool:
+        """Check if the CEF framework has been initialized.
+
+        Returns:
+            True if CEF has been initialized by any Pytonium instance.
+        """
+        return PytoniumLibrary.IsCefInitialized()
 
     def update_message_loop(self) -> None:
         """Process pending CEF messages. Call this in your main loop."""

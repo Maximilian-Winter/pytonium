@@ -78,6 +78,19 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
     cdef cppclass PytoniumLibrary:
         PytoniumLibrary() except +
         void InitPytonium(string start_url, int init_width, int init_height);
+
+        # Multi-instance API
+        int CreateBrowser(const string& url, int width, int height, bool frameless, const string& iconPath)
+        void CloseBrowser()
+        bool IsBrowserRunning()
+        int GetBrowserId()
+
+        @staticmethod
+        bool IsCefInitialized()
+
+        @staticmethod
+        void ShutdownCef()
+
         void ExecuteJavascript(string code)
         void ReturnValueToJavascript(int message_id, CefValueWrapper returnValue)
         void ShutdownPytonium()

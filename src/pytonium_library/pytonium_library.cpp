@@ -4,6 +4,7 @@
 #include "javascript_binding.h"
 #include "cef_value_wrapper.h"
 #include "include/internal/cef_types.h"
+#include "custom_protocol_scheme_handler.h"
 #include <cstring>
 #include <filesystem>
 #include <iostream>
@@ -15,17 +16,18 @@
 #include <Windows.h>
 #endif
 
+// Static member definitions
+bool PytoniumLibrary::s_CefInitialized = false;
+int PytoniumLibrary::s_InstanceCount = 0;
+CefRefPtr<CefWrapperApp> PytoniumLibrary::s_App = nullptr;
 
 std::string ExePath() {
 #if OS_WIN
-  // Try multiple locations for the subprocess executable
   std::vector<std::filesystem::path> possiblePaths;
-  
-  // From current working directory
+
   possiblePaths.push_back(std::filesystem::current_path() / "bin" / "pytonium_subprocess.exe");
   possiblePaths.push_back(std::filesystem::current_path() / "pytonium_subprocess.exe");
-  
-  // From executable directory
+
   wchar_t exePathW[MAX_PATH];
   if (GetModuleFileNameW(NULL, exePathW, MAX_PATH) > 0) {
     std::filesystem::path exeDir = std::filesystem::path(exePathW).parent_path();
@@ -34,14 +36,14 @@ std::string ExePath() {
     possiblePaths.push_back(exeDir.parent_path() / "pytonium_subprocess.exe");
     possiblePaths.push_back(exeDir.parent_path() / "bin" / "pytonium_subprocess.exe");
   }
-  
+
   for (const auto& path : possiblePaths) {
     if (std::filesystem::exists(path)) {
       std::cout << "Found subprocess at: " << path.string() << std::endl;
       return path.string();
     }
   }
-  
+
   std::cout << "Warning: subprocess not found, trying default path" << std::endl;
   return possiblePaths[0].string();
 #else
@@ -51,38 +53,41 @@ std::string ExePath() {
 }
 
 std::string ResourcePath() {
-  std::filesystem::path cwd = std::filesystem::current_path() /"bin" ;   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
+  std::filesystem::path cwd = std::filesystem::current_path() /"bin" ;
   return cwd.string();
 }
 
 std::string LocalesPath() {
-  std::filesystem::path cwd = std::filesystem::current_path() /"bin" / "locales";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
+  std::filesystem::path cwd = std::filesystem::current_path() /"bin" / "locales";
   return cwd.string();
 }
 
 std::string CachePath() {
-  std::filesystem::path cwd = std::filesystem::current_path() / "cache";   //"C:\\Dev\\cef-binaries\\cef_binary_106.0.27+g20ed841+chromium-106.0.5249.103_windows64\\cmake-build-debug-visual-studio\\src\\pytonium_subprocess\\Debug\\pytonium_subprocess.exe";
+  std::filesystem::path cwd = std::filesystem::current_path() / "cache";
   return cwd.string();
 }
 
+PytoniumLibrary::PytoniumLibrary() = default;
+
 void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int init_height) {
+  if (!s_CefInitialized) {
 #if defined(OS_WIN)
-  // Enable per-monitor DPI awareness (graceful fallback on older Windows)
-  {
-    HMODULE hUser32 = LoadLibraryW(L"user32.dll");
-    if (hUser32) {
-      typedef BOOL (WINAPI *SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
-      auto pSetDpiContext = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(
-          GetProcAddress(hUser32, "SetProcessDpiAwarenessContext"));
-      if (pSetDpiContext) {
-        pSetDpiContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    // Enable per-monitor DPI awareness (graceful fallback on older Windows)
+    {
+      HMODULE hUser32 = LoadLibraryW(L"user32.dll");
+      if (hUser32) {
+        typedef BOOL (WINAPI *SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
+        auto pSetDpiContext = reinterpret_cast<SetProcessDpiAwarenessContextFunc>(
+            GetProcAddress(hUser32, "SetProcessDpiAwarenessContext"));
+        if (pSetDpiContext) {
+          pSetDpiContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        }
+        FreeLibrary(hUser32);
       }
-      FreeLibrary(hUser32);
     }
-  }
 #endif
 
-  void *sandbox_info = nullptr;
+    void *sandbox_info = nullptr;
 
 #if OS_LINUX
     std::string name = "pytonium_library";
@@ -94,160 +99,291 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
     CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
     command_line->InitFromArgv(argc, argv);
 #else
-  std::string name = "pytonium_library";
-  //int argc = 0;
-  //char* argv[1] { };
-  CefMainArgs main_args;
-  CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
-  command_line->InitFromString(std::data(name));
+    std::string name = "pytonium_library";
+    CefMainArgs main_args;
+    CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
+    command_line->InitFromString(std::data(name));
 #endif
 
-  // Disable Chrome Runtime - must be done before CefExecuteProcess
-  // This removes the Chrome UI (tabs, address bar, etc.)
-  command_line->AppendSwitch("disable-chrome-runtime");
-  command_line->AppendSwitchWithValue("disable-features", "ChromeRuntime");
-  
-  // Fix Release build GPU/Network service crashes
-  command_line->AppendSwitch("disable-gpu-sandbox");
-  command_line->AppendSwitch("disable-setuid-sandbox");
-  command_line->AppendSwitch("disable-network-service-sandbox");
-  command_line->AppendSwitch("no-sandbox");
-  
-  // Alternative: Run GPU in browser process (slower but more stable)
-  // Uncomment the next line if GPU process still crashes:
-  // command_line->AppendSwitch("in-process-gpu");
-  
-  // Disable GPU if all else fails (software rendering):
-  // command_line->AppendSwitch("disable-gpu");
-  // command_line->AppendSwitch("disable-software-rasterizer");
-  
-  // Debug: print command line to verify switches
-  CefString cmdLineStr = command_line->GetCommandLineString();
-  std::cout << "Command line: " << cmdLineStr.ToString() << std::endl;
+    command_line->AppendSwitch("disable-chrome-runtime");
+    command_line->AppendSwitchWithValue("disable-features", "ChromeRuntime");
 
+    command_line->AppendSwitch("disable-gpu-sandbox");
+    command_line->AppendSwitch("disable-setuid-sandbox");
+    command_line->AppendSwitch("disable-network-service-sandbox");
+    command_line->AppendSwitch("no-sandbox");
 
+    CefString cmdLineStr = command_line->GetCommandLineString();
+    std::cout << "Command line: " << cmdLineStr.ToString() << std::endl;
 
+    s_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp(
+        std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings,
+        m_StateHandlerPythonBindings, m_ContextMenuBindings, m_CustomSchemes, m_MimeTypeMap, m_FramelessWindow));
+    CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
+    CefExecuteProcess(main_args, s_App.get(), sandbox_info);
 
-  m_App = CefRefPtr<CefWrapperApp>(new CefWrapperApp( std::move(start_url), m_Javascript_Bindings, m_Javascript_Python_Bindings, m_StateHandlerPythonBindings, m_ContextMenuBindings, m_CustomSchemes, m_MimeTypeMap, m_FramelessWindow));
-  CefWrapperBrowserProcessHandler::SetInitialResolution(init_width, init_height);
-  CefExecuteProcess(main_args, m_App.get(), sandbox_info);
+    cef_settings_t cefSettings;
+    memset(&cefSettings, 0, sizeof(cef_settings_t));
+    cefSettings.size = sizeof(cef_settings_t);
+    CefSettings settings(cefSettings);
 
-
-
-  // Initialize CEF settings using the underlying C struct
-  cef_settings_t cefSettings;
-  memset(&cefSettings, 0, sizeof(cef_settings_t));
-  cefSettings.size = sizeof(cef_settings_t);
-  CefSettings settings(cefSettings);
-
-
-  if(m_UseCustomCefResourcesPath)
-  {
-    CefString(&settings.resources_dir_path) = m_CustomCefResourcesPath;
-  }
-
-  if(m_UseCustomCefLocalesPath)
-  {
-    CefString(&settings.locales_dir_path) = m_CustomCefLocalesPath;
-  }
-
-
-  if(m_UseCustomCefCachePath)
-  {
-    CefString(&settings.cache_path) = m_CustomCefCachePath;
-    CefString(&settings.root_cache_path) = m_CustomCefCachePath;
-  }
-  else
-  {
-    CefString(&settings.cache_path) = CachePath();
-    CefString(&settings.root_cache_path) = CachePath();
-  }
-
-  // settings.multi_threaded_message_loop = true;
-  settings.no_sandbox = true;
-
-  if(m_UseCustomCefSubPath)
-  {
-    CefString(&settings.browser_subprocess_path).FromASCII(m_CustomCefSubPath.c_str());
-  }
-  else
-  {
-    CefString(&settings.browser_subprocess_path).FromASCII(ExePath().c_str());
-  }
-
-  //settings.log_severity = LOGSEVERITY_VERBOSE;
-  if (!CefInitialize(main_args, settings, m_App.get(), sandbox_info)) {
-    std::cerr << "CefInitialize failed!" << std::endl;
-    return;
-  }
-  g_IsRunning = true;
-
-  if(m_UseCustomIcon)
-  {
-#if defined(OS_WIN)
-    std::filesystem::path iconFsPath(m_CustomIconPath);
-    LPCWSTR w_icon_path = iconFsPath.c_str();
-
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
-
-    if (hwnd)
+    if(m_UseCustomCefResourcesPath)
     {
-      HICON hIcon = (HICON)LoadImageW(NULL, w_icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
-      SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+      CefString(&settings.resources_dir_path) = m_CustomCefResourcesPath;
     }
 
+    if(m_UseCustomCefLocalesPath)
+    {
+      CefString(&settings.locales_dir_path) = m_CustomCefLocalesPath;
+    }
+
+    if(m_UseCustomCefCachePath)
+    {
+      CefString(&settings.cache_path) = m_CustomCefCachePath;
+      CefString(&settings.root_cache_path) = m_CustomCefCachePath;
+    }
+    else
+    {
+      CefString(&settings.cache_path) = CachePath();
+      CefString(&settings.root_cache_path) = CachePath();
+    }
+
+    settings.no_sandbox = true;
+
+    if(m_UseCustomCefSubPath)
+    {
+      CefString(&settings.browser_subprocess_path).FromASCII(m_CustomCefSubPath.c_str());
+    }
+    else
+    {
+      CefString(&settings.browser_subprocess_path).FromASCII(ExePath().c_str());
+    }
+
+    if (!CefInitialize(main_args, settings, s_App.get(), sandbox_info)) {
+      std::cerr << "CefInitialize failed!" << std::endl;
+      return;
+    }
+    s_CefInitialized = true;
+    g_CefInitialized = true;
+  }
+
+  // Create the browser window (works for first and subsequent instances)
+  CreateBrowser(start_url, init_width, init_height, m_FramelessWindow,
+                m_UseCustomIcon ? m_CustomIconPath : "");
+}
+
+int PytoniumLibrary::CreateBrowser(const std::string& url, int width, int height,
+                                    bool frameless, const std::string& iconPath)
+{
+    // Get or create the shared client handler
+    CefWrapperClientHandler* handler = CefWrapperClientHandler::GetInstance();
+    if (!handler) {
+        CefRefPtr<CefCommandLine> command_line = CefCommandLine::GetGlobalCommandLine();
+        bool use_views = command_line->HasSwitch("use-views");
+        new CefWrapperClientHandler(use_views);
+        handler = CefWrapperClientHandler::GetInstance();
+    }
+
+    // Initialize browser settings
+    cef_browser_settings_t cefBrowserSettings;
+    memset(&cefBrowserSettings, 0, sizeof(cef_browser_settings_t));
+    cefBrowserSettings.size = sizeof(cef_browser_settings_t);
+    cefBrowserSettings.windowless_frame_rate = 30;
+    CefBrowserSettings browser_settings(cefBrowserSettings);
+
+    CefWindowInfo window_info;
+
+#if defined(OS_WIN)
+    window_info.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
+
+    if (frameless) {
+        window_info.style = WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+        window_info.parent_window = nullptr;
+        window_info.bounds.x = CW_USEDEFAULT;
+        window_info.bounds.y = CW_USEDEFAULT;
+    } else {
+        window_info.SetAsPopup(nullptr, "");
+    }
+#elif defined(OS_LINUX)
+    if (frameless) {
+        window_info.SetAsWindowless(nullptr, true);
+    }
 #endif
 
-  }
+    // Serialize bindings into extra_info for the renderer
+    CefRefPtr<CefDictionaryValue> extra = CefDictionaryValue::Create();
+    if (!m_Javascript_Bindings.empty())
+    {
+        CefRefPtr<CefListValue> bindings = CefListValue::Create();
+        bindings->SetSize(m_Javascript_Bindings.size());
+        int listIndex = 0;
+        for (const auto &binding: m_Javascript_Bindings)
+        {
+            CefRefPtr<CefDictionaryValue> dic = CefDictionaryValue::Create();
+            dic->SetString("MessageTopic", binding.functionName);
+            dic->SetString("JavascriptObject", binding.JavascriptObject);
+            CefRefPtr<CefBinaryValue> functionPointer = CefBinaryValue::Create(
+                    &binding.function, sizeof(binding.function));
+            dic->SetBinary("FunctionPointer", functionPointer);
+            bindings->SetDictionary(listIndex, dic);
+            listIndex++;
+        }
+        extra->SetList("JavascriptBindings", bindings);
+        extra->SetInt("JavascriptBindingsSize",
+                      static_cast<int>(m_Javascript_Bindings.size()));
+    }
+
+    if (!m_Javascript_Python_Bindings.empty())
+    {
+        CefRefPtr<CefListValue> bindings = CefListValue::Create();
+        bindings->SetSize(m_Javascript_Python_Bindings.size());
+        int listIndex = 0;
+        for (const auto &binding: m_Javascript_Python_Bindings)
+        {
+            CefRefPtr<CefDictionaryValue> dic = CefDictionaryValue::Create();
+            dic->SetString("MessageTopic", binding.FunctionName);
+            dic->SetString("JavascriptObject", binding.JavascriptObject);
+            dic->SetBool("ReturnsValue", binding.ReturnsValue);
+            CefRefPtr<CefBinaryValue> handlerFunc = CefBinaryValue::Create(
+                    &binding.HandlerFunction, sizeof(binding.HandlerFunction));
+            CefRefPtr<CefBinaryValue> pythonObject = CefBinaryValue::Create(
+                    &binding.PythonCallbackObject, sizeof(binding.PythonCallbackObject));
+            dic->SetBinary("HandlerFunction", handlerFunc);
+            dic->SetBinary("PythonFunctionObject", pythonObject);
+            bindings->SetDictionary(listIndex, dic);
+            listIndex++;
+        }
+        extra->SetList("JavascriptPythonBindings", bindings);
+        extra->SetInt("JavascriptPythonBindingsSize",
+                      static_cast<int>(m_Javascript_Python_Bindings.size()));
+    }
+
+    window_info.bounds.width = width;
+    window_info.bounds.height = height;
+
+    m_Browser = CefBrowserHost::CreateBrowserSync(window_info, handler, url,
+                                                   browser_settings, extra, nullptr);
+    if (!m_Browser) {
+        std::cerr << "CreateBrowserSync failed!" << std::endl;
+        return -1;
+    }
+
+    m_BrowserId = m_Browser->GetIdentifier();
+    s_InstanceCount++;
+
+    // Register per-browser bindings on the client handler
+    handler->RegisterBrowserBindings(m_BrowserId,
+        m_Javascript_Bindings, m_Javascript_Python_Bindings,
+        m_StateHandlerPythonBindings, m_ContextMenuBindings);
+
+    // Set icon if specified
+    if (!iconPath.empty())
+    {
+#if defined(OS_WIN)
+        std::filesystem::path iconFsPath(iconPath);
+        LPCWSTR w_icon_path = iconFsPath.c_str();
+        CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+        if (hwnd)
+        {
+            HICON hIcon = (HICON)LoadImageW(NULL, w_icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        }
+#endif
+    }
+
+    return m_BrowserId;
 }
+
+void PytoniumLibrary::CloseBrowser()
+{
+    if (m_Browser) {
+        m_Browser->GetHost()->CloseBrowser(true);
+        m_Browser = nullptr;
+        m_BrowserId = -1;
+        s_InstanceCount--;
+    }
+}
+
+bool PytoniumLibrary::IsBrowserRunning() const
+{
+    return m_Browser != nullptr && m_BrowserId >= 0 &&
+           g_BrowserCount.load(std::memory_order_acquire) > 0;
+}
+
+void PytoniumLibrary::ShutdownCef()
+{
+    g_CefInitialized = false;
+    s_CefInitialized = false;
+    s_App = nullptr;
+    CefShutdown();
+}
+
 void PytoniumLibrary::ExecuteJavascript(const std::string& code) {
-  CefRefPtr<CefFrame> frame = m_App->GetBrowser()->GetMainFrame();
-  if (g_IsRunning) {
-    if (CefWrapperClientHandler::GetInstance()->IsReadyToExecuteJs()) {
+  if (!m_Browser) return;
+  CefRefPtr<CefFrame> frame = m_Browser->GetMainFrame();
+  if (g_BrowserCount.load(std::memory_order_acquire) > 0) {
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && client->IsReadyToExecuteJs(m_BrowserId)) {
       frame->ExecuteJavaScript(code, frame->GetURL(), 0);
     }
   }
 }
-void PytoniumLibrary::ShutdownPytonium() { CefShutdown(); }
 
-bool PytoniumLibrary::IsRunning() { return g_IsRunning; }
+void PytoniumLibrary::ShutdownPytonium() {
+  CloseBrowser();
+  if (s_InstanceCount <= 0 && s_CefInitialized) {
+    ShutdownCef();
+  }
+}
+
+bool PytoniumLibrary::IsRunning() { return g_BrowserCount.load(std::memory_order_acquire) > 0; }
 
 void PytoniumLibrary::UpdateMessageLoop() { CefDoMessageLoopWork(); }
+
 bool PytoniumLibrary::IsReadyToExecuteJavascript() {
-  return CefWrapperClientHandler::GetInstance()->IsReadyToExecuteJs();
+  auto* client = CefWrapperClientHandler::GetInstance();
+  if (!client || !m_Browser) return false;
+  return client->IsReadyToExecuteJs(m_BrowserId);
 }
 
 void PytoniumLibrary::AddJavascriptBinding(std::string name, js_binding_function_ptr jsNativeApiFunctionPtr, std::string javascript_object)
 {
   m_Javascript_Bindings.emplace_back(std::move(name), jsNativeApiFunctionPtr, std::move(javascript_object));
 }
-PytoniumLibrary::PytoniumLibrary() = default;
+
 void PytoniumLibrary::AddJavascriptPythonBinding(
     const std::string& name,
     js_python_bindings_handler_function_ptr python_bindings_handler ,
     js_python_callback_object_ptr python_callback_object, const std::string& javascript_object, bool returns_value) {
   m_Javascript_Python_Bindings.emplace_back(python_bindings_handler, name, python_callback_object, javascript_object, returns_value);
 }
+
 void PytoniumLibrary::SetCustomSubprocessPath(std::string cefsub_path) {
   m_UseCustomCefSubPath = true;
   m_CustomCefSubPath = std::move(cefsub_path);
 }
+
 void PytoniumLibrary::SetCustomCachePath(std::string cef_cache_path) {
   m_UseCustomCefCachePath = true;
   m_CustomCefCachePath = std::move(cef_cache_path);
 }
+
 void PytoniumLibrary::LoadUrl(std::string url) {
- m_App->LoadUrl(std::move(url));
+  if (m_Browser && m_Browser->GetMainFrame()) {
+    m_Browser->GetMainFrame()->LoadURL(url);
+  }
 }
 
 void PytoniumLibrary::SetCustomResourcePath(std::string cef_resources_path) {
   m_UseCustomCefResourcesPath = true;
   m_CustomCefResourcesPath = cef_resources_path;
 }
+
 void PytoniumLibrary::SetCustomLocalesPath(std::string cef_locales_path) {
   m_UseCustomCefLocalesPath = true;
   m_CustomCefLocalesPath = cef_locales_path;
 }
+
 void PytoniumLibrary::SetCustomIconPath(std::string icon_path) {
   m_CustomIconPath = icon_path;
   m_UseCustomIcon = true;
@@ -255,6 +391,8 @@ void PytoniumLibrary::SetCustomIconPath(std::string icon_path) {
 
 void PytoniumLibrary::ReturnValueToJavascript(int message_id, CefValueWrapper returnValue)
 {
+    if (!m_Browser) return;
+
     CefRefPtr<CefProcessMessage> return_to_javascript_message =
             CefProcessMessage::Create("return-to-javascript");
 
@@ -262,15 +400,9 @@ void PytoniumLibrary::ReturnValueToJavascript(int message_id, CefValueWrapper re
             return_to_javascript_message->GetArgumentList();
 
     return_value_message_args->SetInt(0, message_id);
-
     return_value_message_args->SetValue(1, CefValueWrapperHelper::ConvertWrapperToCefValue(returnValue));
 
-
-    //CefRefPtr<CefValue> val = return_to_javascript_message->GetArgumentList()->GetValue(1);
-
-    //CefRefPtr<CefV8Value> val2 = CefValueWrapperHelper::ConvertCefValueToV8Value(val);
-    m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
-
+    m_Browser->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
 }
 
 void PytoniumLibrary::AddStateHandlerPythonBinding(state_handler_function_ptr stateHandlerFunctionPtr,
@@ -281,45 +413,25 @@ void PytoniumLibrary::AddStateHandlerPythonBinding(state_handler_function_ptr st
 
 void PytoniumLibrary::SetState(const std::string& stateNamespace, const std::string& key, CefValueWrapper value)
 {
-    if(g_IsRunning)
-    {
-        CefRefPtr<CefProcessMessage> return_to_javascript_message =
-                CefProcessMessage::Create("set-app-state");
+    if(!m_Browser || g_BrowserCount.load(std::memory_order_acquire) <= 0) return;
 
-        CefRefPtr<CefListValue> return_value_message_args =
-                return_to_javascript_message->GetArgumentList();
-
-        return_value_message_args->SetString(0, stateNamespace);
-
-        return_value_message_args->SetString(1, key);
-
-        return_value_message_args->SetValue(2, CefValueWrapperHelper::ConvertWrapperToCefValue(value));
-
-
-        //CefRefPtr<CefValue> val = return_to_javascript_message->GetArgumentList()->GetValue(1);
-
-        //CefRefPtr<CefV8Value> val2 = CefValueWrapperHelper::ConvertCefValueToV8Value(val);
-        m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
-    }
-
+    CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create("set-app-state");
+    CefRefPtr<CefListValue> args = msg->GetArgumentList();
+    args->SetString(0, stateNamespace);
+    args->SetString(1, key);
+    args->SetValue(2, CefValueWrapperHelper::ConvertWrapperToCefValue(value));
+    m_Browser->GetMainFrame()->SendProcessMessage(PID_RENDERER, msg);
 }
 
 void PytoniumLibrary::RemoveState(const std::string& stateNamespace, const std::string& key)
 {
-    if(!g_IsRunning)
-        return;
+    if(!m_Browser || g_BrowserCount.load(std::memory_order_acquire) <= 0) return;
 
-    CefRefPtr<CefProcessMessage> return_to_javascript_message =
-            CefProcessMessage::Create("remove-app-state");
-
-    CefRefPtr<CefListValue> return_value_message_args =
-            return_to_javascript_message->GetArgumentList();
-
-    return_value_message_args->SetString(0, stateNamespace);
-
-    return_value_message_args->SetString(1, key);
-
-    m_App->GetBrowser()->GetMainFrame()->SendProcessMessage(PID_RENDERER, return_to_javascript_message);
+    CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create("remove-app-state");
+    CefRefPtr<CefListValue> args = msg->GetArgumentList();
+    args->SetString(0, stateNamespace);
+    args->SetString(1, key);
+    m_Browser->GetMainFrame()->SendProcessMessage(PID_RENDERER, msg);
 }
 
 void PytoniumLibrary::AddContextMenuEntry(context_menu_handler_function_ptr context_menuHandlerFunctionPtr,
@@ -332,14 +444,18 @@ void PytoniumLibrary::AddContextMenuEntry(context_menu_handler_function_ptr cont
 
 void PytoniumLibrary::SetCurrentContextMenuNamespace(const std::string& contextMenuNamespace)
 {
-    CefWrapperClientHandler* client = (CefWrapperClientHandler*)CefWrapperBrowserProcessHandler::GetInstance()->GetDefaultClient().get();
-    client->SetCurrentContextMenuName(contextMenuNamespace);
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetCurrentContextMenuName(m_BrowserId, contextMenuNamespace);
+    }
 }
 
 void PytoniumLibrary::SetShowDebugContextMenu(bool show)
 {
-    CefWrapperClientHandler* client = (CefWrapperClientHandler*)CefWrapperBrowserProcessHandler::GetInstance()->GetDefaultClient().get();
-    client->SetShowDebugContextMenu(show);
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetShowDebugContextMenu(m_BrowserId, show);
+    }
 }
 
 void PytoniumLibrary::AddCustomScheme(std::string schemeIdentifier, std::string contentRootFolder)
@@ -354,16 +470,14 @@ void PytoniumLibrary::AddMimeTypeMapping(const std::string& fileExtension, std::
 
 void PytoniumLibrary::SetFramelessWindow(bool frameless)
 {
-    // Store the frameless setting - it will be applied when InitPytonium is called
-    // via the CefWrapperApp constructor
     m_FramelessWindow = frameless;
 }
 
 void PytoniumLibrary::MinimizeWindow()
 {
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return;
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return;
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (hwnd && IsWindow(hwnd)) {
         ShowWindow(hwnd, SW_MINIMIZE);
     }
@@ -373,9 +487,9 @@ void PytoniumLibrary::MinimizeWindow()
 void PytoniumLibrary::MaximizeWindow()
 {
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return;
-    m_App->GetBrowser()->GetHost()->SetFocus(true);
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return;
+    m_Browser->GetHost()->SetFocus(true);
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (hwnd && IsWindow(hwnd)) {
         ShowWindow(hwnd, SW_MAXIMIZE);
     }
@@ -385,8 +499,8 @@ void PytoniumLibrary::MaximizeWindow()
 void PytoniumLibrary::RestoreWindow()
 {
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return;
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return;
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (hwnd && IsWindow(hwnd)) {
         ShowWindow(hwnd, SW_RESTORE);
     }
@@ -395,16 +509,16 @@ void PytoniumLibrary::RestoreWindow()
 
 void PytoniumLibrary::CloseWindow()
 {
-    if (m_App && m_App->GetBrowser()) {
-        m_App->GetBrowser()->GetHost()->CloseBrowser(false);
+    if (m_Browser) {
+        m_Browser->GetHost()->CloseBrowser(false);
     }
 }
 
 bool PytoniumLibrary::IsMaximized()
 {
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return false;
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return false;
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (hwnd && IsWindow(hwnd)) {
         WINDOWPLACEMENT wp;
         wp.length = sizeof(WINDOWPLACEMENT);
@@ -419,8 +533,8 @@ bool PytoniumLibrary::IsMaximized()
 void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
 {
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return;
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return;
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (hwnd && IsWindow(hwnd)) {
         RECT rect;
         if (GetWindowRect(hwnd, &rect)) {
@@ -437,8 +551,8 @@ void PytoniumLibrary::GetWindowPosition(int& x, int& y)
     x = 0;
     y = 0;
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return;
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return;
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (hwnd && IsWindow(hwnd)) {
         RECT rect;
         if (GetWindowRect(hwnd, &rect)) {
@@ -452,8 +566,8 @@ void PytoniumLibrary::GetWindowPosition(int& x, int& y)
 void PytoniumLibrary::SetWindowPosition(int x, int y)
 {
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return;
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return;
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (hwnd && IsWindow(hwnd)) {
         SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
@@ -464,13 +578,13 @@ void PytoniumLibrary::GetWindowSize(int& width, int& height)
 {
     width = 0;
     height = 0;
-    
+
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return;
-    
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return;
+
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (!hwnd || !IsWindow(hwnd)) return;
-    
+
     RECT rect;
     if (GetWindowRect(hwnd, &rect)) {
         width = rect.right - rect.left;
@@ -482,84 +596,77 @@ void PytoniumLibrary::GetWindowSize(int& width, int& height)
 void PytoniumLibrary::SetWindowSize(int width, int height)
 {
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return;
-    
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return;
+
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (!hwnd || !IsWindow(hwnd)) return;
-    if (IsZoomed(hwnd)) return;  // Can't resize maximized windows
-    
-    SetWindowPos(hwnd, NULL, 0, 0, width, height, 
+    if (IsZoomed(hwnd)) return;
+
+    SetWindowPos(hwnd, NULL, 0, 0, width, height,
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 #endif
 }
 
 void PytoniumLibrary::SetOnTitleChangeCallback(void (*callback)(void*, const char*), void* user_data)
 {
-    CefWrapperClientHandler* client = CefWrapperClientHandler::GetInstance();
-    if (client) {
-        client->SetOnTitleChangeCallback(callback, user_data);
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetOnTitleChangeCallback(m_BrowserId, callback, user_data);
     }
 }
 
 void PytoniumLibrary::SetOnAddressChangeCallback(void (*callback)(void*, const char*), void* user_data)
 {
-    CefWrapperClientHandler* client = CefWrapperClientHandler::GetInstance();
-    if (client) {
-        client->SetOnAddressChangeCallback(callback, user_data);
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetOnAddressChangeCallback(m_BrowserId, callback, user_data);
     }
 }
 
 void PytoniumLibrary::SetOnFullscreenChangeCallback(void (*callback)(void*, bool), void* user_data)
 {
-    CefWrapperClientHandler* client = CefWrapperClientHandler::GetInstance();
-    if (client) {
-        client->SetOnFullscreenChangeCallback(callback, user_data);
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetOnFullscreenChangeCallback(m_BrowserId, callback, user_data);
     }
 }
 
 void* PytoniumLibrary::GetNativeWindowHandle()
 {
-    if (!m_App || !m_App->GetBrowser() || !m_App->GetBrowser()->GetHost()) {
+    if (!m_Browser || !m_Browser->GetHost()) {
         return nullptr;
     }
-    return reinterpret_cast<void*>(m_App->GetBrowser()->GetHost()->GetWindowHandle());
+    return reinterpret_cast<void*>(m_Browser->GetHost()->GetWindowHandle());
 }
 
 void PytoniumLibrary::ResizeWindow(int newWidth, int newHeight, int anchor)
 {
 #if defined(OS_WIN)
-    if (!m_App || !m_App->GetBrowser()) return;
-    
-    CefWindowHandle hwnd = m_App->GetBrowser()->GetHost()->GetWindowHandle();
+    if (!m_Browser) return;
+
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
     if (!hwnd || !IsWindow(hwnd)) return;
-    if (IsZoomed(hwnd)) return;  // Can't resize maximized windows
-    
-    // Get current position and size
+    if (IsZoomed(hwnd)) return;
+
     RECT rect;
     if (!GetWindowRect(hwnd, &rect)) return;
-    
+
     int currX = rect.left;
     int currY = rect.top;
     int currWidth = rect.right - rect.left;
     int currHeight = rect.bottom - rect.top;
-    
+
     int newX = currX;
     int newY = currY;
-    
-    // Adjust position based on anchor to keep that corner fixed
-    // anchor 0 (top-left): no position change
-    // anchor 1 (top-right): adjust X based on width change
-    // anchor 2 (bottom-left): adjust Y based on height change  
-    // anchor 3 (bottom-right): adjust both X and Y
+
     if (anchor == 1 || anchor == 3) {
         newX = currX + (currWidth - newWidth);
     }
     if (anchor == 2 || anchor == 3) {
         newY = currY + (currHeight - newHeight);
     }
-    
-    // Move and resize in one atomic operation
-    SetWindowPos(hwnd, NULL, newX, newY, newWidth, newHeight, 
+
+    SetWindowPos(hwnd, NULL, newX, newY, newWidth, newHeight,
                  SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 #endif
 }

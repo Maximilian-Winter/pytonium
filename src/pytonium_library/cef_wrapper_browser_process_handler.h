@@ -26,8 +26,6 @@ public:
     /* Static access method. */
     static CefRefPtr<CefWrapperBrowserProcessHandler> GetInstance();
 
-    static void SendReturnValueToJavascript(int message_id, CefValueWrapper returnValue);
-
     static void SetInitialResolution(int width, int height);
 
     static void SetFramelessWindow(bool frameless);
@@ -40,9 +38,6 @@ public:
 
     static void SetStartUrl(std::string url);
 
-    static void LoadUrl(std::string url);
-
-    CefRefPtr<CefBrowser> Browser;
     std::vector<JavascriptBinding> m_JavascriptBindings;
     std::vector<JavascriptPythonBinding> m_JavascriptPythonBindings;
     std::vector<StateHandlerPythonBinding> m_StateHandlerPythonBindings;

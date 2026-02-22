@@ -17,8 +17,6 @@ public:
             std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings,
             std::vector<ContextMenuBinding> contextMenuBindings, std::vector<CefCustomScheme> customSchemes, std::unordered_map<std::string, std::string> mimeTypeMap, bool frameless = false);
 
-    CefRefPtr<CefBrowser> GetBrowser();
-
     CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override
     {
         return CefWrapperBrowserProcessHandler::GetInstance();
@@ -32,8 +30,6 @@ public:
     void OnBeforeCommandLineProcessing(
             const CefString &process_type,
             CefRefPtr<CefCommandLine> command_line) override;
-
-    void LoadUrl(std::string url);
 
     void
     OnRegisterCustomSchemes(CefRawPtr<CefSchemeRegistrar> registrar) override;

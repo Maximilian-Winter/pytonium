@@ -11,6 +11,9 @@ void SimpleRenderProcessHandler::OnBrowserCreated(
 {
     CEF_REQUIRE_RENDERER_THREAD();
 
+    int id = browser->GetIdentifier();
+    auto& state = m_BrowserStates[id];
+
     if (extra_info->HasKey("JavascriptBindings"))
     {
         const CefRefPtr<CefListValue> bindings =
@@ -29,7 +32,7 @@ void SimpleRenderProcessHandler::OnBrowserCreated(
             functionPointer->GetData(&binding.function,
                                      sizeof(binding.function), 0);
 
-            m_Javascript_Bindings.push_back(binding);
+            state.javascriptBindings.push_back(binding);
         }
     }
 
@@ -54,11 +57,9 @@ void SimpleRenderProcessHandler::OnBrowserCreated(
             pythonFunctionObject->GetData(&binding.PythonCallbackObject,
                                           sizeof(binding.PythonCallbackObject), 0);
             binding.ReturnsValue = dic->GetBool("ReturnsValue");
-            m_Javascript_Python_Bindings.push_back(binding);
+            state.javascriptPythonBindings.push_back(binding);
         }
     }
-
-
 }
 
 /* Null, because instance will be initialized on demand. */
@@ -77,35 +78,39 @@ SimpleRenderProcessHandler::getInstance()
     return instance;
 }
 
-void SimpleRenderProcessHandler::SetJavascriptBindings(
-        std::vector<JavascriptBinding> javascript_bindings,
-        std::vector<JavascriptPythonBinding> javascript_python_bindings)
+SimpleRenderProcessHandler::SimpleRenderProcessHandler() = default;
+
+PerBrowserRendererState& SimpleRenderProcessHandler::GetState(int browserId)
 {
-    getInstance()->m_Javascript_Bindings = javascript_bindings;
-    getInstance()->m_Javascript_Python_Bindings = javascript_python_bindings;
+    return m_BrowserStates[browserId];
 }
 
-SimpleRenderProcessHandler::SimpleRenderProcessHandler() = default;
+void SimpleRenderProcessHandler::OnBrowserDestroyed(CefRefPtr<CefBrowser> browser)
+{
+    m_BrowserStates.erase(browser->GetIdentifier());
+}
 
 void SimpleRenderProcessHandler::OnContextCreated(
         CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
         CefRefPtr<CefV8Context> context)
 {
-    // CEF_REQUIRE_RENDERER_THREAD();
     // Retrieve the context's window object.
     CefRefPtr<CefV8Value> global = context->GetGlobal();
 
     CefRefPtr<CefV8Value> pytonium_namespace = CefV8Value::CreateObject(nullptr, nullptr);
 
-    m_ApplicationStateManager = std::make_shared<ApplicationStateManager>();
-    m_AppStateV8Handler = new AppStateV8Handler(m_ApplicationStateManager, browser);
+    int id = browser->GetIdentifier();
+    auto& state = GetState(id);
+
+    state.applicationStateManager = std::make_shared<ApplicationStateManager>();
+    state.appStateV8Handler = new AppStateV8Handler(state.applicationStateManager, browser);
 
     CefRefPtr<CefV8Value> stateObj = CefV8Value::CreateObject(nullptr, nullptr);
 
-    CefRefPtr<CefV8Value> funcRegisterForStateUpdates = CefV8Value::CreateFunction("registerForStateUpdates", m_AppStateV8Handler);
-    CefRefPtr<CefV8Value> funcSetState = CefV8Value::CreateFunction("setState", m_AppStateV8Handler);
-    CefRefPtr<CefV8Value> funcGetState = CefV8Value::CreateFunction("getState", m_AppStateV8Handler);
-    CefRefPtr<CefV8Value> funcRemoveState = CefV8Value::CreateFunction("removeState", m_AppStateV8Handler);
+    CefRefPtr<CefV8Value> funcRegisterForStateUpdates = CefV8Value::CreateFunction("registerForStateUpdates", state.appStateV8Handler);
+    CefRefPtr<CefV8Value> funcSetState = CefV8Value::CreateFunction("setState", state.appStateV8Handler);
+    CefRefPtr<CefV8Value> funcGetState = CefV8Value::CreateFunction("getState", state.appStateV8Handler);
+    CefRefPtr<CefV8Value> funcRemoveState = CefV8Value::CreateFunction("removeState", state.appStateV8Handler);
 
     stateObj->SetValue("registerForStateUpdates", funcRegisterForStateUpdates, V8_PROPERTY_ATTRIBUTE_NONE);
     stateObj->SetValue("setState", funcSetState, V8_PROPERTY_ATTRIBUTE_NONE);
@@ -115,88 +120,88 @@ void SimpleRenderProcessHandler::OnContextCreated(
     pytonium_namespace->SetValue("appState", stateObj, V8_PROPERTY_ATTRIBUTE_NONE);
 
 
-    if (!m_Javascript_Bindings.empty())
+    if (!state.javascriptBindings.empty())
     {
 
-        m_JavascriptBindingHandler =
-                new JavascriptBindingsHandler(m_Javascript_Bindings, browser);
-        for (int i = 0; i < (int) m_Javascript_Bindings.size(); ++i)
+        state.javascriptBindingHandler =
+                new JavascriptBindingsHandler(state.javascriptBindings, browser);
+        for (int i = 0; i < (int) state.javascriptBindings.size(); ++i)
         {
 
-            if (m_Javascript_Bindings[i].JavascriptObject.empty())
+            if (state.javascriptBindings[i].JavascriptObject.empty())
             {
                 CefRefPtr<CefV8Value> func = CefV8Value::CreateFunction(
-                        m_Javascript_Bindings[i].functionName, m_JavascriptBindingHandler);
-                pytonium_namespace->SetValue(m_Javascript_Bindings[i].functionName, func,
+                        state.javascriptBindings[i].functionName, state.javascriptBindingHandler);
+                pytonium_namespace->SetValue(state.javascriptBindings[i].functionName, func,
                                              V8_PROPERTY_ATTRIBUTE_NONE);
             } else
             {
                 CefRefPtr<CefV8Value> func = CefV8Value::CreateFunction(
-                        m_Javascript_Bindings[i].functionName, m_JavascriptBindingHandler);
+                        state.javascriptBindings[i].functionName, state.javascriptBindingHandler);
                 std::vector<CefString> keys;
                 pytonium_namespace->GetKeys(keys);
 
                 if (auto it =
                             std::find(keys.begin(), keys.end(),
-                                      m_Javascript_Bindings[i].JavascriptObject);
+                                      state.javascriptBindings[i].JavascriptObject);
                         it != keys.end())
                 {
                     CefRefPtr<CefV8Value> jsObj = pytonium_namespace->GetValue(
-                            m_Javascript_Bindings[i].JavascriptObject);
-                    jsObj->SetValue(m_Javascript_Bindings[i].functionName, func,
+                            state.javascriptBindings[i].JavascriptObject);
+                    jsObj->SetValue(state.javascriptBindings[i].functionName, func,
                                     V8_PROPERTY_ATTRIBUTE_NONE);
-                    pytonium_namespace->SetValue(m_Javascript_Bindings[i].JavascriptObject,
+                    pytonium_namespace->SetValue(state.javascriptBindings[i].JavascriptObject,
                                                  jsObj, V8_PROPERTY_ATTRIBUTE_NONE);
                 } else
                 {
                     CefRefPtr<CefV8Value> retVal =
                             CefV8Value::CreateObject(nullptr, nullptr);
-                    retVal->SetValue(m_Javascript_Bindings[i].functionName, func,
+                    retVal->SetValue(state.javascriptBindings[i].functionName, func,
                                      V8_PROPERTY_ATTRIBUTE_NONE);
-                    pytonium_namespace->SetValue(m_Javascript_Bindings[i].JavascriptObject,
+                    pytonium_namespace->SetValue(state.javascriptBindings[i].JavascriptObject,
                                                  retVal, V8_PROPERTY_ATTRIBUTE_NONE);
                 }
             }
         }
     }
 
-    if (!m_Javascript_Python_Bindings.empty())
+    if (!state.javascriptPythonBindings.empty())
     {
-        m_JavascriptPythonBindingHandler = new JavascriptPythonBindingsHandler(
-                m_Javascript_Python_Bindings, browser);
-        for (int i = 0; i < (int) m_Javascript_Python_Bindings.size(); ++i)
+        state.javascriptPythonBindingHandler = new JavascriptPythonBindingsHandler(
+                state.javascriptPythonBindings, browser);
+        for (int i = 0; i < (int) state.javascriptPythonBindings.size(); ++i)
         {
-            if (m_Javascript_Python_Bindings[i].JavascriptObject.empty())
+            if (state.javascriptPythonBindings[i].JavascriptObject.empty())
             {
                 CefRefPtr<CefV8Value> func = CefV8Value::CreateFunction(
-                        m_Javascript_Python_Bindings[i].FunctionName, m_JavascriptPythonBindingHandler);
-                pytonium_namespace->SetValue(m_Javascript_Python_Bindings[i].FunctionName, func,
+                        state.javascriptPythonBindings[i].FunctionName, state.javascriptPythonBindingHandler);
+                pytonium_namespace->SetValue(state.javascriptPythonBindings[i].FunctionName, func,
                                              V8_PROPERTY_ATTRIBUTE_NONE);
             } else
             {
                 CefRefPtr<CefV8Value> func = CefV8Value::CreateFunction(
-                        m_Javascript_Python_Bindings[i].FunctionName, m_JavascriptPythonBindingHandler);
+                        state.javascriptPythonBindings[i].FunctionName, state.javascriptPythonBindingHandler);
                 std::vector<CefString> keys;
                 pytonium_namespace->GetKeys(keys);
 
                 if (auto it =
                             std::find(keys.begin(), keys.end(),
-                                      m_Javascript_Python_Bindings[i].JavascriptObject);
+                                      state.javascriptPythonBindings[i].JavascriptObject);
                         it != keys.end())
                 {
                     CefRefPtr<CefV8Value> jsObj = pytonium_namespace->GetValue(
-                            m_Javascript_Python_Bindings[i].JavascriptObject);
-                    jsObj->SetValue(m_Javascript_Python_Bindings[i].FunctionName, func,
+                            state.javascriptPythonBindings[i].JavascriptObject);
+                    jsObj->SetValue(state.javascriptPythonBindings[i].FunctionName, func,
                                     V8_PROPERTY_ATTRIBUTE_NONE);
-                    pytonium_namespace->SetValue(m_Javascript_Python_Bindings[i].JavascriptObject,
+                    pytonium_namespace->SetValue(state.javascriptPythonBindings[i].JavascriptObject,
                                                  jsObj, V8_PROPERTY_ATTRIBUTE_NONE);
                 } else
                 {
                     CefRefPtr<CefV8Value> jsObj =
                             CefV8Value::CreateObject(nullptr, nullptr);
-                    jsObj->SetValue(m_Javascript_Python_Bindings[i].FunctionName, func,
+                    jsObj->SetValue(state.javascriptPythonBindings[i].FunctionName, func,
                                     V8_PROPERTY_ATTRIBUTE_NONE);
-                    pytonium_namespace->SetValue(m_Javascript_Python_Bindings[i].JavascriptObject,
+                    pytonium_namespace->SetValue(state.javascriptPythonBindings[i].JavascriptObject,
                                                  jsObj, V8_PROPERTY_ATTRIBUTE_NONE);
                 }
             }
@@ -212,6 +217,8 @@ bool SimpleRenderProcessHandler::OnProcessMessageReceived(CefRefPtr<CefBrowser> 
                                                           CefProcessId source_process,
                                                           CefRefPtr<CefProcessMessage> message)
 {
+    int id = browser->GetIdentifier();
+    auto& state = GetState(id);
 
     const std::string& message_name = message->GetName();
 
@@ -219,7 +226,7 @@ bool SimpleRenderProcessHandler::OnProcessMessageReceived(CefRefPtr<CefBrowser> 
     {
         CefRefPtr<CefListValue> argList = message->GetArgumentList();
         int message_id = argList->GetInt(0);
-        m_JavascriptPythonBindingHandler->ResolvePromise(message_id, argList->GetValue(1));
+        state.javascriptPythonBindingHandler->ResolvePromise(message_id, argList->GetValue(1));
     }
     else if(message_name == "set-app-state")
     {
@@ -233,8 +240,8 @@ bool SimpleRenderProcessHandler::OnProcessMessageReceived(CefRefPtr<CefBrowser> 
             }
             nlohmann::json value = ApplicationStateManagerHelper::cefValueToJson(argList->GetValue(2));
 
-            m_ApplicationStateManager->setState(namespaceName, key, value);
-            m_AppStateV8Handler->PushToJavascript(namespaceName, key);
+            state.applicationStateManager->setState(namespaceName, key, value);
+            state.appStateV8Handler->PushToJavascript(namespaceName, key);
             return true;
         } else {
             return false;
@@ -250,9 +257,9 @@ bool SimpleRenderProcessHandler::OnProcessMessageReceived(CefRefPtr<CefBrowser> 
             {
                 return false;
             }
-            auto state = m_ApplicationStateManager->getState(namespaceName, key);
+            auto appState = state.applicationStateManager->getState(namespaceName, key);
 
-            auto cefState = ApplicationStateManagerHelper::jsonToCefValue(state);
+            auto cefState = ApplicationStateManagerHelper::jsonToCefValue(appState);
             CefRefPtr<CefProcessMessage> messageReturn =
                     CefProcessMessage::Create("get-app-state-return");
 
@@ -279,7 +286,7 @@ bool SimpleRenderProcessHandler::OnProcessMessageReceived(CefRefPtr<CefBrowser> 
             {
                 return false;
             }
-            m_ApplicationStateManager->removeState(namespaceName, key);
+            state.applicationStateManager->removeState(namespaceName, key);
 
             return true;
         } else {

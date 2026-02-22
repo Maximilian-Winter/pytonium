@@ -4,6 +4,7 @@
 #include "include/cef_client.h"
 
 #include <list>
+#include <unordered_map>
 
 #include "include/wrapper/cef_helpers.h"
 #include "javascript_binding.h"
@@ -15,6 +16,28 @@
 using window_event_string_callback_ptr = void (*)(void* user_data, const char* value);
 using window_event_bool_callback_ptr = void (*)(void* user_data, bool value);
 
+// Per-browser state stored in the shared client handler, keyed by browser ID.
+struct PerBrowserState {
+    bool isReadyToExecuteJs = false;
+    std::string currentContextMenuNamespace = "app";
+    bool showDebugContextMenu = false;
+
+    // Bindings registered for this specific browser
+    std::vector<JavascriptBinding> javascriptBindings;
+    std::vector<JavascriptPythonBinding> javascriptPythonBindings;
+    std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings;
+    std::vector<ContextMenuBinding> contextMenuBindings;
+    std::unordered_map<std::string, std::vector<ContextMenuBinding>> contextMenuBindingsMap;
+
+    // Window event callbacks
+    window_event_string_callback_ptr onTitleChangeCallback = nullptr;
+    void* onTitleChangeUserData = nullptr;
+    window_event_string_callback_ptr onAddressChangeCallback = nullptr;
+    void* onAddressChangeUserData = nullptr;
+    window_event_bool_callback_ptr onFullscreenChangeCallback = nullptr;
+    void* onFullscreenChangeUserData = nullptr;
+};
+
 class CefWrapperClientHandler : public CefClient,
                                 public CefDisplayHandler,
                                 public CefLifeSpanHandler,
@@ -23,11 +46,7 @@ class CefWrapperClientHandler : public CefClient,
 {
 public:
 
-    explicit CefWrapperClientHandler(bool use_views,
-                                     std::vector<JavascriptBinding> javascript_bindings,
-                                     std::vector<JavascriptPythonBinding> javascript_python_bindings,
-                                     std::vector<StateHandlerPythonBinding> stateHandlerPythonBindings,
-                                     std::vector<ContextMenuBinding> contextMenuBindings);
+    explicit CefWrapperClientHandler(bool use_views);
 
     void OnLoadStart(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                      TransitionType transition_type) override;
@@ -36,6 +55,13 @@ public:
 
     // Provide access to the single global instance of this object.
     static CefWrapperClientHandler *GetInstance();
+
+    // Register per-browser bindings after CreateBrowserSync
+    void RegisterBrowserBindings(int browserId,
+        std::vector<JavascriptBinding> jsBindings,
+        std::vector<JavascriptPythonBinding> jsPythonBindings,
+        std::vector<StateHandlerPythonBinding> stateBindings,
+        std::vector<ContextMenuBinding> contextMenuBindings);
 
     void OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
                              CefRefPtr<CefFrame> frame,
@@ -85,7 +111,7 @@ public:
                      ErrorCode errorCode, const CefString &errorText,
                      const CefString &failedUrl) override;
 
-    // Request that all existing m_Browser windows close.
+    // Request that all existing browser windows close.
     void CloseAllBrowsers(bool force_close);
 
     bool IsClosing() const
@@ -119,7 +145,7 @@ public:
     void OnLoadEnd(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
                    int httpStatusCode) override;
 
-    bool IsReadyToExecuteJs();
+    bool IsReadyToExecuteJs(int browserId);
 
     bool OnProcessMessageReceived(CefRefPtr<CefBrowser> browser,
                                   CefRefPtr<CefFrame> frame,
@@ -129,22 +155,25 @@ public:
     void OnLoadingStateChange(CefRefPtr<CefBrowser> browser, bool isLoading,
                               bool canGoBack, bool canGoForward) override;
 
-    void SetCurrentContextMenuName(const std::string& context_menu_namespace);
+    void SetCurrentContextMenuName(int browserId, const std::string& context_menu_namespace);
 
-    void SetShowDebugContextMenu(bool show);
+    void SetShowDebugContextMenu(int browserId, bool show);
 
-    void SetContextMenuBindings(std::vector<ContextMenuBinding> contextMenuBindings);
+    void SetContextMenuBindings(int browserId, std::vector<ContextMenuBinding> contextMenuBindings);
 
-    // Window event callback setters
-    void SetOnTitleChangeCallback(window_event_string_callback_ptr callback, void* user_data);
-    void SetOnAddressChangeCallback(window_event_string_callback_ptr callback, void* user_data);
-    void SetOnFullscreenChangeCallback(window_event_bool_callback_ptr callback, void* user_data);
+    // Window event callback setters (per-browser)
+    void SetOnTitleChangeCallback(int browserId, window_event_string_callback_ptr callback, void* user_data);
+    void SetOnAddressChangeCallback(int browserId, window_event_string_callback_ptr callback, void* user_data);
+    void SetOnFullscreenChangeCallback(int browserId, window_event_bool_callback_ptr callback, void* user_data);
+
+    // Access per-browser state
+    PerBrowserState& GetBrowserState(int browserId);
 
 private:
     // Platform-specific implementation.
     void PlatformTitleChange(CefRefPtr<CefBrowser> browser,
                              const CefString &title);
-    
+
     // Platform-specific window subclassing for resize borders
     void PlatformSubclassWindow(CefRefPtr<CefBrowser> browser);
     void PlatformRemoveSubclass(CefRefPtr<CefBrowser> browser);
@@ -152,27 +181,14 @@ private:
     // True if the application is using the Views framework.
     const bool use_views_;
 
-    // List of existing m_Browser windows. Only accessed on the CEF UI thread.
+    // List of existing browser windows. Only accessed on the CEF UI thread.
     using BrowserList = std::list<CefRefPtr<CefBrowser>>;
     BrowserList browser_list_;
 
-    bool m_IsReadyToExecuteJs;
-    std::vector<JavascriptBinding> m_JavascriptBindings;
-    std::vector<JavascriptPythonBinding> m_JavascriptPythonBindings;
-    std::vector<StateHandlerPythonBinding> m_StateHandlerPythonBindings;
-    std::vector<ContextMenuBinding> m_ContextMenuBindings;
-    std::unordered_map<std::string, std::vector<ContextMenuBinding>> m_ContextMenuBindingsMap;
-    std::string m_CurrentContextMenuNamespace = "app";
     bool is_closing_;
-    bool m_ShowDebugContextMenu;
 
-    // Window event callbacks
-    window_event_string_callback_ptr m_OnTitleChangeCallback = nullptr;
-    void* m_OnTitleChangeUserData = nullptr;
-    window_event_string_callback_ptr m_OnAddressChangeCallback = nullptr;
-    void* m_OnAddressChangeUserData = nullptr;
-    window_event_bool_callback_ptr m_OnFullscreenChangeCallback = nullptr;
-    void* m_OnFullscreenChangeUserData = nullptr;
+    // Per-browser state map, keyed by browser->GetIdentifier()
+    std::unordered_map<int, PerBrowserState> m_BrowserStates;
 
     // Include the default reference counting implementation.
 IMPLEMENT_REFCOUNTING(CefWrapperClientHandler);

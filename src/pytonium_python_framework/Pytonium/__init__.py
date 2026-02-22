@@ -78,3 +78,31 @@ async def run_pytonium_async(pytonium, interval=0.016):
     while pytonium.is_running():
         pytonium.update_message_loop()
         await asyncio.sleep(interval)
+
+
+async def run_pytonium_multi_async(instances, interval=0.016):
+    """Run the message loop for multiple Pytonium instances.
+
+    CEF's message loop is global — calling ``update_message_loop()`` on any
+    instance processes events for ALL browser windows. This helper pumps the
+    loop while any instance is still running.
+
+    Args:
+        instances: A list of initialized Pytonium instances.
+        interval: Seconds between message loop updates (default ~60fps).
+
+    Example::
+
+        import asyncio
+        from Pytonium import Pytonium, run_pytonium_multi_async
+
+        p1 = Pytonium()
+        p1.initialize("https://example.com", 800, 600)
+        p2 = Pytonium()
+        p2.initialize("https://example.org", 600, 400)
+        asyncio.run(run_pytonium_multi_async([p1, p2]))
+    """
+    import asyncio
+    while any(p.is_running() for p in instances):
+        instances[0].update_message_loop()
+        await asyncio.sleep(interval)
