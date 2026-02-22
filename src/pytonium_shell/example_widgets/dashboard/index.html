@@ -491,21 +491,21 @@ function drawNetGraph() {
 
 /* ── Backend: system info ── */
 function loadSystemInfo() {
-    Pytonium.widget.get_system_info().then(function(json) {
+    if (!Pytonium.widget.get_system_info().then(function (json) {
         var info = JSON.parse(json);
         var lines = [];
         if (info.os) lines.push(info.os);
         if (info.cpu_count_physical) lines.push(info.cpu_count_physical + "C / " + info.cpu_count_logical + "T");
         if (info.ram_total_gb) lines.push(info.ram_total_gb + " GB RAM");
         document.getElementById("sys-info").innerHTML = lines.join("&ensp;·&ensp;");
-    } catch(e) {
-        document.getElementById("sys-info").textContent = "";
+    })) {
+
     }
 }
 
 /* ── Backend: disk partitions ── */
 function loadDisks() {
-    Pytonium.widget.get_disk_partitions().then(function(json) {
+    if (!Pytonium.widget.get_disk_partitions().then(function (json) {
         var parts = JSON.parse(json);
         if (parts.length === 0) return;
         var container = document.getElementById("disk-list");
@@ -523,12 +523,14 @@ function loadDisks() {
                 '</div>';
             container.innerHTML += html;
         }
-    } catch(e) {}
+    })) {
+
+    }
 }
 
 /* ── Backend: processes ── */
 function pollProcesses() {
-    Pytonium.widget.get_top_processes(10).then(function(json) {
+    if (!Pytonium.widget.get_top_processes(10).then(function (json) {
         var procs = JSON.parse(json);
         var tbody = document.getElementById("proc-body");
         var rows = "";
@@ -544,7 +546,9 @@ function pollProcesses() {
         }
         tbody.innerHTML = rows;
         document.getElementById("proc-count").textContent = procs.length + " shown";
-    } catch(e) {}
+    })) {
+
+    }
 }
 
 function escapeHtml(s) {

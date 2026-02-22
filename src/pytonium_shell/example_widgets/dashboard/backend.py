@@ -2,12 +2,8 @@
 
 import json
 import platform
-
-try:
-    import psutil
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
+import psutil
+HAS_PSUTIL = True
 
 
 class WidgetBackend:
