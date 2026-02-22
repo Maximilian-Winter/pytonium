@@ -1,0 +1,19 @@
+{
+  "name": "status-bar",
+  "version": "1.0.0",
+  "description": "A top-of-screen status bar showing time, CPU, and memory",
+  "entry": "index.html",
+
+  "window": {
+    "mode": "bar",
+    "anchor": "top",
+    "height": 36,
+    "reserve_space": true,
+    "transparent_background": true,
+    "show_in_taskbar": false
+  },
+
+  "permissions": ["system.cpu", "system.memory"],
+  "state_namespaces": ["datetime", "system"],
+  "hot_reload": true
+}

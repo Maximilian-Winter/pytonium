@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        background: transparent;
+        font-family: var(--shell-font, 'Segoe UI', 'Consolas', monospace);
+        color: var(--shell-foreground, #a9b1d6);
+        overflow: hidden;
+        -webkit-app-region: drag;
+    }
+    .container {
+        background: var(--shell-background, rgba(26, 27, 38, 0.85));
+        border: 1px solid var(--shell-border, rgba(255, 255, 255, 0.08));
+        border-radius: var(--shell-radius, 12px);
+        padding: 16px;
+        height: 100vh;
+    }
+    .title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--shell-muted, #565f89);
+        margin-bottom: 14px;
+    }
+    .metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+    .label { font-size: 13px; }
+    .value { font-size: 13px; font-weight: 500; }
+    .value.cpu { color: var(--shell-accent, #7aa2f7); }
+    .value.mem { color: var(--shell-accent2, #bb9af7); }
+    .value.disk { color: var(--shell-success, #9ece6a); }
+    .bar-bg {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 2px;
+        margin-top: 3px;
+        margin-bottom: 14px;
+    }
+    .bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.5s ease;
+    }
+    .bar-fill.cpu { background: var(--shell-accent, #7aa2f7); }
+    .bar-fill.mem { background: var(--shell-accent2, #bb9af7); }
+    .bar-fill.disk { background: var(--shell-success, #9ece6a); }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="title">System</div>
+
+    <div class="metric">
+        <span class="label">CPU</span>
+        <span class="value cpu" id="cpu-val">0%</span>
+    </div>
+    <div class="bar-bg"><div class="bar-fill cpu" id="cpu-bar" style="width: 0%"></div></div>
+
+    <div class="metric">
+        <span class="label">Memory</span>
+        <span class="value mem" id="mem-val">0%</span>
+    </div>
+    <div class="bar-bg"><div class="bar-fill mem" id="mem-bar" style="width: 0%"></div></div>
+
+    <div class="metric">
+        <span class="label">Disk</span>
+        <span class="value disk" id="disk-val">0%</span>
+    </div>
+    <div class="bar-bg"><div class="bar-fill disk" id="disk-bar" style="width: 0%"></div></div>
+</div>
+
+<script>
+function init() {
+    Pytonium.appState.registerForStateUpdates(
+        "systemUpdate", ["system"], true, true
+    );
+
+    document.addEventListener("systemUpdate", function(event) {
+        var key = event.detail.key;
+        var value = event.detail.value;
+
+        if (key === "cpu_avg") {
+            var pct = Math.round(value);
+            document.getElementById("cpu-val").textContent = pct + "%";
+            document.getElementById("cpu-bar").style.width = pct + "%";
+        }
+        if (key === "mem_percent") {
+            var pct = Math.round(value);
+            document.getElementById("mem-val").textContent = pct + "%";
+            document.getElementById("mem-bar").style.width = pct + "%";
+        }
+        if (key === "disk_percent") {
+            var pct = Math.round(value);
+            document.getElementById("disk-val").textContent = pct + "%";
+            document.getElementById("disk-bar").style.width = pct + "%";
+        }
+    });
+}
+
+if (window.PytoniumReady) { init(); }
+else { window.addEventListener("PytoniumReady", init); }
+</script>
+</body>
+</html>

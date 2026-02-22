@@ -1,0 +1,16 @@
+{
+  "name": "live-wallpaper",
+  "version": "1.0.0",
+  "description": "Animated gradient wallpaper behind desktop icons",
+  "entry": "index.html",
+
+  "window": {
+    "mode": "wallpaper",
+    "transparent_background": false,
+    "click_through": true,
+    "monitor": "primary"
+  },
+
+  "state_namespaces": ["datetime"],
+  "hot_reload": true
+}
