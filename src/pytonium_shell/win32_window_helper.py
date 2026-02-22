@@ -8,6 +8,35 @@ if os.name == "nt":
     user32 = ctypes.windll.user32
     shell32 = ctypes.windll.shell32
 
+    HWND = ctypes.wintypes.HWND
+    UINT = ctypes.wintypes.UINT
+    BOOL = ctypes.wintypes.BOOL
+    LONG = ctypes.wintypes.LONG
+    INT = ctypes.c_int
+
+    # -- Declare argtypes so ctypes marshals HWND / pointer-sized values
+    #    correctly on 64-bit Windows (HWND is a pointer, not a 32-bit int).
+
+    # BOOL SetWindowPos(HWND, HWND, int, int, int, int, UINT)
+    user32.SetWindowPos.argtypes = [HWND, HWND, INT, INT, INT, INT, UINT]
+    user32.SetWindowPos.restype = BOOL
+
+    # LONG GetWindowLongW(HWND, int)
+    user32.GetWindowLongW.argtypes = [HWND, INT]
+    user32.GetWindowLongW.restype = LONG
+
+    # LONG SetWindowLongW(HWND, int, LONG)
+    user32.SetWindowLongW.argtypes = [HWND, INT, LONG]
+    user32.SetWindowLongW.restype = LONG
+
+    # BOOL ShowWindow(HWND, int)
+    user32.ShowWindow.argtypes = [HWND, INT]
+    user32.ShowWindow.restype = BOOL
+
+    # int GetSystemMetrics(int)
+    user32.GetSystemMetrics.argtypes = [INT]
+    user32.GetSystemMetrics.restype = INT
+
 # Window style constants
 GWL_EXSTYLE = -20
 WS_EX_TOOLWINDOW = 0x00000080
