@@ -7,6 +7,7 @@ import time
 from .widget_manager import WidgetManager
 from .system_services import SystemServices
 from .theme import Theme
+from .hotkey_listener import HotkeyListener
 
 
 def load_config(config_path):
@@ -31,6 +32,8 @@ class ShellManager:
         self.widget_manager = WidgetManager(self)
         self.system_services = SystemServices(self)
         self.theme = Theme(theme_name)
+        hotkey = self.config.get("dashboard_hotkey", "ctrl+alt+d")
+        self.hotkey_listener = HotkeyListener(hotkey)
         self.running = True
 
     def run(self):
@@ -39,11 +42,23 @@ class ShellManager:
         self.widget_manager.load_all(self.widgets_dir)
         self.system_services.start()
 
-        print(f"PytoniumShell: {len(self.widget_manager.active_widgets)} widget(s) loaded.")
+        # Start hotkey listener if there are dashboard widgets
+        if self.widget_manager.dashboard_widgets:
+            self.hotkey_listener.start()
+            hotkey_str = self.config.get("dashboard_hotkey", "ctrl+alt+d").upper().replace("+", " + ")
+            print(f"PytoniumShell: Dashboard hotkey: {hotkey_str}")
+
+        n_widgets = len(self.widget_manager.active_widgets)
+        n_dashboard = len(self.widget_manager.dashboard_widgets)
+        print(f"PytoniumShell: {n_widgets} widget(s) loaded ({n_dashboard} dashboard).")
         print("PytoniumShell: Running. Close all widgets or press Ctrl+C to exit.")
 
         try:
             while self.running and self.widget_manager.any_running():
+                # Check for dashboard toggle hotkey
+                if self.hotkey_listener.check_and_clear():
+                    self.widget_manager.toggle_dashboard()
+
                 self.widget_manager.update()
                 self.system_services.poll()
                 time.sleep(0.016)  # ~60 fps
@@ -55,6 +70,7 @@ class ShellManager:
     def shutdown(self):
         """Shut down all widgets and services."""
         print("PytoniumShell: Shutting down...")
+        self.hotkey_listener.stop()
         self.system_services.stop()
         self.widget_manager.shutdown_all()
         print("PytoniumShell: Done.")

@@ -79,3 +79,18 @@ class Win32WindowHelper:
             x, y, width, height,
             SWP_NOZORDER | SWP_NOACTIVATE,
         )
+
+    @staticmethod
+    def show_window(hwnd):
+        """Show the window."""
+        user32.ShowWindow(hwnd, 5)  # SW_SHOW
+
+    @staticmethod
+    def hide_window(hwnd):
+        """Hide the window."""
+        user32.ShowWindow(hwnd, 0)  # SW_HIDE
+
+    @staticmethod
+    def get_primary_monitor_size():
+        """Returns (width, height) of the primary monitor."""
+        return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)

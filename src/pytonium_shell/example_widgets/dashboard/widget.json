@@ -1,0 +1,17 @@
+{
+  "name": "dashboard",
+  "version": "1.0.0",
+  "description": "Full-screen dashboard overlay toggled by hotkey",
+  "entry": "index.html",
+
+  "window": {
+    "mode": "dashboard",
+    "transparent_background": true,
+    "always_on_top": true,
+    "show_in_taskbar": false
+  },
+
+  "permissions": ["system.cpu", "system.memory", "system.disk", "system.network", "system.battery"],
+  "state_namespaces": ["datetime", "system"],
+  "hot_reload": true
+}

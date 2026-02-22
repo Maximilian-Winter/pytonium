@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import os
+import time
 
 from Pytonium import Pytonium
 
@@ -17,6 +18,9 @@ class WidgetManager:
     def __init__(self, shell):
         self.shell = shell
         self.active_widgets = []
+        self.dashboard_widgets = []
+        self._dashboard_visible = False
+        self._pending_hide_time = None
 
     def load_all(self, widgets_dir):
         """Discover and load all widgets from the given directory."""
@@ -43,6 +47,8 @@ class WidgetManager:
         window_config = manifest.get("window", {})
         entry_file = manifest.get("entry", "index.html")
         backend_file = manifest.get("backend", None)
+        mode = window_config.get("mode", "widget")
+        is_dashboard = mode == "dashboard"
 
         # Create Pytonium instance
         p = Pytonium()
@@ -66,9 +72,12 @@ class WidgetManager:
                         backend_obj, javascript_object="widget"
                     )
 
-        # Get dimensions
-        width = window_config.get("width", 300)
-        height = window_config.get("height", 200)
+        # Get dimensions — dashboard widgets cover the full primary monitor
+        if is_dashboard:
+            width, height = Win32WindowHelper.get_primary_monitor_size()
+        else:
+            width = window_config.get("width", 300)
+            height = window_config.get("height", 200)
 
         # Build file:/// URL for the entry point
         entry_path = os.path.abspath(os.path.join(widget_path, entry_file))
@@ -80,25 +89,31 @@ class WidgetManager:
         # Apply Win32 window flags after initialization
         hwnd = p.get_native_window_handle()
         if hwnd:
-            if window_config.get("always_on_top", False):
+            if window_config.get("always_on_top", False) or is_dashboard:
                 Win32WindowHelper.make_always_on_top(hwnd)
 
-            if not window_config.get("show_in_taskbar", True):
+            if not window_config.get("show_in_taskbar", True) or is_dashboard:
                 Win32WindowHelper.hide_from_taskbar(hwnd)
 
             if window_config.get("click_through", False):
                 Win32WindowHelper.make_click_through(hwnd)
 
-            # Position the window
-            position = window_config.get("position", None)
-            if position:
-                Win32WindowHelper.set_position(
-                    hwnd,
-                    position.get("x", 0),
-                    position.get("y", 0),
-                    width,
-                    height,
-                )
+            if is_dashboard:
+                # Position at (0, 0) covering full screen
+                Win32WindowHelper.set_position(hwnd, 0, 0, width, height)
+                # Start hidden — toggled by hotkey
+                Win32WindowHelper.hide_window(hwnd)
+            else:
+                # Position the window
+                position = window_config.get("position", None)
+                if position:
+                    Win32WindowHelper.set_position(
+                        hwnd,
+                        position.get("x", 0),
+                        position.get("y", 0),
+                        width,
+                        height,
+                    )
 
         # Inject theme
         self.shell.theme.inject(p)
@@ -107,6 +122,10 @@ class WidgetManager:
         widget_inst = WidgetInstance(name, p, manifest, backend_module)
         if manifest.get("hot_reload", False):
             widget_inst.watcher = start_watching(widget_path, widget_inst)
+
+        # Track dashboard widgets separately
+        if is_dashboard:
+            self.dashboard_widgets.append(widget_inst)
 
         return widget_inst
 
@@ -121,8 +140,53 @@ class WidgetManager:
             return module
         return None
 
+    def toggle_dashboard(self):
+        """Toggle visibility of all dashboard-mode widgets."""
+        if self._dashboard_visible:
+            self.hide_dashboard()
+        else:
+            self.show_dashboard()
+
+    def show_dashboard(self):
+        """Show all dashboard widgets with a fade-in animation."""
+        self._dashboard_visible = True
+        for w in self.dashboard_widgets:
+            hwnd = w.pytonium.get_native_window_handle()
+            if hwnd:
+                # Show the window first, then trigger CSS fade-in
+                Win32WindowHelper.show_window(hwnd)
+                w.pytonium.execute_javascript(
+                    "document.body.classList.remove('fade-out');"
+                    "document.body.classList.add('fade-in');"
+                )
+
+    def hide_dashboard(self):
+        """Hide all dashboard widgets with a fade-out animation."""
+        self._dashboard_visible = False
+        for w in self.dashboard_widgets:
+            hwnd = w.pytonium.get_native_window_handle()
+            if hwnd:
+                # Trigger CSS fade-out, then hide the window after transition
+                w.pytonium.execute_javascript(
+                    "document.body.classList.remove('fade-in');"
+                    "document.body.classList.add('fade-out');"
+                )
+        # Schedule actual window hide after animation (300ms)
+        self._pending_hide_time = time.time() + 0.3
+
+    def _check_pending_hide(self):
+        """Hide dashboard windows after fade-out animation completes."""
+        if self._pending_hide_time and time.time() >= self._pending_hide_time:
+            self._pending_hide_time = None
+            if not self._dashboard_visible:
+                for w in self.dashboard_widgets:
+                    hwnd = w.pytonium.get_native_window_handle()
+                    if hwnd:
+                        Win32WindowHelper.hide_window(hwnd)
+
     def update(self):
         """Pump the message loop. Only one instance needs to call this."""
+        self._check_pending_hide()
         if self.active_widgets:
             self.active_widgets[0].pytonium.update_message_loop()
 
