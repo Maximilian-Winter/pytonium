@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Full system dashboard with CPU, network, memory, weather, news, and media player",
   "entry": "index.html",
+  "backend": "backend.py",
 
   "window": {
     "mode": "dashboard",
@@ -24,7 +25,7 @@
   "hot_reload": true,
 
   "config": {
-    "youtube_playlist": "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+    "youtube_playlist": "OLAK5uy_mFOn8urHsYJYp9nZVSQ7kLNrb6J-PJbwo",
     "weather_location": "Königswinter,DE",
     "news_sources": ["tech", "science", "world"],
     "refresh_interval_weather": 1800,

@@ -11,6 +11,8 @@ import urllib.parse
 import os
 from datetime import datetime
 
+from Pytonium import returns_value_to_javascript
+
 
 class WidgetBackend:
     """Backend for the dashboard widget."""
@@ -23,8 +25,9 @@ class WidgetBackend:
 
     # ─── Configuration ───
 
+    @returns_value_to_javascript("any")
     def get_config(self, key):
-        """Return a config value. Called from JS via Pytonium.callFunction."""
+        """Return a config value. Called from JS via Pytonium.widget.get_config."""
         config = {
             "youtube_playlist": "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
             "weather_location": "Königswinter,DE",
@@ -34,6 +37,7 @@ class WidgetBackend:
     # ─── Weather ───
     # Uses Open-Meteo (free, no API key needed)
 
+    @returns_value_to_javascript("string")
     def fetch_weather(self):
         """Fetch current weather and 7-day forecast for Königswinter."""
         try:
@@ -106,6 +110,7 @@ class WidgetBackend:
     # ─── News ───
     # Uses a simple RSS approach — can be extended
 
+    @returns_value_to_javascript("string")
     def fetch_news(self):
         """Fetch tech/science news headlines.
 
@@ -161,10 +166,12 @@ class WidgetBackend:
 
     # ─── System Extras ───
 
+    @returns_value_to_javascript("string")
     def get_hostname(self):
         """Return the machine hostname."""
         return os.environ.get("COMPUTERNAME", "unknown")
 
+    @returns_value_to_javascript("string")
     def get_username(self):
         """Return the current username."""
         return os.environ.get("USERNAME", os.environ.get("USER", "unknown"))

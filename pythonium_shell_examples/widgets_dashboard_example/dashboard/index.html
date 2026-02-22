@@ -1051,61 +1051,99 @@
   // ═══════════════════════════════════════════════════════════════
 
   function initPytonium() {
-    // Register for system state updates
+    // ── State buffer for accumulating individual key-value updates ──
+    var sys = {};             // latest system state values
+    var prevNetRecv = null;   // previous cumulative recv bytes
+    var prevNetSent = null;   // previous cumulative sent bytes
+    var lastNetTime = null;   // timestamp of last network snapshot
+
+    // Register for system state updates (CPU, memory, disk, network, boot_time)
     Pytonium.appState.registerForStateUpdates(
             "dashboardSystemUpdate", ["system"], true, true
     );
 
-    // Register for weather state updates
-    Pytonium.appState.registerForStateUpdates(
-            "dashboardWeatherUpdate", ["weather"], true, true
-    );
-
-    // Register for news state updates
-    Pytonium.appState.registerForStateUpdates(
-            "dashboardNewsUpdate", ["news"], true, true
-    );
-
-    // System state handler
+    // System state handler — buffers individual keys and dispatches to UI
     document.addEventListener("dashboardSystemUpdate", function(event) {
       var key = event.detail.key;
       var value = event.detail.value;
+      sys[key] = value;
 
-      if (key === "cpu_avg") updateCPU(value, []);
-      if (key === "cpu_per_core") {
-        // If per-core data available, use it for histogram
+      // ── CPU ──
+      if (key === "cpu_avg") {
+        updateCPU(value, sys.cpu_percent || []);
       }
-      if (key === "mem_percent") updateMemory(value);
-      if (key === "mem_used") {
-        // Store for combined update
+
+      // ── Memory — update whenever any mem_ key arrives ──
+      if (key.startsWith("mem_") && sys.mem_percent !== undefined) {
+        // psutil pushes bytes; updateMemory expects MB (divided by 1024 → GB)
+        var usedMB = sys.mem_used !== undefined ? sys.mem_used / (1024 * 1024) : undefined;
+        var totalMB = sys.mem_total !== undefined ? sys.mem_total / (1024 * 1024) : undefined;
+        updateMemory(sys.mem_percent, usedMB, totalMB);
       }
-      if (key === "disk_percent") updateDisk(value);
-      if (key === "net_download_rate") {
-        // Will be paired with upload
+
+      // ── Disk — update whenever any disk_ key arrives ──
+      if (key.startsWith("disk_") && sys.disk_percent !== undefined) {
+        // psutil pushes bytes; updateDisk expects GB
+        var usedGB = sys.disk_used !== undefined ? sys.disk_used / (1024 * 1024 * 1024) : undefined;
+        var totalGB = sys.disk_total !== undefined ? sys.disk_total / (1024 * 1024 * 1024) : undefined;
+        updateDisk(sys.disk_percent, usedGB, totalGB);
       }
-      if (key === "net_upload_rate") {
-        // Network update
+
+      // ── Network — calculate rates from cumulative byte counters ──
+      if (key === "net_recv" || key === "net_sent") {
+        var now = Date.now() / 1000;
+        if (prevNetRecv !== null && lastNetTime !== null) {
+          var dt = now - lastNetTime;
+          if (dt > 0.1) {  // avoid division by tiny intervals
+            var downRate = Math.max(0, ((sys.net_recv || 0) - prevNetRecv) / dt);
+            var upRate = Math.max(0, ((sys.net_sent || 0) - prevNetSent) / dt);
+            updateNetwork(downRate, upRate, sys.net_recv, sys.net_sent);
+            prevNetRecv = sys.net_recv || 0;
+            prevNetSent = sys.net_sent || 0;
+            lastNetTime = now;
+          }
+        } else {
+          // First sample — just store baseline, no rate yet
+          prevNetRecv = sys.net_recv || 0;
+          prevNetSent = sys.net_sent || 0;
+          lastNetTime = now;
+        }
       }
-      if (key === "boot_time") updateUptime(value);
+
+      // ── Uptime ──
+      if (key === "boot_time") {
+        updateUptime(value);
+      }
     });
 
-    // Weather state handler
-    document.addEventListener("dashboardWeatherUpdate", function(event) {
-      if (event.detail.key === "current") {
-        updateWeather(JSON.parse(event.detail.value));
-      }
-    });
+    // ── Weather — fetch from Python backend via Pytonium.widget.* ──
+    function refreshWeather() {
+      Pytonium.widget.fetch_weather().then(function(data) {
+        if (data) {
+          try { updateWeather(JSON.parse(data)); }
+          catch (e) { console.log("Weather parse error:", e); }
+        }
+      }).catch(function(e) { console.log("Weather fetch failed:", e); });
+    }
+    refreshWeather();
+    setInterval(refreshWeather, 1800000); // refresh every 30 minutes
 
-    // News state handler
-    document.addEventListener("dashboardNewsUpdate", function(event) {
-      if (event.detail.key === "articles") {
-        updateNews(JSON.parse(event.detail.value));
-      }
-    });
+    // ── News — fetch from Python backend ──
+    function refreshNews() {
+      Pytonium.widget.fetch_news().then(function(data) {
+        if (data) {
+          try { updateNews(JSON.parse(data)); }
+          catch (e) { console.log("News parse error:", e); }
+        }
+      }).catch(function(e) { console.log("News fetch failed:", e); });
+    }
+    refreshNews();
+    setInterval(refreshNews, 600000); // refresh every 10 minutes
 
-    // Load player from config
-    Pytonium.callFunction("get_config", "youtube_playlist").then(function(id) {
+    // ── YouTube Player — load config from backend ──
+    Pytonium.widget.get_config("youtube_playlist").then(function(id) {
       if (id) loadPlayer(id);
+      else loadPlayer("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf");
     }).catch(function() {
       loadPlayer("PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"); // fallback
     });

@@ -46,6 +46,7 @@ class SystemServices:
             self._poll_memory()
             self._poll_disk()
             self._poll_network()
+            self._poll_boot_time()
             self._poll_battery()
 
     def _push_state(self, namespace, key, value):
@@ -95,6 +96,10 @@ class SystemServices:
         net = psutil.net_io_counters()
         self._push_state("system", "net_sent", net.bytes_sent)
         self._push_state("system", "net_recv", net.bytes_recv)
+
+    def _poll_boot_time(self):
+        """Push system boot timestamp (for uptime calculation)."""
+        self._push_state("system", "boot_time", psutil.boot_time())
 
     def _poll_battery(self):
         """Push battery state if available."""
