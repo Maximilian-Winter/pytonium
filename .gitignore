@@ -236,3 +236,4 @@ cef-binaries-windows/MODULE.bazel
 cef-binaries-windows/README.txt
 /tests
 /src/pytonium_shell/pytonium_shell.egg-info
+/src/pytonium_shell/pytonium_shell/__pycache__
