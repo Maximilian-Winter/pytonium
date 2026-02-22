@@ -155,6 +155,12 @@ if os.name == "nt":
     user32.IsWindow.argtypes = [HWND]
     user32.IsWindow.restype = BOOL
 
+    user32.EnumChildWindows.argtypes = [HWND, WNDENUMPROC, ctypes.wintypes.LPARAM]
+    user32.EnumChildWindows.restype = BOOL
+
+    user32.IsWindowVisible.argtypes = [HWND]
+    user32.IsWindowVisible.restype = BOOL
+
     # For wallpaper debug/verification
     user32.GetClassNameW.argtypes = [HWND, ctypes.wintypes.LPWSTR, INT]
     user32.GetClassNameW.restype = INT
@@ -450,21 +456,24 @@ class Win32WindowHelper:
 
     @staticmethod
     def find_wallpaper_worker_w():
-        """Find or create the WorkerW window for wallpaper embedding.
+        """Find the correct parent window for wallpaper embedding.
 
-        Sends the undocumented 0x052C message to Progman to spawn WorkerW,
-        then finds the correct target via EnumWindows. Supports both
-        Windows 10 layout (SHELLDLL_DefView in WorkerW) and Windows 11
-        layout (SHELLDLL_DefView under Progman).
+        Sends the undocumented 0x052C message to Progman, then searches
+        for the wallpaper canvas using multiple strategies:
+
+        - **Win11**: WorkerW is a *child* of Progman (found via
+          EnumChildWindows), sitting behind SHELLDLL_DefView.
+        - **Win10**: WorkerW is a *top-level* window (found via
+          EnumWindows), sibling of Progman.
 
         Returns:
-            (parent_hwnd, strategy) — the HWND to SetParent into and a
-            string describing the strategy ('worker_w' or 'progman').
+            (parent_hwnd, strategy) tuple. Strategy is one of:
+            'progman_child_worker', 'toplevel_worker', 'progman'.
             Returns (0, None) on failure.
         """
         progman = user32.FindWindowW("Progman", None)
         if not progman:
-            print("Win32WindowHelper: Progman not found")
+            print("  Wallpaper: Progman not found")
             return 0, None
 
         # Send undocumented message to enable wallpaper layering
@@ -474,89 +483,81 @@ class Win32WindowHelper:
             SMTO_NORMAL, 1000, ctypes.byref(result),
         )
 
-        # Enumerate all top-level windows to find:
-        #   - Where SHELLDLL_DefView (desktop icons) lives
-        #   - All WorkerW windows (with and without SHELLDLL_DefView)
-        shell_view_parent = [0]
-        worker_ws_with_shell = []
-        worker_ws_without_shell = []
-        sibling_worker = [0]
+        # --- Strategy 1 (Win11): WorkerW as a CHILD of Progman ---
+        # On Windows 11, the desktop hierarchy is:
+        #   Progman
+        #   ├── SHELLDLL_DefView (icons, on top)
+        #   └── WorkerW (wallpaper canvas, behind icons)
+        # The WorkerW child is visible and spans the full desktop.
+        progman_child_worker = [0]
 
-        def _enum_cb(hwnd, lparam):
-            # Check if this window contains SHELLDLL_DefView
-            shell_view = user32.FindWindowExW(
-                hwnd, None, "SHELLDLL_DefView", None
-            )
-            if shell_view:
-                shell_view_parent[0] = hwnd
-                # Classic approach: find the next WorkerW sibling
-                worker = user32.FindWindowExW(
-                    None, hwnd, "WorkerW", None
-                )
-                if worker:
-                    sibling_worker[0] = worker
-
-            # Classify all WorkerW windows
+        def _enum_children(hwnd, lparam):
             class_buf = ctypes.create_unicode_buffer(64)
             user32.GetClassNameW(hwnd, class_buf, 64)
             if class_buf.value == "WorkerW":
-                child_shell = user32.FindWindowExW(
+                # Verify it's visible and has a real size
+                if user32.IsWindowVisible(hwnd):
+                    rect = ctypes.wintypes.RECT()
+                    user32.GetWindowRect(hwnd, ctypes.byref(rect))
+                    w = rect.right - rect.left
+                    h = rect.bottom - rect.top
+                    if w > 100 and h > 100:
+                        progman_child_worker[0] = hwnd
+                        return False  # stop enumeration
+            return True
+
+        cb_child = WNDENUMPROC(_enum_children)
+        user32.EnumChildWindows(progman, cb_child, 0)
+
+        if progman_child_worker[0]:
+            target = progman_child_worker[0]
+            print(f"  Wallpaper strategy: progman_child_worker, "
+                  f"target={target:#x}")
+            return target, "progman_child_worker"
+
+        # --- Strategy 2 (Win10): Top-level WorkerW sibling ---
+        # On Windows 10, 0x052C creates a top-level WorkerW.
+        # SHELLDLL_DefView moves into one WorkerW; the other is our canvas.
+        toplevel_worker_with_shell = []
+        toplevel_worker_without_shell = []
+
+        def _enum_toplevel(hwnd, lparam):
+            class_buf = ctypes.create_unicode_buffer(64)
+            user32.GetClassNameW(hwnd, class_buf, 64)
+            if class_buf.value == "WorkerW":
+                shell = user32.FindWindowExW(
                     hwnd, None, "SHELLDLL_DefView", None
                 )
-                if child_shell:
-                    worker_ws_with_shell.append(hwnd)
-                else:
-                    worker_ws_without_shell.append(hwnd)
+                if shell:
+                    toplevel_worker_with_shell.append(hwnd)
+                elif user32.IsWindowVisible(hwnd):
+                    rect = ctypes.wintypes.RECT()
+                    user32.GetWindowRect(hwnd, ctypes.byref(rect))
+                    w = rect.right - rect.left
+                    h = rect.bottom - rect.top
+                    if w > 100 and h > 100:
+                        toplevel_worker_without_shell.append(hwnd)
+            return True
 
-            return True  # continue
+        cb_top = WNDENUMPROC(_enum_toplevel)
+        user32.EnumWindows(cb_top, 0)
 
-        cb = WNDENUMPROC(_enum_cb)
-        user32.EnumWindows(cb, 0)
+        if toplevel_worker_with_shell and toplevel_worker_without_shell:
+            target = toplevel_worker_without_shell[0]
+            print(f"  Wallpaper strategy: toplevel_worker (classic), "
+                  f"target={target:#x}")
+            return target, "toplevel_worker"
 
-        print(f"  Wallpaper scan: Progman={progman:#x}, "
-              f"SHELLDLL_DefView parent={shell_view_parent[0]:#x}, "
-              f"WorkerW with icons={len(worker_ws_with_shell)}, "
-              f"WorkerW empty={len(worker_ws_without_shell)}, "
-              f"sibling WorkerW={sibling_worker[0]:#x}")
+        if toplevel_worker_without_shell:
+            target = toplevel_worker_without_shell[0]
+            print(f"  Wallpaper strategy: toplevel_worker (visible), "
+                  f"target={target:#x}")
+            return target, "toplevel_worker"
 
-        # --- Strategy selection ---
-
-        # Strategy 1: Classic (Win10) — SHELLDLL_DefView is in a WorkerW.
-        # The other WorkerW (without SHELLDLL_DefView) is our wallpaper surface.
-        if worker_ws_with_shell and worker_ws_without_shell:
-            target = worker_ws_without_shell[0]
-            print(f"  Wallpaper strategy: worker_w (classic), target={target:#x}")
-            return target, "worker_w"
-
-        # Strategy 2: SHELLDLL_DefView is under Progman (Win11 common).
-        # On Windows 11, SHELLDLL_DefView stays under Progman and 0x052C
-        # may spawn many WorkerW windows for various DWM purposes.
-        # Parenting to Progman is more reliable — our child window sits
-        # above Progman's wallpaper bitmap but below SHELLDLL_DefView
-        # (using HWND_BOTTOM z-order).
-        if shell_view_parent[0] == progman:
-            print(f"  Wallpaper strategy: progman (win11), target={progman:#x}")
-            return progman, "progman"
-
-        # Strategy 3: Use the sibling WorkerW found via FindWindowExW.
-        if sibling_worker[0]:
-            target = sibling_worker[0]
-            print(f"  Wallpaper strategy: worker_w (sibling), target={target:#x}")
-            return target, "worker_w"
-
-        # Strategy 4: Any available WorkerW.
-        if worker_ws_without_shell:
-            target = worker_ws_without_shell[0]
-            print(f"  Wallpaper strategy: worker_w (any), target={target:#x}")
-            return target, "worker_w"
-
-        # Strategy 5: Fallback — parent directly to Progman.
-        if progman:
-            print(f"  Wallpaper strategy: progman (fallback), target={progman:#x}")
-            return progman, "progman"
-
-        print("  Wallpaper strategy: FAILED — no suitable parent found")
-        return 0, None
+        # --- Strategy 3: Fallback to Progman ---
+        print(f"  Wallpaper strategy: progman (fallback), "
+              f"target={progman:#x}")
+        return progman, "progman"
 
     @staticmethod
     def make_wallpaper(hwnd, monitor=None):
