@@ -491,8 +491,7 @@ function drawNetGraph() {
 
 /* ── Backend: system info ── */
 function loadSystemInfo() {
-    try {
-        var json = widget.get_system_info();
+    Pytonium.widget.get_system_info().then(function(json) {
         var info = JSON.parse(json);
         var lines = [];
         if (info.os) lines.push(info.os);
@@ -506,8 +505,7 @@ function loadSystemInfo() {
 
 /* ── Backend: disk partitions ── */
 function loadDisks() {
-    try {
-        var json = widget.get_disk_partitions();
+    Pytonium.widget.get_disk_partitions().then(function(json) {
         var parts = JSON.parse(json);
         if (parts.length === 0) return;
         var container = document.getElementById("disk-list");
@@ -530,8 +528,7 @@ function loadDisks() {
 
 /* ── Backend: processes ── */
 function pollProcesses() {
-    try {
-        var json = widget.get_top_processes(10);
+    Pytonium.widget.get_top_processes(10).then(function(json) {
         var procs = JSON.parse(json);
         var tbody = document.getElementById("proc-body");
         var rows = "";
