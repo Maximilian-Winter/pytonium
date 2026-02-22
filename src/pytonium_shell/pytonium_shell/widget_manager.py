@@ -204,11 +204,16 @@ class WidgetManager:
         width = monitor.width
         height = monitor.height
 
+        print(f"  Wallpaper setup: monitor {monitor.index} "
+              f"({monitor.width}x{monitor.height} @ {monitor.x},{monitor.y})")
+
         p.initialize(entry_url, width, height)
 
         hwnd = p.get_native_window_handle()
         if hwnd:
-            Win32WindowHelper.hide_from_taskbar(hwnd)
+            # Note: hide_from_taskbar is NOT called here — the WS_CHILD
+            # conversion in make_wallpaper handles taskbar visibility
+            # (child windows don't appear on the taskbar).
 
             success = Win32WindowHelper.make_wallpaper(hwnd, monitor)
             if success:
@@ -352,11 +357,18 @@ class WidgetManager:
         """Re-parent wallpaper widgets if explorer.exe restarted.
 
         Called periodically (every ~5 seconds) from update().
+        When the parent WorkerW is destroyed (explorer restart), the
+        window becomes an orphaned WS_CHILD — we must restore WS_POPUP
+        first so make_wallpaper() can convert it back cleanly.
         """
         for w in self.active_widgets:
             if w.is_wallpaper:
                 hwnd = w.pytonium.get_native_window_handle()
                 if hwnd and not Win32WindowHelper.is_wallpaper_parent_valid(hwnd):
+                    print(f"  Wallpaper health: re-parenting '{w.name}'")
+                    # Restore to a valid top-level state first
+                    Win32WindowHelper.restore_from_wallpaper(hwnd)
+                    # Re-parent into the (new) WorkerW
                     monitor_spec = w.manifest.get("window", {}).get("monitor", "primary")
                     monitor = self._resolve_monitor(monitor_spec)
                     Win32WindowHelper.make_wallpaper(hwnd, monitor)

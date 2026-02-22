@@ -86,17 +86,12 @@ class SystemTray:
         widgets = self.shell.widget_manager.active_widgets
         if widgets:
             for w in widgets:
-                name = w.name
-                mode = w.mode
-                # Show mode as suffix for clarity
-                label = f"{name} [{mode}]"
+                label = f"{w.name} [{w.mode}]"
                 items.append(
                     pystray.MenuItem(
                         label,
-                        lambda icon, item, n=name: self._queue_action(
-                            "toggle_widget", n
-                        ),
-                        checked=lambda item, n=name: self._is_widget_visible(n),
+                        self._make_toggle_action(w.name),
+                        checked=self._make_visibility_check(w.name),
                     )
                 )
             items.append(pystray.Menu.SEPARATOR)
@@ -106,7 +101,7 @@ class SystemTray:
             items.append(
                 pystray.MenuItem(
                     "Toggle Dashboard",
-                    lambda icon, item: self._queue_action("toggle_dashboard"),
+                    self._make_simple_action("toggle_dashboard"),
                 )
             )
             items.append(pystray.Menu.SEPARATOR)
@@ -115,7 +110,7 @@ class SystemTray:
         items.append(
             pystray.MenuItem(
                 "Reload All",
-                lambda icon, item: self._queue_action("reload_all"),
+                self._make_simple_action("reload_all"),
             )
         )
 
@@ -123,11 +118,33 @@ class SystemTray:
         items.append(
             pystray.MenuItem(
                 "Quit PytoniumShell",
-                lambda icon, item: self._queue_action("quit"),
+                self._make_simple_action("quit"),
             )
         )
 
         return pystray.Menu(*items)
+
+    def _make_toggle_action(self, widget_name):
+        """Create a 2-arg action callback for toggling a widget.
+
+        pystray validates callback signatures — using a proper closure
+        with exactly (icon, item) avoids signature inspection issues.
+        """
+        def action(icon, item):
+            self._queue_action("toggle_widget", widget_name)
+        return action
+
+    def _make_visibility_check(self, widget_name):
+        """Create a 1-arg checked callback for a widget menu item."""
+        def check(item):
+            return self._is_widget_visible(widget_name)
+        return check
+
+    def _make_simple_action(self, action_name):
+        """Create a 2-arg action callback for a simple (no-arg) tray action."""
+        def action(icon, item):
+            self._queue_action(action_name)
+        return action
 
     def _is_widget_visible(self, widget_name):
         """Check if a widget is currently visible (for menu checkmarks)."""
