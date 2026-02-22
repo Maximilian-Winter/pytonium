@@ -757,6 +757,30 @@ cdef class Pytonium:
         """Check if the window is currently maximized."""
         return self.pytonium_library.IsMaximized()
 
+    def set_fullscreen(self, fullscreen: bool) -> None:
+        """Enter or exit fullscreen mode.
+
+        When entering fullscreen, the window fills the entire monitor it is
+        currently on, with all window chrome removed.  When exiting, the
+        previous window position, size, and style are restored.
+
+        Args:
+            fullscreen: True to enter fullscreen, False to exit.
+        """
+        self.pytonium_library.SetFullscreen(fullscreen)
+
+    def is_fullscreen(self) -> bool:
+        """Check if the window is currently in fullscreen mode.
+
+        Returns:
+            True if the window is fullscreen.
+        """
+        return self.pytonium_library.IsFullscreen()
+
+    def toggle_fullscreen(self) -> None:
+        """Toggle between fullscreen and windowed mode."""
+        self.pytonium_library.ToggleFullscreen()
+
     def drag_window(self, delta_x: int, delta_y: int):
         """Drag the window by the specified delta (for frameless windows)."""
         self.pytonium_library.DragWindow(delta_x, delta_y)

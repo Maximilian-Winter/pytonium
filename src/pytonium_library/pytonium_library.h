@@ -104,6 +104,11 @@ public:
     void CloseWindow();
     bool IsMaximized();
 
+    // Fullscreen mode
+    void SetFullscreen(bool fullscreen);
+    bool IsFullscreen();
+    void ToggleFullscreen();
+
     // Drag window by delta (for draggable custom title bar)
     void DragWindow(int deltaX, int deltaY);
 
@@ -159,6 +164,17 @@ private:
     bool m_FramelessWindow = false;
     bool m_OsrMode = false;
     void* m_ParentHwnd = nullptr;
+
+    // Fullscreen state
+    bool m_IsFullscreen = false;
+#if defined(OS_WIN)
+    struct FullscreenState {
+        RECT savedRect = {0, 0, 0, 0};
+        LONG savedStyle = 0;
+        LONG savedExStyle = 0;
+    };
+    FullscreenState m_FullscreenState;
+#endif
 
 #if defined(OS_WIN)
     CefRefPtr<OsrWindowWin> m_OsrWindow;

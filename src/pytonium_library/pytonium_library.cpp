@@ -549,6 +549,69 @@ bool PytoniumLibrary::IsMaximized()
     return false;
 }
 
+void PytoniumLibrary::SetFullscreen(bool fullscreen)
+{
+#if defined(OS_WIN)
+    if (!m_Browser) return;
+    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    if (!hwnd || !IsWindow(hwnd)) return;
+
+    if (fullscreen == m_IsFullscreen) return;
+
+    if (fullscreen) {
+        // Save current window state before going fullscreen
+        GetWindowRect(hwnd, &m_FullscreenState.savedRect);
+        m_FullscreenState.savedStyle = static_cast<LONG>(GetWindowLongPtrW(hwnd, GWL_STYLE));
+        m_FullscreenState.savedExStyle = static_cast<LONG>(GetWindowLongPtrW(hwnd, GWL_EXSTYLE));
+
+        // Strip window chrome
+        LONG newStyle = m_FullscreenState.savedStyle;
+        newStyle &= ~(WS_CAPTION | WS_THICKFRAME);
+        LONG newExStyle = m_FullscreenState.savedExStyle;
+        newExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE |
+                        WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
+
+        SetWindowLongPtrW(hwnd, GWL_STYLE, newStyle);
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, newExStyle);
+
+        // Get the monitor this window is on
+        HMONITOR hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO mi;
+        mi.cbSize = sizeof(MONITORINFO);
+        if (GetMonitorInfoW(hMonitor, &mi)) {
+            SetWindowPos(hwnd, HWND_TOP,
+                         mi.rcMonitor.left, mi.rcMonitor.top,
+                         mi.rcMonitor.right - mi.rcMonitor.left,
+                         mi.rcMonitor.bottom - mi.rcMonitor.top,
+                         SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        }
+    } else {
+        // Restore saved window state
+        SetWindowLongPtrW(hwnd, GWL_STYLE, m_FullscreenState.savedStyle);
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, m_FullscreenState.savedExStyle);
+
+        SetWindowPos(hwnd, NULL,
+                     m_FullscreenState.savedRect.left,
+                     m_FullscreenState.savedRect.top,
+                     m_FullscreenState.savedRect.right - m_FullscreenState.savedRect.left,
+                     m_FullscreenState.savedRect.bottom - m_FullscreenState.savedRect.top,
+                     SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+
+    m_IsFullscreen = fullscreen;
+#endif
+}
+
+bool PytoniumLibrary::IsFullscreen()
+{
+    return m_IsFullscreen;
+}
+
+void PytoniumLibrary::ToggleFullscreen()
+{
+    SetFullscreen(!m_IsFullscreen);
+}
+
 void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
 {
 #if defined(OS_WIN)
