@@ -1,0 +1,47 @@
+{
+  "shell": {
+    "name": "Pytonium Desktop Demo",
+    "theme": "default"
+  },
+
+  "quit_hotkey": "ctrl+alt+q",
+  "reload_hotkey": "ctrl+shift+r",
+
+  "desktop_mirror": {
+    "poll_interval": 0.5
+  },
+
+  "layers": [
+    {
+      "id": "wallpaper",
+      "type": "wallpaper",
+      "z_order": 0,
+      "entry": "layers/wallpaper/index.html",
+      "input": "click_through_always"
+    },
+    {
+      "id": "taskbar",
+      "type": "taskbar",
+      "z_order": 3,
+      "entry": "layers/taskbar/index.html",
+      "backend": "layers/taskbar/backend.py",
+      "state_namespaces": ["windows", "datetime", "system"],
+      "input": "always_active",
+      "config": {
+        "position": "top",
+        "height": 38,
+        "reserve_space": true
+      }
+    },
+    {
+      "id": "launcher",
+      "type": "overlay",
+      "z_order": 4,
+      "entry": "layers/overlay/index.html",
+      "backend": "layers/overlay/backend.py",
+      "state_namespaces": ["windows"],
+      "input": "passthrough_when_inactive",
+      "hotkey": "ctrl+space"
+    }
+  ]
+}

@@ -75,18 +75,23 @@ class SystemServices:
         self._push_state("system", "cpu_avg", round(avg, 1))
 
     def _poll_memory(self):
-        """Push memory usage state."""
+        """Push memory usage state.
+
+        Note: mem.total and mem.used are Python ints that can exceed C long
+        (32-bit on Windows).  Cast to float so the Cython bridge uses
+        SetDouble() instead of SetInt().
+        """
         mem = psutil.virtual_memory()
-        self._push_state("system", "mem_total", mem.total)
-        self._push_state("system", "mem_used", mem.used)
+        self._push_state("system", "mem_total", float(mem.total))
+        self._push_state("system", "mem_used", float(mem.used))
         self._push_state("system", "mem_percent", round(mem.percent, 1))
 
     def _poll_disk(self):
         """Push disk usage state."""
         try:
             disk = psutil.disk_usage("/")
-            self._push_state("system", "disk_total", disk.total)
-            self._push_state("system", "disk_used", disk.used)
+            self._push_state("system", "disk_total", float(disk.total))
+            self._push_state("system", "disk_used", float(disk.used))
             self._push_state("system", "disk_percent", round(disk.percent, 1))
         except Exception:
             pass
@@ -94,8 +99,8 @@ class SystemServices:
     def _poll_network(self):
         """Push network I/O state."""
         net = psutil.net_io_counters()
-        self._push_state("system", "net_sent", net.bytes_sent)
-        self._push_state("system", "net_recv", net.bytes_recv)
+        self._push_state("system", "net_sent", float(net.bytes_sent))
+        self._push_state("system", "net_recv", float(net.bytes_recv))
 
     def _poll_boot_time(self):
         """Push system boot timestamp (for uptime calculation)."""

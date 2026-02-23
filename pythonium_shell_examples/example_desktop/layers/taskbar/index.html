@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bar-bg: rgba(15, 15, 30, 0.88);
+    --bar-fg: #c0caf5;
+    --bar-muted: #565f89;
+    --bar-accent: #7aa2f7;
+    --bar-accent2: #bb9af7;
+    --bar-hover: rgba(255, 255, 255, 0.08);
+    --bar-active: rgba(122, 162, 247, 0.2);
+    --bar-border: rgba(255, 255, 255, 0.06);
+    --bar-success: #9ece6a;
+    --bar-warning: #e0af68;
+    --bar-error: #f7768e;
+}
+
+html, body {
+    width: 100vw;
+    height: 38px;
+    overflow: hidden;
+    font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+    font-size: 12px;
+    color: var(--bar-fg);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body {
+    background: var(--bar-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--bar-border);
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    gap: 4px;
+}
+
+/* ── Sections ── */
+.section-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.section-center {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0 8px;
+}
+.section-center::-webkit-scrollbar { display: none; }
+
+.section-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ── Menu button ── */
+.menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 150ms;
+    font-size: 16px;
+}
+.menu-btn:hover { background: var(--bar-hover); }
+.menu-btn:active { background: var(--bar-active); }
+
+/* ── Window buttons ── */
+.window-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 150ms;
+    max-width: 180px;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 11.5px;
+}
+.window-btn:hover { background: var(--bar-hover); }
+.window-btn:active { background: var(--bar-active); }
+.window-btn.minimized { opacity: 0.5; }
+.window-btn .title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.window-btn .indicator {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--bar-accent);
+    flex-shrink: 0;
+}
+
+/* ── System info ── */
+.sys-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--bar-muted);
+    white-space: nowrap;
+}
+.sys-item .value { color: var(--bar-fg); }
+.sys-item .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ── Clock ── */
+.clock {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 8px;
+    color: var(--bar-fg);
+    letter-spacing: 0.3px;
+}
+
+/* ── Separator ── */
+.sep {
+    width: 1px;
+    height: 18px;
+    background: var(--bar-border);
+    margin: 0 4px;
+}
+</style>
+</head>
+<body>
+
+<!-- Left: Menu + launcher toggle -->
+<div class="section-left">
+    <div class="menu-btn" id="menuBtn" title="App Launcher (Ctrl+Space)">&#9776;</div>
+    <div class="sep"></div>
+</div>
+
+<!-- Center: Running windows -->
+<div class="section-center" id="windowList"></div>
+
+<!-- Right: System info + Clock -->
+<div class="section-right">
+    <div class="sep"></div>
+    <div class="sys-item">
+        <span class="label">CPU</span>
+        <span class="value" id="cpuValue">--%</span>
+    </div>
+    <div class="sys-item">
+        <span class="label">MEM</span>
+        <span class="value" id="memValue">--</span>
+    </div>
+    <div class="sep"></div>
+    <div class="clock" id="clock">--:--</div>
+</div>
+
+<script>
+// ── State ──
+let windows = [];
+let cpuAvg = 0;
+let memPercent = 0;
+let memUsed = 0;
+let memTotal = 0;
+
+// ── Clock ──
+function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Render window buttons ──
+function renderWindows() {
+    const container = document.getElementById('windowList');
+    container.innerHTML = '';
+
+    for (const w of windows) {
+        const btn = document.createElement('div');
+        btn.className = 'window-btn' + (w.minimized ? ' minimized' : '');
+        btn.title = `${w.title}\n${w.exe} (PID: ${w.pid})`;
+
+        // Shorten exe name for display
+        let exeLabel = w.exe.replace('.exe', '').replace('.EXE', '');
+        if (exeLabel.length > 3) {
+            exeLabel = exeLabel.charAt(0).toUpperCase() + exeLabel.slice(1);
+        }
+
+        btn.innerHTML = `
+            <span class="indicator"></span>
+            <span class="title">${escapeHtml(w.title || exeLabel)}</span>
+        `;
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof Pytonium !== 'undefined' && Pytonium.layer) {
+                Pytonium.layer.focus_window(w.hwnd);
+            }
+        });
+
+        btn.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof Pytonium !== 'undefined' && Pytonium.layer) {
+                if (w.minimized) {
+                    Pytonium.layer.focus_window(w.hwnd);
+                } else {
+                    Pytonium.layer.minimize_window(w.hwnd);
+                }
+            }
+        });
+
+        container.appendChild(btn);
+    }
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ── System info display ──
+function updateSysInfo() {
+    document.getElementById('cpuValue').textContent =
+        cpuAvg > 0 ? Math.round(cpuAvg) + '%' : '--%';
+
+    if (memTotal > 0) {
+        const usedGB = (memUsed / (1024 * 1024 * 1024)).toFixed(1);
+        const totalGB = (memTotal / (1024 * 1024 * 1024)).toFixed(0);
+        document.getElementById('memValue').textContent = `${usedGB}/${totalGB}G`;
+    }
+}
+
+// ── State event handler ──
+// Register immediately — events come via execute_javascript (CustomEvent dispatch),
+// not the Pytonium state IPC system, so no need to wait for PytoniumReady.
+window.addEventListener('shell-state', (e) => {
+    const { namespace, key, value } = e.detail;
+
+    if (namespace === 'windows') {
+        if (key === 'list' && Array.isArray(value)) {
+            windows = value;
+            renderWindows();
+        }
+    }
+
+    if (namespace === 'system') {
+        if (key === 'cpu_avg') cpuAvg = value;
+        if (key === 'mem_used') memUsed = value;
+        if (key === 'mem_total') memTotal = value;
+        if (key === 'mem_percent') memPercent = value;
+        updateSysInfo();
+    }
+});
+
+// ── Pytonium backend init ──
+function initPytonium() {
+    if (typeof Pytonium === 'undefined') {
+        setTimeout(initPytonium, 100);
+        return;
+    }
+    // Backend methods (toggle_launcher, focus_window, etc.) are ready
+    console.log('Pytonium bridge ready');
+}
+
+// Menu button — toggles the app launcher overlay
+document.getElementById('menuBtn').addEventListener('click', () => {
+    if (typeof Pytonium !== 'undefined' && Pytonium.layer) {
+        Pytonium.layer.toggle_launcher();
+    }
+});
+
+// Boot
+if (window.PytoniumReady) {
+    initPytonium();
+} else {
+    window.addEventListener('PytoniumReady', initPytonium);
+}
+</script>
+</body>
+</html>

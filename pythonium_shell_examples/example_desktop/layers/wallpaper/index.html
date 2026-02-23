@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100vw; height: 100vh; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Palette — deep blues and purples
+const colors = [
+    [15, 15, 35],    // deep navy
+    [25, 20, 55],    // dark purple
+    [10, 30, 60],    // midnight blue
+    [35, 15, 50],    // plum
+];
+
+// Noise function
+function smoothNoise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const fx = x - ix, fy = y - iy;
+    const sx = fx * fx * (3 - 2 * fx);
+    const sy = fy * fy * (3 - 2 * fy);
+    function hash(a, b) {
+        let h = (a * 2654435761 ^ b * 2246822519) & 0x7fffffff;
+        return (h % 65536) / 65536;
+    }
+    const n00 = hash(ix, iy), n10 = hash(ix + 1, iy);
+    const n01 = hash(ix, iy + 1), n11 = hash(ix + 1, iy + 1);
+    const nx0 = n00 + (n10 - n00) * sx;
+    const nx1 = n01 + (n11 - n01) * sx;
+    return nx0 + (nx1 - nx0) * sy;
+}
+
+function fbm(x, y, octaves) {
+    let val = 0, amp = 0.5, freq = 1;
+    for (let i = 0; i < octaves; i++) {
+        val += amp * smoothNoise(x * freq, y * freq);
+        amp *= 0.5; freq *= 2;
+    }
+    return val;
+}
+
+// Stars
+const stars = [];
+for (let i = 0; i < 200; i++) {
+    stars.push({
+        x: Math.random(),
+        y: Math.random(),
+        size: Math.random() * 1.5 + 0.5,
+        brightness: Math.random() * 0.6 + 0.4,
+        twinkleSpeed: Math.random() * 2 + 1,
+    });
+}
+
+let time = 0;
+
+function draw() {
+    const w = canvas.width, h = canvas.height;
+    time += 0.003;
+
+    // Background gradient with noise-driven color shifts
+    const imgData = ctx.createImageData(w, h);
+    const data = imgData.data;
+
+    // Low-res noise pass (performance: sample every 4px)
+    const step = 4;
+    const noiseGrid = [];
+    const cols = Math.ceil(w / step) + 1;
+    const rows = Math.ceil(h / step) + 1;
+    for (let gy = 0; gy < rows; gy++) {
+        for (let gx = 0; gx < cols; gx++) {
+            const nx = gx * step / w * 3 + time * 0.3;
+            const ny = gy * step / h * 3 + time * 0.2;
+            noiseGrid.push(fbm(nx, ny, 3));
+        }
+    }
+
+    for (let y = 0; y < h; y++) {
+        const fy = y / h;
+        const gy = Math.floor(y / step);
+        const ty = (y - gy * step) / step;
+
+        for (let x = 0; x < w; x++) {
+            const fx = x / w;
+            const gx = Math.floor(x / step);
+            const tx = (x - gx * step) / step;
+
+            // Bilinear interpolation of noise
+            const i00 = gy * cols + gx;
+            const i10 = i00 + 1;
+            const i01 = i00 + cols;
+            const i11 = i01 + 1;
+            const n = (noiseGrid[i00] * (1 - tx) + noiseGrid[i10] * tx) * (1 - ty)
+                    + (noiseGrid[i01] * (1 - tx) + noiseGrid[i11] * tx) * ty;
+
+            // Color mixing
+            const ci = n * (colors.length - 1);
+            const c0 = Math.floor(ci);
+            const c1 = Math.min(c0 + 1, colors.length - 1);
+            const t = ci - c0;
+
+            const r = colors[c0][0] + (colors[c1][0] - colors[c0][0]) * t;
+            const g = colors[c0][1] + (colors[c1][1] - colors[c0][1]) * t;
+            const b = colors[c0][2] + (colors[c1][2] - colors[c0][2]) * t;
+
+            const idx = (y * w + x) * 4;
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    // Stars
+    for (const s of stars) {
+        const twinkle = 0.5 + 0.5 * Math.sin(time * s.twinkleSpeed + s.x * 100);
+        const alpha = s.brightness * twinkle;
+        ctx.fillStyle = `rgba(200, 210, 255, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x * w, s.y * h, s.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Subtle aurora at the top
+    ctx.globalAlpha = 0.15;
+    for (let i = 0; i < 3; i++) {
+        const gradient = ctx.createLinearGradient(0, 0, w, h * 0.3);
+        const hue = 200 + i * 40 + Math.sin(time + i) * 20;
+        gradient.addColorStop(0, `hsla(${hue}, 60%, 40%, 0)`);
+        gradient.addColorStop(0.3 + Math.sin(time * 0.5 + i) * 0.1,
+            `hsla(${hue}, 70%, 50%, 0.3)`);
+        gradient.addColorStop(1, `hsla(${hue}, 60%, 40%, 0)`);
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        for (let x = 0; x <= w; x += 20) {
+            const n = fbm(x / w * 4 + time + i, i * 10, 2);
+            ctx.lineTo(x, n * h * 0.15 + 20);
+        }
+        ctx.lineTo(w, 0);
+        ctx.closePath();
+        ctx.fillStyle = gradient;
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>

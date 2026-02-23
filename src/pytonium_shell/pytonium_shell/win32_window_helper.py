@@ -294,6 +294,38 @@ class Win32WindowHelper:
         ex_style &= ~WS_EX_TRANSPARENT
         user32.SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style)
 
+    # -- Layer z-ordering (for desktop compositor) --------------------------------
+
+    @staticmethod
+    def set_layer_bottom(hwnd):
+        """Place window at HWND_BOTTOM z-order (for wallpaper/desktop/widget layers).
+
+        Windows at HWND_BOTTOM sit below all normal windows, so real OS
+        application windows naturally float above them.
+        """
+        user32.SetWindowPos(
+            hwnd, HWND_BOTTOM, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+
+    @staticmethod
+    def set_layer_topmost(hwnd):
+        """Place window at HWND_TOPMOST (for overlay layers when shown)."""
+        user32.SetWindowPos(
+            hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+
+    @staticmethod
+    def remove_layer_topmost(hwnd):
+        """Remove TOPMOST flag (when overlay is hidden)."""
+        user32.SetWindowPos(
+            hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+
+    # -- Position / visibility ---------------------------------------------------
+
     @staticmethod
     def set_position(hwnd, x, y, width, height):
         """Set the window position and size."""
