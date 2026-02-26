@@ -53,6 +53,11 @@ from .pytonium import Pytonium as Pytonium
 # Initialize the class-level attribute upon import
 Pytonium.set_subprocess_path(pytonium_process_path)
 
+# -- Platform helpers (Windows only) ------------------------------------------
+if os.name == "nt":
+    from .win32_helpers import Win32WindowHelper, MonitorInfo, WallpaperInfo
+    from .desktop_mirror import DesktopMirror, WindowInfo, DesktopItem, AppInfo
+
 
 async def run_pytonium_async(pytonium, interval=0.016):
     """Run the Pytonium message loop as an async coroutine.
