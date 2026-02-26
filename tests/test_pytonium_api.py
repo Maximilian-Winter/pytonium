@@ -5,11 +5,7 @@ CEF browser (no GPU, no display server needed).
 """
 
 import pytest
-import sys
 import os
-
-# Ensure the package is importable for editable installs
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "pytonium_python_framework"))
 
 
 class TestImportAndCreation:
