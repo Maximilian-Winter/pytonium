@@ -1,225 +1,242 @@
 # How to Build Pytonium from Source
 
-This guide explains how to build the Pytonium Python framework from source on Windows.
+This guide covers building the Pytonium Python framework from source on **Windows** and **Linux** using CLI commands only.
 
 ## Prerequisites
 
-### Required Software
+### Windows
 
-1. **Python 3.10+** (64-bit)
-   - Download from: https://www.python.org/downloads/
-   - Make sure to check "Add Python to PATH" during installation
+- **Python 3.10+** (64-bit) -- [python.org](https://www.python.org/downloads/)
+  - Check "Add Python to PATH" during installation
+- **Visual Studio 2022 Build Tools** (or full Visual Studio)
+  - Workload: **Desktop development with C++**
+  - Components: MSVC v143 C++ x64/x86 build tools, Windows SDK
+- **CMake 3.19+** -- included with Visual Studio, or [cmake.org](https://cmake.org/download/)
+- **Git** -- [git-scm.com](https://git-scm.com/)
 
-2. **Visual Studio 2022** (Community Edition or higher)
-   - Download from: https://visualstudio.microsoft.com/
-   - Required Workloads:
-     - **Desktop development with C++**
-   - Required Individual Components:
-     - MSVC v143 - VS 2022 C++ x64/x86 build tools
-     - Windows 11 SDK (or Windows 10 SDK)
-     - CMake tools for Windows
+### Linux (Ubuntu/Debian)
 
-3. **CMake 3.18+**
-   - Usually included with Visual Studio
-   - Or download from: https://cmake.org/download/
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential cmake ninja-build python3-dev python3-venv git binutils
+```
 
-4. **Git** (for cloning the repository)
-   - Download from: https://git-scm.com/
+- `binutils` provides `strip`, used to reduce `.so` file sizes during build preparation
 
-## Setup Instructions
-
-### Step 1: Clone the Repository
+## Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/Maximilian-Winter/pytonium.git
 cd pytonium
 ```
 
-### Step 2: Create a Virtual Environment
+## Step 2: Set Up Python Environment
+
+### Windows
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
-```
-
-### Step 3: Install Build Dependencies
-
-```bash
 pip install --upgrade pip
 pip install build scikit-build cmake ninja Cython
 ```
 
-### Step 4: Prepare Source Files
-
-The Python framework requires the C++ library source files and CEF binaries to be in the correct location:
-
-```powershell
-# From the repository root, copy CEF binaries
-copy-item -path "cef-binaries-windows" -destination "src/pytonium_python_framework/Pytonium/src/cef-binaries-windows" -recurse -force
-
-# Copy the C++ library source
-copy-item -path "src/pytonium_library" -destination "src/pytonium_python_framework/Pytonium/src/pytonium_library" -recurse -force
-
-# Copy the subprocess source
-copy-item -path "src/pytonium_subprocess" -destination "src/pytonium_python_framework/Pytonium/src/pytonium_subprocess" -recurse -force
-```
-
-Or using Command Prompt:
-
-```cmd
-xcopy /E /I cef-binaries-windows src\pytonium_python_framework\Pytonium\src\cef-binaries-windows
-xcopy /E /I src\pytonium_library src\pytonium_python_framework\Pytonium\src\pytonium_library
-xcopy /E /I src\pytonium_subprocess src\pytonium_python_framework\Pytonium\src\pytonium_subprocess
-```
-
-### Step 5: Build the Wheel
+### Linux
 
 ```bash
-cd src/pytonium_python_framework
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install build scikit-build cmake ninja Cython
+```
+
+## Step 3: Build the C++ Subprocess
+
+CEF uses a multi-process architecture and requires a separate `pytonium_subprocess` executable.
+
+### Windows
+
+```bash
+cmake -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build cmake-build-release --target pytonium_subprocess --config Release
+```
+
+### Linux
+
+```bash
+cmake -B build_linux -DCMAKE_BUILD_TYPE=Release
+cmake --build build_linux --target pytonium_subprocess
+```
+
+This also builds the `pytonium_library` and `libcef_dll_wrapper` dependencies automatically.
+
+## Step 4: Prepare Build Files
+
+The `prepare_build.py` script syncs C++ sources, copies CEF binaries, and places the subprocess executable into the correct locations for the Python wheel build.
+
+### Windows
+
+```bash
+cd building_pythonium_core
+python prepare_build.py --platform windows --build-dir ../cmake-build-release
+```
+
+### Linux
+
+```bash
+cd building_pythonium_core
+python3 prepare_build.py --platform linux --build-dir ../build_linux
+```
+
+The script performs the following steps:
+
+1. Cleans old build artifacts (`dist/`, `_skbuild/`, `Pytonium.egg-info/`, `bin_win/` or `bin_linux/`)
+2. Syncs C++ library source files into the pyframework directory
+3. Syncs subprocess source files
+4. Copies CEF binaries (headers, cmake modules, libcef_dll wrapper, libcef)
+5. Copies CEF runtime resources and shared libraries to the bin folder
+6. Copies the `pytonium_subprocess` executable to the bin folder
+7. On Linux: strips debug symbols from `.so` files (e.g. `libcef.so` 1.5 GB -> ~250 MB)
+
+#### prepare_build.py Options
+
+| Option | Description |
+|--------|-------------|
+| `--platform {windows,linux,all}` | Which platform to prepare (default: all) |
+| `--build-dir PATH` | CMake build directory to locate `pytonium_subprocess` |
+| `--dry-run` | Show what would be done without making changes |
+| `-v, --verbose` | Enable verbose output |
+| `--skip-clean` | Skip the cleanup step |
+| `--skip-sync` | Skip C++ source sync step |
+| `--skip-cef` | Skip CEF binary copy step |
+
+## Step 5: Build the Wheel
+
+### Windows
+
+```bash
+cd ../src/pytonium_python_framework
 python -m build --wheel
 ```
 
-This will create a wheel file in `src/pytonium_python_framework/dist/` named something like:
-```
-pytonium-0.0.13-cp313-cp313-win_amd64.whl
-```
-
-The build process typically takes 10-30 minutes depending on your system.
-
-### Step 6: Install the Package
+### Linux
 
 ```bash
-pip install dist/pytonium-0.0.13-cp313-cp313-win_amd64.whl --force-reinstall
+cd ../src/pytonium_python_framework
+python3 -m build --wheel
 ```
 
-Or install directly without building the wheel first:
+This creates a wheel file in `src/pytonium_python_framework/dist/`, e.g.:
+- Windows: `pytonium-0.0.13-cp310-cp310-win_amd64.whl`
+- Linux: `pytonium-0.0.13-cp310-cp310-linux_x86_64.whl`
+
+The build compiles Cython extensions and links against CEF. It typically takes 5-15 minutes.
+
+## Step 6: Install the Package
 
 ```bash
-pip install . --no-build-isolation
+pip install dist/pytonium-*.whl --force-reinstall
+```
+
+## Quick Reference (Full Workflow)
+
+### Windows
+
+```bash
+git clone https://github.com/Maximilian-Winter/pytonium.git
+cd pytonium
+python -m venv .venv
+.venv\Scripts\activate
+pip install --upgrade pip build scikit-build cmake ninja Cython
+
+cmake -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build cmake-build-release --target pytonium_subprocess --config Release
+
+cd building_pythonium_core
+python prepare_build.py --platform windows --build-dir ../cmake-build-release
+cd ../src/pytonium_python_framework
+python -m build --wheel
+pip install dist/pytonium-*.whl --force-reinstall
+```
+
+### Linux
+
+```bash
+git clone https://github.com/Maximilian-Winter/pytonium.git
+cd pytonium
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip build scikit-build cmake ninja Cython
+
+cmake -B build_linux -DCMAKE_BUILD_TYPE=Release
+cmake --build build_linux --target pytonium_subprocess
+
+cd building_pythonium_core
+python3 prepare_build.py --platform linux --build-dir ../build_linux
+cd ../src/pytonium_python_framework
+python3 -m build --wheel
+pip install dist/pytonium-*.whl --force-reinstall
 ```
 
 ## Verification
-
-Test the installation by running a simple example:
 
 ```python
 from Pytonium import Pytonium
 
 print("Pytonium imported successfully!")
-
-# Create a simple test
-pytonium = Pytonium()
+p = Pytonium()
 print("Pytonium instance created successfully!")
-```
-
-## Build Configuration
-
-### Build Options
-
-The build can be customized by modifying `pyproject.toml`:
-
-```toml
-[tool.scikit-build]
-build-type = "Release"  # or "Debug"
-```
-
-### CMake Arguments
-
-Additional CMake arguments can be passed in `setup.py`:
-
-```python
-setup(
-    cmake_args=['-DUSE_SANDBOX=OFF', '-DCMAKE_BUILD_TYPE=Release'],
-)
 ```
 
 ## Troubleshooting
 
-### Issue: "Cannot import 'scikit_build.build'"
+### "pytonium_subprocess not found at expected locations"
 
-**Solution:** Make sure `scikit-build` is installed before building:
+The subprocess executable has not been built, or was built to a non-standard directory.
 
-```bash
-pip install scikit-build>=0.16
-```
+**Fix**: Build the subprocess (Step 3), then use `--build-dir` to point at your CMake build directory.
 
-### Issue: "CMake Error: Could not find package configuration file provided by 'CEF'"
+### "CMake Error: Could not find package configuration file provided by 'CEF'"
 
-**Solution:** The CEF binaries are not in the expected location. Make sure to copy `cef-binaries-windows` to `src/pytonium_python_framework/Pytonium/src/`.
+The CEF binary distribution is missing.
 
-### Issue: "Syntaxfehler: Ungültiges Token auf der rechten Seite von '::'"
+**Fix**: Ensure `cef-binaries-windows/` (or `cef-binaries-linux/`) exists in the project root.
 
-**Solution:** This is a Windows macro conflict. The `CMakeLists.txt` should include:
+### "libcef.so missing" or ninja error about missing .so file
 
-```cmake
-if(WIN32)
-    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
-endif()
-```
+On Linux, `libcef.so` (~1.5 GB) must be copied to `bin_linux/` and then into the CEF build directory by `setup.py`. If `prepare_build.py` was not run (or was run with `--skip-cef`), this file will be missing.
 
-### Issue: "CMake Error: Compatibility with CMake < 3.5 has been removed"
+**Fix**: Re-run `prepare_build.py --platform linux` without `--skip-cef`.
 
-**Solution:** Update the minimum CMake version in `src/pytonium_python_framework/CMakeLists.txt`:
+### Stale _skbuild cache causes FindCython or other CMake errors
 
-```cmake
-cmake_minimum_required(VERSION 3.5)
-```
+The `_skbuild/` directory caches CMake configuration between builds. If your build environment changes (e.g. different Python virtualenv, different temp paths), the cache becomes stale.
 
-### Issue: "No module named 'Pytonium.pytonium'" after installation
+**Fix**: Delete `_skbuild/` and rebuild. The `prepare_build.py` script does this automatically in its cleanup step (Step 1), so re-running it without `--skip-clean` will fix this.
 
-**Solution:** The compiled extension module (.pyd file) was not built or installed. Make sure:
-1. You're using the correct Python version (the wheel is platform-specific)
-2. The build completed without errors
-3. Install with `--force-reinstall` flag
+### Build takes very long or hangs
 
-### Issue: Build takes very long or hangs
+- The first build compiles the CEF wrapper library (~200 source files). Subsequent builds are faster.
+- Ensure at least 8 GB of free RAM.
+- On WSL with NTFS mounts (`/mnt/...`), I/O is significantly slower than on native ext4.
 
-**Solution:** 
-- The first build compiles CEF which is large. Subsequent builds are faster.
-- Make sure you have at least 8GB of free RAM
-- Close other applications to free up resources
+### Windows: "Syntaxfehler" or macro conflicts
 
-## Development Build (Editable Install)
-
-For development, you can install in editable mode:
-
-```bash
-cd src/pytonium_python_framework
-pip install -e . --no-build-isolation
-```
-
-Note: This requires all build dependencies to be installed in your environment.
+**Fix**: The `CMakeLists.txt` should include `add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)` for Windows. This is already set in the current codebase.
 
 ## Clean Build
 
-To perform a clean build, remove the build directories:
+To perform a completely clean build, re-run `prepare_build.py` without `--skip-clean` (the default). This removes `_skbuild/`, `dist/`, `Pytonium.egg-info/`, and the platform bin folder.
+
+Alternatively, clean manually:
 
 ```bash
 cd src/pytonium_python_framework
-Remove-Item -Path "_skbuild" -Recurse -Force
-Remove-Item -Path "dist" -Recurse -Force
-Remove-Item -Path "Pytonium.egg-info" -Recurse -Force
+rm -rf _skbuild dist Pytonium.egg-info
 ```
-
-Then rebuild from Step 5.
-
-## Platform-Specific Notes
-
-### Windows
-- Use Visual Studio 2022 or 2019
-- Make sure to use the "x64 Native Tools Command Prompt" if building manually
-- The wheel is platform-specific: `pytonium-0.0.13-cp313-cp313-win_amd64.whl`
-
-### Linux (Ubuntu/Debian)
-Install system dependencies:
-```bash
-sudo apt-get update
-sudo apt-get install -y build-essential cmake ninja-build python3-dev
-```
-
-Then follow the same build steps.
 
 ## See Also
 
-- [README.md](README.md) - Project overview and usage
-- [Pytonium Examples](https://github.com/Maximilian-Winter/pytonium_examples) - Example applications
+- [BUILDING_SUBPROCESS.md](building_pythonium_core/BUILDING_SUBPROCESS.md) -- Detailed subprocess build guide
+- [PREPARE_BUILD_GUIDE.md](building_pythonium_core/PREPARE_BUILD_GUIDE.md) -- Full prepare_build.py reference
+- [Pytonium Examples](https://github.com/Maximilian-Winter/pytonium_examples) -- Example applications

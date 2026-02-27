@@ -8,13 +8,18 @@ if(WIN32)
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
 
-if(UNIX)
-    set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Pytonium/src/cef-binaries-linux")
-endif(UNIX)
+# CEF_ROOT can be set externally (e.g. -DCEF_ROOT=../../cef-binaries-linux)
+# to avoid copying the large CEF binaries into the source tree.
+# Falls back to the local synced copy for pip package builds.
+if(NOT CEF_ROOT)
+    if(UNIX)
+        set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Pytonium/src/cef-binaries-linux")
+    endif(UNIX)
 
-if(WIN32)
-    set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Pytonium/src/cef-binaries-windows")
-endif(WIN32)
+    if(WIN32)
+        set(CEF_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Pytonium/src/cef-binaries-windows")
+    endif(WIN32)
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CEF_ROOT}/cmake")
 

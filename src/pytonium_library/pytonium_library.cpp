@@ -220,7 +220,7 @@ int PytoniumLibrary::CreateBrowser(const std::string& url, int width, int height
     }
 #elif defined(OS_LINUX)
     if (frameless) {
-        window_info.SetAsWindowless(nullptr, true);
+        window_info.SetAsWindowless(kNullWindowHandle);
     }
 #endif
 

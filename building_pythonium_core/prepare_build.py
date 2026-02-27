@@ -10,6 +10,7 @@ Usage:
     python prepare_build.py                    # Full prepare (Windows + Linux)
     python prepare_build.py --platform windows  # Windows only
     python prepare_build.py --platform linux    # Linux only
+    python prepare_build.py --build-dir ../cmake-build-release  # Custom CMake build dir
     python prepare_build.py --dry-run          # Show what would be done
     python prepare_build.py -v                 # Verbose output
 """
@@ -170,11 +171,34 @@ def copy_cef_binaries(platform, base_src, base_dest, dry_run=False, verbose=Fals
         lib_dest = release_dir / "libcef.so"
 
     if lib_src.exists():
-        if verbose or dry_run:
-            action = "Would copy" if dry_run else "Copying"
-            print(f"  {action} {lib_src.name}")
         if not dry_run:
-            shutil.copy2(lib_src, lib_dest)
+            # Remove existing file/symlink at destination
+            if lib_dest.exists() or lib_dest.is_symlink():
+                lib_dest.unlink()
+            # Try symlink first (avoids copying 1.5GB libcef.so on Linux/WSL),
+            # fall back to copy if symlinks aren't supported (e.g. NTFS without symlink perms)
+            linked = False
+            try:
+                lib_dest.symlink_to(lib_src.resolve())
+                linked = True
+            except OSError:
+                pass
+            if linked:
+                if verbose:
+                    print(f"  Symlinked {lib_src.name} -> {lib_src.resolve()}")
+            else:
+                if verbose:
+                    print(f"  Copying {lib_src.name} ({lib_src.stat().st_size / (1024*1024):.0f} MB)...")
+                shutil.copy2(lib_src, lib_dest)
+                # Verify the copy actually landed (WSL/NTFS can silently fail for large files)
+                if not lib_dest.exists() or lib_dest.stat().st_size != lib_src.stat().st_size:
+                    print(f"  ERROR: Copy verification failed for {lib_src.name}!")
+                    print(f"    Expected size: {lib_src.stat().st_size}, got: {lib_dest.stat().st_size if lib_dest.exists() else 'missing'}")
+                    return total_copied
+                if verbose:
+                    print(f"  Copied {lib_src.name} OK")
+        elif verbose or dry_run:
+            print(f"  Would link/copy {lib_src.name}")
         total_copied += 1
 
     return total_copied
@@ -215,57 +239,83 @@ def copy_cef_runtime(platform, dry_run=False, verbose=False):
 
     release_src = cef_src / "Release"
     if release_src.exists():
+        if platform == "windows":
+            extensions = [".dll", ".exe"]
+        else:
+            extensions = [".so", ".so.1", ".bin", ".json"]
         for item in release_src.iterdir():
-            if item.is_file() and item.suffix in [".dll", ".exe"]:
-                shutil.copy2(item, bin_dest / item.name)
+            if item.is_file():
+                # Match exact suffix or multi-part suffixes like .so.1
+                if item.suffix in extensions or "".join(item.suffixes) in extensions:
+                    dest_file = bin_dest / item.name
+                    shutil.copy2(item, dest_file)
+                    if verbose:
+                        size_mb = item.stat().st_size / (1024 * 1024)
+                        print(f"  Copied {item.name} ({size_mb:.0f} MB)")
+
+    # Strip debug symbols from .so files to reduce size (e.g. libcef.so 1.5GB -> ~250MB)
+    if platform != "windows" and shutil.which("strip"):
+        for item in bin_dest.iterdir():
+            if item.is_file() and ".so" in item.name:
+                original_size = item.stat().st_size
+                if original_size > 1024 * 1024:  # Only strip files > 1MB
+                    import subprocess
+                    result = subprocess.run(
+                        ["strip", "--strip-unneeded", str(item)],
+                        capture_output=True,
+                    )
+                    if result.returncode == 0:
+                        new_size = item.stat().st_size
+                        if verbose:
+                            print(
+                                f"  Stripped {item.name}: "
+                                f"{original_size / (1024*1024):.0f} MB -> {new_size / (1024*1024):.0f} MB"
+                            )
 
     return 1
 
 
-def copy_subprocess_exe(platform, dry_run=False, verbose=False):
-    """Copy the pytonium_subprocess.exe to bin folder."""
-    if platform == "windows":
-        subprocess_src = (
-            SRC_DIR
-            / "src"
-            / "pytonium_library_test"
-            / "release"
-            / "bin"
-            / "pytonium_subprocess.exe"
-        )
-        bin_dest = PYTHON_FRAMEWORK_DIR / "Pytonium" / "bin_win"
-    else:
-        subprocess_src = (
-            SRC_DIR
-            / "src"
-            / "pytonium_library_test"
-            / "release"
-            / "bin"
-            / "pytonium_subprocess"
-        )
-        bin_dest = PYTHON_FRAMEWORK_DIR / "Pytonium" / "bin_linux"
+def find_subprocess_exe(platform, build_dir=None):
+    """Find the pytonium_subprocess executable, searching build_dir first if provided."""
+    exe_name = "pytonium_subprocess.exe" if platform == "windows" else "pytonium_subprocess"
 
-    if not subprocess_src.exists():
-        subprocess_src = (
-            SRC_DIR
-            / "src"
-            / "pytonium_library_test"
-            / "debug"
-            / "bin"
-            / (
-                "pytonium_subprocess.exe"
-                if platform == "windows"
-                else "pytonium_subprocess"
-            )
+    search_paths = []
+
+    if build_dir:
+        build_path = Path(build_dir).resolve()
+        # CMake output structure: <build-dir>/src/pytonium_subprocess/<Config>/
+        for config in ["Release", "release", "Debug", "debug"]:
+            search_paths.append(build_path / "src" / "pytonium_subprocess" / config / exe_name)
+        # Also check directly under the subprocess build dir (Linux single-config)
+        search_paths.append(build_path / "src" / "pytonium_subprocess" / exe_name)
+
+    # Default paths (where CMake post-build copies land)
+    for config in ["release", "debug"]:
+        search_paths.append(
+            SRC_DIR / "src" / "pytonium_library_test" / config / "bin" / exe_name
         )
 
-    if not subprocess_src.exists():
-        print(f"WARNING: pytonium_subprocess not found at expected locations")
+    for path in search_paths:
+        if path.exists():
+            return path
+
+    return None
+
+
+def copy_subprocess_exe(platform, build_dir=None, dry_run=False, verbose=False):
+    """Copy the pytonium_subprocess executable to bin folder."""
+    bin_dest = PYTHON_FRAMEWORK_DIR / "Pytonium" / ("bin_win" if platform == "windows" else "bin_linux")
+
+    subprocess_src = find_subprocess_exe(platform, build_dir)
+
+    if subprocess_src is None:
+        locations = f" (build-dir: {build_dir})" if build_dir else ""
+        print(f"WARNING: pytonium_subprocess not found at expected locations{locations}")
         return 0
 
     if verbose or dry_run:
         action = "Would copy" if dry_run else "Copying"
-        print(f"{action} pytonium_subprocess to {bin_dest.name}/")
+        print(f"{action} pytonium_subprocess to {bin_dest.name}/ (from {subprocess_src})")
 
     if dry_run:
         return 1
@@ -285,6 +335,7 @@ Examples:
   %(prog)s                          # Full prepare (all platforms)
   %(prog)s --platform windows       # Windows only
   %(prog)s --platform linux         # Linux only
+  %(prog)s --build-dir ../cmake-build-release  # Custom CMake build dir
   %(prog)s --dry-run                # Show what would be done
   %(prog)s -v                       # Verbose output
         """,
@@ -308,6 +359,13 @@ Examples:
     )
     parser.add_argument(
         "--skip-cef", action="store_true", help="Skip CEF binary copy step"
+    )
+    parser.add_argument(
+        "--build-dir",
+        type=str,
+        default=None,
+        help="Path to the CMake build directory (e.g. cmake-build-release, build_linux). "
+             "Used to locate the pytonium_subprocess executable.",
     )
 
     args = parser.parse_args()
@@ -378,7 +436,7 @@ Examples:
 
             if args.verbose or args.dry_run:
                 print("Step 6: Copying pytonium_subprocess.exe...")
-            copy_subprocess_exe("windows", args.dry_run, args.verbose)
+            copy_subprocess_exe("windows", args.build_dir, args.dry_run, args.verbose)
 
         if args.platform in ("linux", "all"):
             if args.verbose or args.dry_run:
@@ -398,7 +456,7 @@ Examples:
 
             if args.verbose or args.dry_run:
                 print("Step 6: Copying pytonium_subprocess...")
-            copy_subprocess_exe("linux", args.dry_run, args.verbose)
+            copy_subprocess_exe("linux", args.build_dir, args.dry_run, args.verbose)
     else:
         print("Step 4-6: Skipping CEF copy (--skip-cef)")
 

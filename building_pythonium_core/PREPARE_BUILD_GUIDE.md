@@ -55,6 +55,7 @@ python prepare_build.py --platform linux
 | `--skip-clean` | Skip the cleanup step |
 | `--skip-sync` | Skip C++ source sync step |
 | `--skip-cef` | Skip CEF binary copy step |
+| `--build-dir PATH` | CMake build directory to locate `pytonium_subprocess` |
 
 ## Examples
 
@@ -128,7 +129,11 @@ Ensure `cef-binaries-windows/` or `cef-binaries-linux/` exists in the project ro
 
 ### "pytonium_subprocess not found"
 
-The subprocess executable must be built separately from `src/pytonium_subprocess/`. Check that `src/pytonium_library_test/release/bin/pytonium_subprocess.exe` exists.
+The subprocess executable must be built separately from `src/pytonium_subprocess/`. Check that `src/pytonium_library_test/release/bin/pytonium_subprocess.exe` exists, or use `--build-dir` to point at your CMake build directory:
+
+```bash
+python prepare_build.py --platform windows --build-dir ../cmake-build-release
+```
 
 ## Script Location
 
