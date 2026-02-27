@@ -1,0 +1,141 @@
+site_name: Pytonium
+site_url: https://maximilian-winter.github.io/pytonium/
+site_author: Maximilian Winter
+site_description: >-
+  Build Python desktop apps with HTML, CSS, and JavaScript using the
+  Chromium Embedded Framework.
+
+repo_name: Maximilian-Winter/pytonium
+repo_url: https://github.com/Maximilian-Winter/pytonium
+edit_uri: edit/master/docs/
+
+copyright: Copyright &copy; 2022-2026 Maximilian Winter
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Maximilian-Winter/pytonium
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/Pytonium/
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Your First App: getting-started/first-app.md
+  - Guides:
+    - JavaScript Bindings: guides/javascript-bindings.md
+    - State Management: guides/state-management.md
+    - Context Menus: guides/context-menus.md
+    - Custom Schemes & MIME Types: guides/custom-schemes.md
+    - Frameless Windows: guides/frameless-windows.md
+    - Window Control: guides/window-control.md
+    - Fullscreen Mode: guides/fullscreen.md
+    - Multi-Instance: guides/multi-instance.md
+    - TypeScript Definitions: guides/typescript-definitions.md
+    - Async Integration: guides/async-integration.md
+    - Event Callbacks: guides/event-callbacks.md
+  - Examples:
+    - Overview: examples/index.md
+    - Simple App: examples/simple-app.md
+    - Frameless Window: examples/frameless-window.md
+    - 3D with Babylon.js: examples/babylon-js.md
+    - Real-Time Line Graph: examples/line-graph.md
+    - Control Center: examples/control-center.md
+    - Data Studio: examples/data-studio.md
+  - API Reference:
+    - Pytonium Class: api/pytonium.md
+    - Decorators & Helpers: api/helpers.md
+    - JavaScript API: api/javascript-api.md
+  - Building from Source:
+    - Build Guide: building/build-guide.md
+    - Subprocess Build: building/subprocess.md
+    - Prepare Build Script: building/prepare-build.md
+  - About:
+    - Changelog: about/changelog.md
+    - Contributing: about/contributing.md
+    - License: about/license.md

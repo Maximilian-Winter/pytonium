@@ -3,7 +3,10 @@
     "allow": [
       "Bash(du:*)",
       "Bash(grep:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(mkdir:*)",
+      "Bash(pip install:*)",
+      "Bash(mkdocs build:*)"
     ]
   },
   "outputStyle": "vajrayogini"

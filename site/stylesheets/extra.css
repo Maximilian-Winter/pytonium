@@ -1,0 +1,40 @@
+/* Pytonium documentation custom styles */
+
+.md-typeset h1 {
+    font-weight: 700;
+}
+
+.md-typeset code {
+    font-size: 0.85em;
+}
+
+/* API reference method signatures */
+.md-typeset .api-method {
+    background: var(--md-code-bg-color);
+    padding: 0.5em 1em;
+    border-left: 4px solid var(--md-accent-fg-color);
+    margin: 1em 0;
+    font-family: var(--md-code-font-family);
+}
+
+.md-typeset .api-method + table {
+    font-size: 0.85em;
+}
+
+/* Feature grid on landing page */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.feature-grid .feature {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.feature-grid .feature h3 {
+    margin-top: 0;
+}
