@@ -85,6 +85,10 @@ async def run_pytonium_async(pytonium, interval=0.016):
         await asyncio.sleep(interval)
 
 
+# -- Reactive Components -------------------------------------------------------
+from . import components
+
+
 async def run_pytonium_multi_async(instances, interval=0.016):
     """Run the message loop for multiple Pytonium instances.
 
