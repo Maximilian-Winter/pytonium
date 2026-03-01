@@ -119,6 +119,10 @@ nav:
     - TypeScript Definitions: guides/typescript-definitions.md
     - Async Integration: guides/async-integration.md
     - Event Callbacks: guides/event-callbacks.md
+    - Reactive Components: guides/reactive-components.md
+    - Reactive Elements: guides/reactive-elements.md
+    - Reactive Interactivity: guides/reactive-interactivity.md
+    - Dynamic Lists & Conditions: guides/reactive-lists-conditions.md
   - Examples:
     - Overview: examples/index.md
     - Simple App: examples/simple-app.md
@@ -127,10 +131,12 @@ nav:
     - Real-Time Line Graph: examples/line-graph.md
     - Control Center: examples/control-center.md
     - Data Studio: examples/data-studio.md
+    - Reactive App: examples/reactive-app.md
   - API Reference:
     - Pytonium Class: api/pytonium.md
     - Decorators & Helpers: api/helpers.md
     - JavaScript API: api/javascript-api.md
+    - Components API: api/components.md
   - Building from Source:
     - Build Guide: building/build-guide.md
     - Subprocess Build: building/subprocess.md

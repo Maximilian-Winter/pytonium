@@ -67,6 +67,14 @@ Shared state between Python and JavaScript with event subscriptions. Set state f
 
 <div class="feature" markdown>
 
+### Reactive Components
+
+Build UIs entirely in Python with reactive state bindings. State changes trigger surgical DOM updates -- no virtual DOM, no JavaScript framework needed.
+
+</div>
+
+<div class="feature" markdown>
+
 ### Custom Schemes
 
 Register custom URL protocols (e.g., `myapp://`) for loading local files. Serve your HTML, CSS, JS, and assets from your project directory without a web server.
