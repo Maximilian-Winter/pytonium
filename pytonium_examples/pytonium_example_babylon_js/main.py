@@ -1,34 +1,41 @@
-import math
+"""Pytonium Babylon.js Example — 3D Graphics
+
+Demonstrates loading a 3D scene with Babylon.js inside Pytonium:
+- Custom URL schemes for local resource loading
+- MIME type registration for binary 3D model files (.glb)
+- Babylon.js engine with animated character model
+
+Requirements:
+- Place babylon.js and babylonjs.loaders.js in this directory
+- Place a .glb model file (e.g. HipHopDancing.glb) in the data/ subdirectory
+"""
+
 import os
 import time
-import random
-from datetime import datetime
 
-# Import the Pytonium class
-from Pytonium import Pytonium, returns_value_to_javascript
+from Pytonium import Pytonium
 
-# Create a Pytonium instance.
-pytonium = Pytonium()
 
-# To load a html file, on start up from disk, we need the absolute path to it, so we get it here.
-pytonium_test_path = os.path.abspath(__file__)
-pytonium_test_path = os.path.dirname(pytonium_test_path)
+def main():
+    pytonium = Pytonium()
 
-pytonium.add_mime_type_mapping("glb", "model/gltf-binary")
-pytonium.add_custom_scheme("pytonium", f"{pytonium_test_path}\\")
-pytonium.add_custom_scheme("pytonium-data", f"{pytonium_test_path}\\data\\")
-# Set a custom icon for the window.
-pytonium.set_custom_icon_path(f"radioactive.ico")
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    html_path = os.path.join(current_dir, "index.html")
 
-# Start Pytonium and pass it the start-up URL or file and the width and height of the Window.
-pytonium.initialize(f"file://{pytonium_test_path}\\index.html", 1920, 1080)
+    # Register MIME type for glTF binary models
+    pytonium.add_mime_type_mapping("glb", "model/gltf-binary")
 
-pytonium.set_show_debug_context_menu(True)
+    # Custom schemes to serve local files (Babylon.js libs + model data)
+    pytonium.add_custom_scheme("pytonium", current_dir + "/")
+    pytonium.add_custom_scheme("pytonium-data", os.path.join(current_dir, "data") + "/")
 
-# Start a loop to update the Pytonium message loop and execute some javascript.
-while pytonium.is_running():
-    time.sleep(0.01)
+    pytonium.set_show_debug_context_menu(True)
+    pytonium.initialize(f"file:///{html_path}", 1920, 1080)
 
-    # Update the message loop.
-    pytonium.update_message_loop()
+    while pytonium.is_running():
+        pytonium.update_message_loop()
+        time.sleep(0.01)
 
+
+if __name__ == "__main__":
+    main()

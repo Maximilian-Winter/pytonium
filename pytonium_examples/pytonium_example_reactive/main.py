@@ -743,15 +743,20 @@ def main():
 
     # Main loop — update the clock from Python
     frame = 0
-    while p.is_running():
-        p.update_message_loop()
-        time.sleep(0.016)
+    try:
+        while p.is_running():
+            p.update_message_loop()
+            time.sleep(0.016)
 
-        # Update the clock every ~30 frames (~0.5s)
-        frame += 1
-        if frame % 30 == 0:
-            now = datetime.now().strftime("%H:%M:%S")
-            app.clock_text = now
+            # Update the clock every ~30 frames (~0.5s)
+            frame += 1
+            if frame % 30 == 0:
+                now = datetime.now().strftime("%H:%M:%S")
+                app.clock_text = now
+    finally:
+        # Clean up the generated HTML file
+        if os.path.exists(html_path):
+            os.remove(html_path)
 
 
 if __name__ == "__main__":

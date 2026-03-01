@@ -36,12 +36,6 @@ from data_analyzer import data_analyzer  # pandas + matplotlib - pure Python pow
 
 
 # ============================================================================
-# Real System Monitoring (The Pytonium Advantage!)
-# ============================================================================
-# In Electron, you'd need native Node modules. In Pytonium, just import psutil!
-
-
-# ============================================================================
 # Window Control Functions
 # ============================================================================
 
@@ -170,7 +164,7 @@ def update_cpu_history():
             # Keep last 50 data points
             if len(_cpu_history) > 50:
                 _cpu_history = _cpu_history[-50:]
-        except:
+        except Exception:
             pass
         time.sleep(0.5)
 

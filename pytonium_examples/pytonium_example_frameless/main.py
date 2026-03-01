@@ -198,22 +198,13 @@ def main():
     # Main Message Loop
     # =========================================================================
     
-    counter = 0
     while pytonium.is_running():
-        time.sleep(0.01)
         pytonium.update_message_loop()
-        
-        counter += 1
-        
-        # Update date/time display every loop
+        time.sleep(0.01)
+
         now = datetime.now()
         date_time = now.strftime("%d.%m.%Y, %H:%M:%S")
         pytonium.set_state("app-general", "date", date_time)
-        
-        # Set user age at counter == 500 (demonstrates state updates)
-        if counter == 500:
-            print("Python: Setting user age to 123...")
-            pytonium.set_state("user", "age", 123)
 
 
 if __name__ == "__main__":
