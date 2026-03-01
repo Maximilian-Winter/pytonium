@@ -22,8 +22,9 @@ Basic usage:
             )
 
     p = Pytonium()
-    p.initialize("data:text/html,<html><body></body></html>", 800, 600)
-    Counter().mount(p)
+    Component.setup(p)                             # 1. before initialize!
+    p.initialize("file:///page.html", 800, 600)    # 2. create browser
+    Counter().mount(p)                             # 3. render & inject
 """
 
 from .component import Component

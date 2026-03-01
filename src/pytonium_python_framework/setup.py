@@ -14,7 +14,7 @@ if 'RELEASE_SDIST' in os.environ:
     is_sdist_release = True
 
 pytonium_manifest_file_list = []
-pytonium_packages = ['Pytonium']
+pytonium_packages = ['Pytonium', 'Pytonium.components']
 
 if os.path.exists('./Pytonium/test/cache'):
     shutil.rmtree('./Pytonium/test/cache')

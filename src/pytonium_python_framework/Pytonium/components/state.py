@@ -288,6 +288,11 @@ class DependencyTracker:
         for child in getattr(element, "_children", []):
             cls._analyze_element(comp_id, child)
 
+        # Recurse into conditional elements' active branch (Show/Switch)
+        current = getattr(element, "_current_element", None)
+        if current is not None:
+            cls._analyze_element(comp_id, current)
+
     @classmethod
     def remove_element_bindings(cls, element):
         """Remove all bindings referencing a specific element's node_id.

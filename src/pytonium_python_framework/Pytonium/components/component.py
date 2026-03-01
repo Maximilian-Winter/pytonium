@@ -6,13 +6,24 @@ Element tree. The mount() method initializes the component: it calls render(),
 analyzes dependencies, generates HTML, injects it into the browser DOM, and
 registers event listeners.
 
+IMPORTANT — Initialization order:
+    1. ``Component.setup(pytonium)``   — registers event bindings with CEF
+    2. ``pytonium.initialize(url, …)`` — creates the browser & loads the page
+    3. ``component.mount(pytonium)``   — renders, injects HTML, sets up events
+
+``setup()`` MUST be called before ``initialize()`` because CEF registers
+JavaScript bindings during page load (OnContextCreated).  Bindings added
+after that point are not visible to JavaScript.
+
 After mounting, state changes trigger surgical DOM updates through the
 dependency graph established during render analysis.
 """
 
+import time
+import warnings
 from typing import Optional
 
-from .elements import Element, reset_id_counter
+from .elements import Element
 from .mutation_compiler import MutationCompiler, _js_string
 from .state import DependencyTracker, State
 
@@ -39,7 +50,11 @@ class Component:
     and implement render() to return an Element tree. State changes after
     mounting automatically trigger minimal DOM updates.
 
-    Usage:
+    Usage::
+
+        from Pytonium import Pytonium
+        from Pytonium.components import Component, State, Div, H1, Button
+
         class Counter(Component):
             count = State(0)
 
@@ -54,10 +69,92 @@ class Component:
                 )
 
         p = Pytonium()
-        p.initialize("data:text/html,<html><body></body></html>", 800, 600)
+        Component.setup(p)                       # 1. register bindings
+        p.initialize(url, 800, 600)              # 2. create browser
         counter = Counter()
-        counter.mount(p)
+        counter.mount(p)                         # 3. render & inject
     """
+
+    # Page-readiness sentinel — set by the _ready callback from JS
+    _page_ready: bool = False
+    _setup_done: bool = False
+
+    # ------------------------------------------------------------------
+    # Class-level setup (call BEFORE pytonium.initialize)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def setup(pytonium):
+        """Pre-register event handlers and the page-ready sentinel.
+
+        **MUST** be called before ``pytonium.initialize()``.  CEF registers
+        JavaScript bindings during page load (``OnContextCreated``).  Bindings
+        added after the page has already loaded will not be visible to JS,
+        which means events and the readiness probe will silently fail.
+
+        Args:
+            pytonium: A Pytonium instance that has **not** been initialized yet.
+
+        Example::
+
+            p = Pytonium()
+            Component.setup(p)
+            p.initialize("file:///page.html", 800, 600)
+            MyComponent().mount(p)
+        """
+        from .event_router import EventRouter
+
+        # Bind a tiny sentinel function so mount() can probe readiness
+        def _ready_check():
+            Component._page_ready = True
+
+        pytonium.bind_function_to_javascript(
+            _ready_check,
+            name="_ready",
+            javascript_object="_internal",
+        )
+
+        # Pre-register the global event router handler
+        EventRouter.prepare(pytonium)
+
+        Component._setup_done = True
+
+    @staticmethod
+    def _wait_for_page_ready(pytonium, timeout_s: float = 5.0):
+        """Block until ``execute_javascript()`` is actually working.
+
+        Pumps the CEF message loop while repeatedly executing a tiny JS
+        snippet that calls the ``_ready`` sentinel function.  When the
+        sentinel fires (setting ``_page_ready = True``), the page is
+        confirmed ready and ``execute_javascript`` will no longer silently
+        drop calls.
+
+        Args:
+            pytonium: An initialized Pytonium instance.
+            timeout_s: Maximum seconds to wait (default 5).
+        """
+        if Component._page_ready:
+            return  # Already confirmed ready from a prior mount
+
+        start = time.monotonic()
+        while not Component._page_ready:
+            if (time.monotonic() - start) >= timeout_s:
+                warnings.warn(
+                    "Pytonium page did not become ready within "
+                    f"{timeout_s}s.  Make sure Component.setup(pytonium) "
+                    "was called before pytonium.initialize().",
+                    stacklevel=3,
+                )
+                break
+            # Execute the sentinel probe — silently dropped if page not ready
+            pytonium.execute_javascript("Pytonium._internal._ready();")
+            pytonium.update_message_loop()
+            time.sleep(0.016)
+
+        # Pump a few extra frames so the DOM is fully settled
+        for _ in range(5):
+            pytonium.update_message_loop()
+            time.sleep(0.016)
 
     def __init__(self, **kwargs):
         """Initialize the component with optional initial state values.
@@ -126,15 +223,19 @@ class Component:
         """Mount this component into a Pytonium browser.
 
         Performs the full initialization sequence:
+
+        0. Wait for the page to be ready (if ``Component.setup()`` was used)
         1. Reset element ID counter
         2. Call render() to get element tree
         3. Register component with DependencyTracker
         4. Analyze element tree for reactive dependencies
         5. Initialize DynamicChildrenManagers for children_from elements
-        6. Generate initial HTML
-        7. Inject HTML into the DOM
-        8. Register event listeners
-        9. Call on_mount() lifecycle hook
+        6. Initialize conditional elements (Show/Switch)
+        7. Collect all node IDs
+        8. Generate initial HTML
+        9. Inject HTML into the DOM
+        10. Register event listeners
+        11. Call on_mount() lifecycle hook
 
         Args:
             pytonium: Pytonium instance with an initialized browser.
@@ -149,8 +250,13 @@ class Component:
         self._event_router = EventRouter(pytonium)
         self._event_router.set_component(self)
 
-        # 1. Reset ID counter for this component's render
-        reset_id_counter()
+        # 0. Wait for the page to be ready (only when setup() was called)
+        if Component._setup_done:
+            Component._wait_for_page_ready(pytonium)
+
+        # 1. ID counter is NOT reset — IDs must be globally unique across
+        #    all mounted components because querySelector searches the entire
+        #    document.  Each mount continues from the previous counter value.
 
         # 2. Call render() to get element tree
         self._element_tree = self.render()
@@ -185,6 +291,12 @@ class Component:
         else:
             js = f"document.body.innerHTML={_js_string(html)};"
         pytonium.execute_javascript(js)
+
+        # Pump the message loop so the injected HTML is in the DOM
+        # before we attach event listeners
+        for _ in range(3):
+            pytonium.update_message_loop()
+            time.sleep(0.016)
 
         # 10. Register event listeners
         self._event_router.register_events(self._element_tree)

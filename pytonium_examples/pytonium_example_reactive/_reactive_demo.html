@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pytonium Reactive Demo</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f0f1a;
+    color: #e0e0f0;
+    min-height: 100vh;
+}
+
+.app {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.app-header {
+    text-align: center;
+    padding: 32px 0 24px;
+    border-bottom: 1px solid #2a2a4a;
+    margin-bottom: 24px;
+}
+.app-header h1 { color: #bb9af7; font-size: 28px; }
+.app-header p { color: #7a7aaa; margin-top: 8px; font-size: 14px; }
+
+.clock { color: #7aa2f7; font-size: 13px; margin-top: 4px; }
+
+/* Navigation tabs */
+.nav { display: flex; gap: 8px; margin-bottom: 24px; }
+.nav button {
+    padding: 8px 20px;
+    border: 1px solid #3a3a5a;
+    border-radius: 6px;
+    background: #1a1a2e;
+    color: #a0a0c0;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+}
+.nav button:hover { background: #2a2a4a; color: #e0e0f0; }
+.nav button.active {
+    background: #7b5ea7;
+    color: #fff;
+    border-color: #9b7ec7;
+}
+
+/* Cards */
+.card {
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+.card h2, .card h3 { color: #bb9af7; margin-bottom: 12px; font-size: 18px; }
+
+/* Counter */
+.counter-row { display: flex; align-items: center; gap: 16px; }
+.counter-value {
+    font-size: 48px;
+    font-weight: 700;
+    color: #7aa2f7;
+    min-width: 100px;
+    text-align: center;
+}
+.counter-btns { display: flex; flex-direction: column; gap: 6px; }
+.counter-btns button {
+    padding: 6px 18px;
+    border: 1px solid #3a3a5a;
+    border-radius: 6px;
+    background: #1a1a2e;
+    color: #e0e0f0;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.15s;
+}
+.counter-btns button:hover { background: #3a3a5a; }
+.counter-info { color: #7a7aaa; font-size: 13px; margin-top: 8px; }
+.even { color: #9ece6a; }
+.odd { color: #ff9e64; }
+
+/* Todo */
+.todo-input-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.todo-input-row input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #3a3a5a;
+    border-radius: 6px;
+    background: #12121e;
+    color: #e0e0f0;
+    font-size: 14px;
+    outline: none;
+}
+.todo-input-row input:focus { border-color: #7b5ea7; }
+.todo-input-row button {
+    padding: 10px 20px;
+    background: #7b5ea7;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+.todo-input-row button:hover { background: #9b7ec7; }
+
+.todo-filters { display: flex; gap: 6px; margin-bottom: 12px; }
+.todo-filters button {
+    padding: 4px 12px;
+    border: 1px solid #3a3a5a;
+    border-radius: 4px;
+    background: transparent;
+    color: #a0a0c0;
+    cursor: pointer;
+    font-size: 12px;
+}
+.todo-filters button.active { background: #7b5ea7; color: #fff; border-color: #9b7ec7; }
+
+.todo-list { list-style: none; }
+.todo-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #1f1f3a;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+.todo-item:hover { background: #1f1f3a; }
+.todo-item.done { opacity: 0.5; }
+.todo-item.done .todo-text { text-decoration: line-through; }
+.todo-check { font-size: 18px; }
+.todo-text { flex: 1; }
+.todo-delete {
+    background: none;
+    border: none;
+    color: #f7768e;
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.todo-item:hover .todo-delete { opacity: 1; }
+
+.todo-summary { color: #7a7aaa; font-size: 13px; margin-top: 8px; }
+
+/* Color picker */
+.color-section { margin-top: 12px; }
+.color-preview {
+    width: 60px; height: 60px;
+    border-radius: 8px;
+    border: 2px solid #3a3a5a;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 12px;
+}
+.color-sliders { margin-top: 12px; }
+.color-sliders label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #a0a0c0;
+}
+.color-sliders input[type="range"] { flex: 1; }
+.color-value {
+    font-family: 'Consolas', monospace;
+    color: #7aa2f7;
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+/* Footer */
+.app-footer {
+    text-align: center;
+    color: #4a4a6a;
+    font-size: 12px;
+    padding: 24px 0;
+    border-top: 1px solid #2a2a4a;
+    margin-top: 24px;
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+</body>
+</html>

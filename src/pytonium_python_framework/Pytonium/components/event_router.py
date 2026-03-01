@@ -54,13 +54,16 @@ class EventData:
 def _accepts_event_arg(handler: Callable) -> bool:
     """Check if a handler function accepts an EventData argument.
 
-    Returns True if the handler has at least one parameter (excluding 'self').
+    Returns True if the handler has at least one parameter without a default
+    value (excluding 'self').  Parameters with defaults are assumed to be
+    closure captures (e.g., ``lambda t=t: ...``), not event data slots.
     """
     try:
         sig = inspect.signature(handler)
         params = [
             p for p in sig.parameters.values()
             if p.name != "self"
+            and p.default is inspect.Parameter.empty
         ]
         return len(params) >= 1
     except (ValueError, TypeError):
@@ -74,8 +77,17 @@ class EventRouter:
     A single Python function is bound to JavaScript as the event receiver.
     JS event listeners serialize event data and call this function.
 
+    IMPORTANT: Call ``EventRouter.prepare(pytonium)`` (or the convenience
+    wrapper ``Component.setup(pytonium)``) **before** ``pytonium.initialize()``
+    so that the global event-handler binding is available when CEF's
+    ``OnContextCreated`` fires.  Bindings registered after the page has
+    already loaded will NOT be visible in JavaScript.
+
     Usage:
-        router = EventRouter(pytonium)
+        p = Pytonium()
+        EventRouter.prepare(p)          # or Component.setup(p)
+        p.initialize(url, w, h)
+        router = EventRouter(p)
         router.register_events(element_tree)
         # Later, when component unmounts:
         router.cleanup()
@@ -84,6 +96,7 @@ class EventRouter:
     # Class-level registry of all active routers (for the global handler)
     _active_routers: dict[int, "EventRouter"] = {}
     _bound_to_js: bool = False
+    _prepared: bool = False
     _component_ref = None
 
     def __init__(self, pytonium):
@@ -97,6 +110,75 @@ class EventRouter:
         self._router_id = id(self)
         self._component = None
         EventRouter._active_routers[self._router_id] = self
+
+    @classmethod
+    def prepare(cls, pytonium):
+        """Pre-register the global event handler with JavaScript.
+
+        MUST be called **before** ``pytonium.initialize()`` so the binding
+        is available when CEF's ``OnContextCreated`` fires.  Bindings added
+        after the page loads are not picked up by the renderer process.
+
+        It is safe to call this multiple times — subsequent calls are no-ops.
+
+        Args:
+            pytonium: Pytonium instance (not yet initialized).
+        """
+        if cls._bound_to_js:
+            return
+
+        def _pyt_event_handler(node_id: str, event_type: str, event_json: str):
+            """Global event handler called from JavaScript."""
+            for router in cls._active_routers.values():
+                handler_info = router._handlers.get((node_id, event_type))
+                if handler_info:
+                    router._dispatch_event(
+                        handler_info, node_id, event_type, event_json
+                    )
+                    return
+
+        pytonium.bind_function_to_javascript(
+            _pyt_event_handler,
+            name="_event",
+            javascript_object="_internal",
+        )
+
+        def _pyt_buffered_input(data_json: str):
+            """Handle buffered input events (requestAnimationFrame batched)."""
+            try:
+                data = json.loads(data_json)
+            except (json.JSONDecodeError, TypeError):
+                return
+            for node_id, value in data.items():
+                for router in cls._active_routers.values():
+                    handler_info = router._handlers.get((node_id, "input"))
+                    if handler_info:
+                        event_data = EventData(type="input", value=str(value))
+                        handler = handler_info["handler"]
+                        component = router._component
+                        if component:
+                            from .state import DependencyTracker
+                            DependencyTracker.begin_batch(component)
+                        try:
+                            if _accepts_event_arg(handler):
+                                handler(event_data)
+                            else:
+                                handler()
+                        except Exception:
+                            import traceback
+                            traceback.print_exc()
+                        finally:
+                            if component:
+                                DependencyTracker.flush_batch(component)
+
+        pytonium.bind_function_to_javascript(
+            _pyt_buffered_input,
+            name="_buffered_input",
+            javascript_object="_internal",
+        )
+
+        cls._bound_to_js = True
+        cls._prepared = True
 
     def set_component(self, component):
         """Set the component for batch context during event handling.
@@ -204,6 +286,11 @@ class EventRouter:
         # Recurse into children
         for child in getattr(element, "_children", []):
             self._register_element_events(child)
+
+        # Recurse into conditional elements' active branch (Show/Switch)
+        current = getattr(element, "_current_element", None)
+        if current is not None:
+            self._register_element_events(current)
 
     def _generate_listener_js(
         self, node_id: str, event_type: str, event_info: dict
@@ -376,5 +463,5 @@ class EventRouter:
         """Remove all handlers and unregister this router."""
         self._handlers.clear()
         EventRouter._active_routers.pop(self._router_id, None)
-        if not EventRouter._active_routers:
+        if not EventRouter._active_routers and not EventRouter._prepared:
             EventRouter._bound_to_js = False

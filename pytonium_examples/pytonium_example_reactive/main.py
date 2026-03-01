@@ -18,6 +18,7 @@ Run after building:
     python pytonium_examples/pytonium_example_reactive/main.py
 """
 
+import os
 import time
 from datetime import datetime
 
@@ -31,7 +32,7 @@ from Pytonium.components import (
 
 
 # ---------------------------------------------------------------------------
-# CSS embedded as a data: URL — no external files needed
+# CSS
 # ---------------------------------------------------------------------------
 
 APP_CSS = """
@@ -217,24 +218,6 @@ body {
     margin-top: 24px;
 }
 """
-
-
-def make_data_url(body_html: str, css: str = "") -> str:
-    """Create a data: URL from HTML body content and optional CSS."""
-    import urllib.parse
-    full_html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Pytonium Reactive Demo</title>
-<style>{css}</style>
-</head>
-<body>
-{body_html}
-</body>
-</html>"""
-    encoded = urllib.parse.quote(full_html, safe="")
-    return f"data:text/html,{encoded}"
 
 
 # ---------------------------------------------------------------------------
@@ -666,43 +649,54 @@ def main():
     print("=" * 60)
     print()
 
-    # Create Pytonium and load the base page
     p = Pytonium()
 
-    # Use a data: URL so no external HTML files are needed
-    start_url = make_data_url(
-        '<div id="app"></div>',
-        css=APP_CSS,
-    )
+    # ---------------------------------------------------------------
+    # Step 1: Register event bindings BEFORE initialize()
+    # CEF binds JavaScript functions during page load (OnContextCreated).
+    # Bindings added AFTER that point are invisible to JavaScript.
+    # ---------------------------------------------------------------
+    Component.setup(p)
 
-    p.initialize(start_url, 960, 900)
+    # ---------------------------------------------------------------
+    # Step 2: Write the HTML page to a file and load via file:// URL.
+    # (Avoids data: URL size / encoding issues with large CSS.)
+    # ---------------------------------------------------------------
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    html_path = os.path.join(script_dir, "_reactive_demo.html")
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(
+            "<!DOCTYPE html>\n"
+            '<html lang="en">\n'
+            "<head>\n"
+            '<meta charset="UTF-8">\n'
+            "<title>Pytonium Reactive Demo</title>\n"
+            f"<style>{APP_CSS}</style>\n"
+            "</head>\n"
+            "<body>\n"
+            '<div id="app"></div>\n'
+            "</body>\n"
+            "</html>\n"
+        )
 
-    # Wait for the page to be ready
-    import time
-    time.sleep(0.5)
-    for _ in range(30):
-        p.update_message_loop()
-        time.sleep(0.016)
+    p.initialize(f"file:///{html_path}", 960, 900)
 
-    # Mount the root component
+    # ---------------------------------------------------------------
+    # Step 3: Mount components.
+    # mount() automatically waits for the page to be ready (polls
+    # the _ready sentinel until execute_javascript() actually works).
+    # ---------------------------------------------------------------
     app = ReactiveApp()
     app.mount(p, container_id="app")
 
-    # Mount sub-components into the sections div
-    # (Each sub-component mounts independently with its own dependency graph)
+    # Create sub-components
     counter = CounterSection()
     todo = TodoSection()
     tab_demo = TabDemoSection()
     show_demo = ShowDemoSection()
     color_picker = ColorPickerSection()
 
-    # Give the root component's HTML time to render
-    for _ in range(10):
-        p.update_message_loop()
-        time.sleep(0.016)
-
-    # Mount each section into the sections container
-    # We append section containers via JS, then mount components into them
+    # Append section containers into the "sections" div, then mount
     sections = [
         ("section-counter", counter),
         ("section-tabs", tab_demo),
@@ -711,7 +705,7 @@ def main():
         ("section-color", color_picker),
     ]
 
-    for section_id, _component in sections:
+    for section_id, _ in sections:
         p.execute_javascript(
             f'(function(){{'
             f'var s=document.getElementById("sections");'
@@ -720,16 +714,13 @@ def main():
             f'}})()'
         )
 
-    # Small delay for the DOM to update
+    # Pump a few frames so the section containers are in the DOM
     for _ in range(5):
         p.update_message_loop()
         time.sleep(0.016)
 
     for section_id, component in sections:
         component.mount(p, container_id=section_id)
-        for _ in range(5):
-            p.update_message_loop()
-            time.sleep(0.016)
 
     print("  All components mounted!")
     print()

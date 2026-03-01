@@ -6,7 +6,8 @@
       "Bash(cd:*)",
       "Bash(mkdir:*)",
       "Bash(pip install:*)",
-      "Bash(mkdocs build:*)"
+      "Bash(mkdocs build:*)",
+      "Bash(cp:*)"
     ]
   },
   "outputStyle": "vajrayogini"
