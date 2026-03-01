@@ -34,6 +34,9 @@ struct PerBrowserState {
     std::vector<ContextMenuBinding> contextMenuBindings;
     std::unordered_map<std::string, std::vector<ContextMenuBinding>> contextMenuBindingsMap;
 
+    // Maps command_id → binding pointer for the currently-shown menu (rebuilt each right-click)
+    std::unordered_map<int, ContextMenuBinding*> activeCommandMap;
+
     // Window event callbacks
     window_event_string_callback_ptr onTitleChangeCallback = nullptr;
     void* onTitleChangeUserData = nullptr;
@@ -41,6 +44,10 @@ struct PerBrowserState {
     void* onAddressChangeUserData = nullptr;
     window_event_bool_callback_ptr onFullscreenChangeCallback = nullptr;
     void* onFullscreenChangeUserData = nullptr;
+
+    // on_before_context_menu callback
+    before_context_menu_callback_ptr onBeforeContextMenuCallback = nullptr;
+    void* onBeforeContextMenuUserData = nullptr;
 };
 
 class CefWrapperClientHandler : public CefClient,
@@ -174,6 +181,15 @@ public:
 
     void SetContextMenuBindings(int browserId, std::vector<ContextMenuBinding> contextMenuBindings);
 
+    // Context menu runtime modification
+    void SetContextMenuItemEnabled(int browserId, const std::string& ns, int index, bool enabled);
+    void SetContextMenuItemChecked(int browserId, const std::string& ns, int index, bool checked);
+    void SetContextMenuItemVisible(int browserId, const std::string& ns, int index, bool visible);
+    void SetContextMenuItemAccelerator(int browserId, const std::string& ns, int index,
+                                       int keyCode, bool shift, bool ctrl, bool alt);
+    void ClearContextMenuEntries(int browserId, const std::string& ns);
+    void SetOnBeforeContextMenuCallback(int browserId, before_context_menu_callback_ptr callback, void* user_data);
+
     // Window event callback setters (per-browser)
     void SetOnTitleChangeCallback(int browserId, window_event_string_callback_ptr callback, void* user_data);
     void SetOnAddressChangeCallback(int browserId, window_event_string_callback_ptr callback, void* user_data);
@@ -183,6 +199,13 @@ public:
     PerBrowserState& GetBrowserState(int browserId);
 
 private:
+    // Recursively build a CefMenuModel from context menu bindings for a namespace
+    void BuildMenuRecursive(CefRefPtr<CefMenuModel> model, PerBrowserState& state,
+                            const std::string& ns, int& nextCommandId);
+
+    // Serialize CefContextMenuParams to a JSON string for Python callbacks
+    static std::string SerializeContextMenuParams(CefRefPtr<CefContextMenuParams> params);
+
     // Platform-specific implementation.
     void PlatformTitleChange(CefRefPtr<CefBrowser> browser,
                              const CefString &title);

@@ -94,12 +94,25 @@ cdef class PytoniumStateHandlerWrapper:
 
 cdef class PytoniumContextMenuBindingWrapper:
     cdef object python_method
+    cdef bint _accepts_params
 
     def __init__(self, method):
+        import inspect
         self.python_method = method
+        # Inspect whether handler accepts a ContextMenuParams argument
+        try:
+            sig = inspect.signature(method)
+            params = [p for p in sig.parameters.values()
+                      if p.name != "self" and p.default is inspect.Parameter.empty]
+            self._accepts_params = len(params) >= 1
+        except (ValueError, TypeError):
+            self._accepts_params = False
 
-    def __call__(self):
-        self.python_method()
+    def __call__(self, context_params=None):
+        if self._accepts_params and context_params is not None:
+            self.python_method(context_params)
+        else:
+            self.python_method()
 
 cdef class PytoniumContextMenuWrapper:
     cdef dict context_menu
@@ -115,10 +128,21 @@ cdef class PytoniumContextMenuWrapper:
     def get_menu_size(self, entryNamespace: str):
         return len(self.context_menu.get(entryNamespace, []))
 
-    def __call__(self, entryNamespace: string, command_id: int):
+    def __call__(self, entryNamespace: string, command_id: int, params_json: string = b""):
         key = entryNamespace.decode("utf-8")
         if key in self.context_menu and command_id < len(self.context_menu[key]):
-            self.context_menu[key][command_id]()
+            # Parse context params JSON if present
+            context_params = None
+            json_str = params_json.decode("utf-8") if params_json.size() > 0 else ""
+            if json_str:
+                try:
+                    import json
+                    data = json.loads(json_str)
+                    from Pytonium import ContextMenuParams
+                    context_params = ContextMenuParams(**data)
+                except Exception:
+                    pass
+            self.context_menu[key][command_id](context_params)
 
 cdef class PytoniumValueWrapper:
     cdef CefValueWrapper cef_value_wrapper;
@@ -298,9 +322,23 @@ cdef inline void javascript_binding_object_callback(void *python_function_object
         import traceback
         traceback.print_exc()
 
-cdef inline void context_menu_binding_object_callback(void *python_function_object, string entryNamespace, int command_id) noexcept with gil:
+cdef inline void context_menu_binding_object_callback(void *python_function_object, string entryNamespace, int command_id, string params_json) noexcept with gil:
     try:
-        (<PytoniumContextMenuWrapper> python_function_object)(entryNamespace, command_id)
+        (<PytoniumContextMenuWrapper> python_function_object)(entryNamespace, command_id, params_json)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+cdef inline void _on_before_context_menu_callback(void* user_data, const char* params_json) noexcept with gil:
+    try:
+        json_str = params_json.decode("utf-8") if params_json else ""
+        context_params = None
+        if json_str:
+            import json
+            data = json.loads(json_str)
+            from Pytonium import ContextMenuParams
+            context_params = ContextMenuParams(**data)
+        (<PytoniumWindowEventCallbackWrapper>user_data)(context_params)
     except Exception:
         import traceback
         traceback.print_exc()
@@ -616,6 +654,166 @@ cdef class Pytonium:
             show: True to show DevTools entries in the context menu.
         """
         self.pytonium_library.SetShowDebugContextMenu(show)
+
+    def add_context_menu_separator(self, context_menu_namespace: str = "") -> None:
+        """Add a visual separator line to the context menu.
+
+        Args:
+            context_menu_namespace: Namespace for grouping menu entries. Defaults to ``"app"``.
+        """
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        self.pytonium_library.AddContextMenuSeparator(context_menu_namespace.encode("utf-8"))
+
+    def add_context_menu_check_item(self, context_menu_entry_function, display_name: str = "", checked: bool = False, context_menu_namespace: str = "") -> None:
+        """Add a checkable menu item to the context menu.
+
+        The item toggles its checked state automatically when clicked.
+
+        Args:
+            context_menu_entry_function: A callable invoked when the item is clicked.
+                Can optionally accept a ``ContextMenuParams`` argument.
+            display_name: The label shown in the context menu.
+            checked: Initial checked state.
+            context_menu_namespace: Namespace for grouping. Defaults to ``"app"``.
+        """
+        if not callable(context_menu_entry_function):
+            raise TypeError(f"context_menu_entry_function must be callable, got {type(context_menu_entry_function).__name__}")
+        if display_name == "":
+            display_name = context_menu_entry_function.__name__
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        context_menu_entry = PytoniumContextMenuBindingWrapper(context_menu_entry_function)
+        entry_index = self._pytonium_context_menu.get_menu_size(context_menu_namespace)
+        self._pytonium_context_menu.add_menu_entry(context_menu_namespace, context_menu_entry)
+        self.pytonium_library.AddContextMenuCheckItem(context_menu_binding_object_callback, <void *>self._pytonium_context_menu, context_menu_namespace.encode("utf-8"), display_name.encode("utf-8"), entry_index, checked)
+
+    def add_context_menu_radio_item(self, context_menu_entry_function, display_name: str = "", group_id: int = 0, context_menu_namespace: str = "") -> None:
+        """Add a radio button menu item to the context menu.
+
+        Only one radio item per group can be checked at a time.
+
+        Args:
+            context_menu_entry_function: A callable invoked when the item is clicked.
+                Can optionally accept a ``ContextMenuParams`` argument.
+            display_name: The label shown in the context menu.
+            group_id: Radio group identifier. Items in the same group are mutually exclusive.
+            context_menu_namespace: Namespace for grouping. Defaults to ``"app"``.
+        """
+        if not callable(context_menu_entry_function):
+            raise TypeError(f"context_menu_entry_function must be callable, got {type(context_menu_entry_function).__name__}")
+        if display_name == "":
+            display_name = context_menu_entry_function.__name__
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        context_menu_entry = PytoniumContextMenuBindingWrapper(context_menu_entry_function)
+        entry_index = self._pytonium_context_menu.get_menu_size(context_menu_namespace)
+        self._pytonium_context_menu.add_menu_entry(context_menu_namespace, context_menu_entry)
+        self.pytonium_library.AddContextMenuRadioItem(context_menu_binding_object_callback, <void *>self._pytonium_context_menu, context_menu_namespace.encode("utf-8"), display_name.encode("utf-8"), entry_index, group_id)
+
+    def add_context_menu_submenu(self, display_name: str, sub_namespace: str, context_menu_namespace: str = "") -> None:
+        """Add a submenu to the context menu.
+
+        Items registered under ``sub_namespace`` will appear as children of this submenu.
+
+        Args:
+            display_name: The submenu label.
+            sub_namespace: Namespace whose entries become the submenu children.
+            context_menu_namespace: Parent namespace. Defaults to ``"app"``.
+        """
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        entry_index = self._pytonium_context_menu.get_menu_size(context_menu_namespace)
+        # Submenus use a placeholder entry in the Python wrapper (no callable)
+        placeholder = PytoniumContextMenuBindingWrapper(lambda: None)
+        self._pytonium_context_menu.add_menu_entry(context_menu_namespace, placeholder)
+        self.pytonium_library.AddContextMenuSubMenu(context_menu_namespace.encode("utf-8"), display_name.encode("utf-8"), entry_index, sub_namespace.encode("utf-8"))
+
+    def set_context_menu_item_enabled(self, item_index: int, enabled: bool, context_menu_namespace: str = "") -> None:
+        """Enable or disable a context menu item at runtime.
+
+        Args:
+            item_index: Index of the item within its namespace (insertion order).
+            enabled: True to enable, False to gray out.
+            context_menu_namespace: Namespace of the item. Defaults to ``"app"``.
+        """
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        self.pytonium_library.SetContextMenuItemEnabled(context_menu_namespace.encode("utf-8"), item_index, enabled)
+
+    def set_context_menu_item_checked(self, item_index: int, checked: bool, context_menu_namespace: str = "") -> None:
+        """Set the checked state of a check or radio menu item at runtime.
+
+        Args:
+            item_index: Index of the item within its namespace.
+            checked: True to check, False to uncheck.
+            context_menu_namespace: Namespace of the item. Defaults to ``"app"``.
+        """
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        self.pytonium_library.SetContextMenuItemChecked(context_menu_namespace.encode("utf-8"), item_index, checked)
+
+    def set_context_menu_item_visible(self, item_index: int, visible: bool, context_menu_namespace: str = "") -> None:
+        """Show or hide a context menu item at runtime.
+
+        Args:
+            item_index: Index of the item within its namespace.
+            visible: True to show, False to hide.
+            context_menu_namespace: Namespace of the item. Defaults to ``"app"``.
+        """
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        self.pytonium_library.SetContextMenuItemVisible(context_menu_namespace.encode("utf-8"), item_index, visible)
+
+    def set_context_menu_item_accelerator(self, item_index: int, key_code: int, ctrl: bool = False, shift: bool = False, alt: bool = False, context_menu_namespace: str = "") -> None:
+        """Set a keyboard accelerator label for a context menu item.
+
+        The accelerator is displayed next to the item label. Note that this sets
+        the visual label only; actual keyboard shortcuts require separate handling.
+
+        Args:
+            item_index: Index of the item within its namespace.
+            key_code: ASCII key code (e.g. ``ord('C')`` for Ctrl+C).
+            ctrl: Whether Ctrl is part of the shortcut.
+            shift: Whether Shift is part of the shortcut.
+            alt: Whether Alt is part of the shortcut.
+            context_menu_namespace: Namespace of the item. Defaults to ``"app"``.
+        """
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        self.pytonium_library.SetContextMenuItemAccelerator(context_menu_namespace.encode("utf-8"), item_index, key_code, shift, ctrl, alt)
+
+    def clear_context_menu_entries(self, context_menu_namespace: str = "") -> None:
+        """Remove all context menu entries in a namespace.
+
+        This allows rebuilding the menu dynamically at runtime.
+
+        Args:
+            context_menu_namespace: Namespace to clear. Defaults to ``"app"``.
+        """
+        if context_menu_namespace == "":
+            context_menu_namespace = "app"
+        self.pytonium_library.ClearContextMenuEntries(context_menu_namespace.encode("utf-8"))
+        # Also clear Python-side wrappers
+        if context_menu_namespace in self._pytonium_context_menu.context_menu:
+            self._pytonium_context_menu.context_menu[context_menu_namespace] = []
+
+    def on_before_context_menu(self, callback) -> None:
+        """Register a callback fired before the context menu is shown.
+
+        The callback receives a ``ContextMenuParams`` object with context about
+        the right-click location (coordinates, selected text, link URL, etc.).
+        Use it to dynamically modify menu items (enable/disable, check/uncheck,
+        show/hide) based on context.
+
+        Args:
+            callback: A callable that receives a ``ContextMenuParams`` object.
+        """
+        if not callable(callback):
+            raise TypeError(f"callback must be callable, got {type(callback).__name__}")
+        wrapper = PytoniumWindowEventCallbackWrapper(callback)
+        self._event_callback_wrappers.append(wrapper)
+        self.pytonium_library.SetOnBeforeContextMenuCallback(_on_before_context_menu_callback, <void*>wrapper)
 
     def create_browser(self, url: str, width: int, height: int, frameless: bool = False, icon_path: str = "") -> int:
         """Create an additional browser window (CEF must already be initialized).

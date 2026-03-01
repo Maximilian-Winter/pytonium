@@ -456,6 +456,80 @@ void PytoniumLibrary::AddContextMenuEntry(context_menu_handler_function_ptr cont
     m_ContextMenuBindings.emplace_back(contextMenuDisplayName, contextMenuId, context_menuHandlerFunctionPtr, context_menuCallbackObjectPtr, contextMenuNameSpace);
 }
 
+void PytoniumLibrary::AddContextMenuSeparator(const std::string& contextMenuNameSpace)
+{
+    m_ContextMenuBindings.push_back(ContextMenuBinding::MakeSeparator(contextMenuNameSpace, static_cast<int>(m_ContextMenuBindings.size())));
+}
+
+void PytoniumLibrary::AddContextMenuCheckItem(context_menu_handler_function_ptr cb, context_menu_handler_object_ptr obj,
+                                               const std::string& ns, const std::string& displayName, int id, bool checked)
+{
+    m_ContextMenuBindings.emplace_back(displayName, id, cb, obj, ns,
+                                        ContextMenuItemType::CHECK, 0, checked);
+}
+
+void PytoniumLibrary::AddContextMenuRadioItem(context_menu_handler_function_ptr cb, context_menu_handler_object_ptr obj,
+                                               const std::string& ns, const std::string& displayName, int id, int groupId)
+{
+    m_ContextMenuBindings.emplace_back(displayName, id, cb, obj, ns,
+                                        ContextMenuItemType::RADIO, groupId);
+}
+
+void PytoniumLibrary::AddContextMenuSubMenu(const std::string& ns, const std::string& displayName, int id,
+                                             const std::string& subNamespace)
+{
+    m_ContextMenuBindings.push_back(ContextMenuBinding::MakeSubMenu(displayName, ns, id, subNamespace));
+}
+
+void PytoniumLibrary::SetContextMenuItemEnabled(const std::string& ns, int index, bool enabled)
+{
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetContextMenuItemEnabled(m_BrowserId, ns, index, enabled);
+    }
+}
+
+void PytoniumLibrary::SetContextMenuItemChecked(const std::string& ns, int index, bool checked)
+{
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetContextMenuItemChecked(m_BrowserId, ns, index, checked);
+    }
+}
+
+void PytoniumLibrary::SetContextMenuItemVisible(const std::string& ns, int index, bool visible)
+{
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetContextMenuItemVisible(m_BrowserId, ns, index, visible);
+    }
+}
+
+void PytoniumLibrary::SetContextMenuItemAccelerator(const std::string& ns, int index,
+                                                     int keyCode, bool shift, bool ctrl, bool alt)
+{
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetContextMenuItemAccelerator(m_BrowserId, ns, index, keyCode, shift, ctrl, alt);
+    }
+}
+
+void PytoniumLibrary::ClearContextMenuEntries(const std::string& ns)
+{
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->ClearContextMenuEntries(m_BrowserId, ns);
+    }
+}
+
+void PytoniumLibrary::SetOnBeforeContextMenuCallback(before_context_menu_callback_ptr callback, void* user_data)
+{
+    auto* client = CefWrapperClientHandler::GetInstance();
+    if (client && m_BrowserId >= 0) {
+        client->SetOnBeforeContextMenuCallback(m_BrowserId, callback, user_data);
+    }
+}
+
 void PytoniumLibrary::SetCurrentContextMenuNamespace(const std::string& contextMenuNamespace)
 {
     auto* client = CefWrapperClientHandler::GetInstance();

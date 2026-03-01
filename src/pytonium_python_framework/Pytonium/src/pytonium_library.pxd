@@ -71,7 +71,8 @@ cdef extern from "src/pytonium_library/application_state_python.h":
 
 cdef extern from "src/pytonium_library/application_context_menu_binding.h":
     ctypedef void (*context_menu_handler_object_ptr)
-    ctypedef void (*context_menu_handler_function_ptr)(context_menu_handler_object_ptr python_callback_object, string contextMenuNamespace, int contextMenuIndex)
+    ctypedef void (*context_menu_handler_function_ptr)(context_menu_handler_object_ptr python_callback_object, string contextMenuNamespace, int contextMenuIndex, string paramsJson)
+    ctypedef void (*before_context_menu_callback_ptr)(void* user_data, const char* params_json)
 
 # Declare the class with cdef
 cdef extern from "src/pytonium_library/pytonium_library.h":
@@ -101,6 +102,16 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         void SetState(string stateNamespace, string key, CefValueWrapper value)
         void RemoveState(string stateNamespace, string key)
         void AddContextMenuEntry(context_menu_handler_function_ptr context_menuHandlerFunctionPtr, context_menu_handler_object_ptr context_menuCallbackObjectPtr, string contextMenuNameSpace, string contextMenuDisplayName, int contextMenuId)
+        void AddContextMenuSeparator(string contextMenuNameSpace)
+        void AddContextMenuCheckItem(context_menu_handler_function_ptr cb, context_menu_handler_object_ptr obj, string ns, string displayName, int id, bint checked)
+        void AddContextMenuRadioItem(context_menu_handler_function_ptr cb, context_menu_handler_object_ptr obj, string ns, string displayName, int id, int groupId)
+        void AddContextMenuSubMenu(string ns, string displayName, int id, string subNamespace)
+        void SetContextMenuItemEnabled(string ns, int index, bint enabled)
+        void SetContextMenuItemChecked(string ns, int index, bint checked)
+        void SetContextMenuItemVisible(string ns, int index, bint visible)
+        void SetContextMenuItemAccelerator(string ns, int index, int keyCode, bint shift, bint ctrl, bint alt)
+        void ClearContextMenuEntries(string ns)
+        void SetOnBeforeContextMenuCallback(before_context_menu_callback_ptr callback, void* user_data)
         void SetCustomSubprocessPath(string path)
         void SetCustomCachePath(string cef_cache_path)
         void SetCustomIconPath(string custom_icon_path)

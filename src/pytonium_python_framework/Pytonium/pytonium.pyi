@@ -58,6 +58,58 @@ class Pytonium:
     def add_state_handler(self, state_handler: object, namespaces: list[str]) -> None: ...
     def set_context_menu_namespace(self, context_menu_namespace: str) -> None: ...
     def set_show_debug_context_menu(self, show: bool) -> None: ...
+
+    def add_context_menu_separator(self, context_menu_namespace: str = "") -> None: ...
+
+    def add_context_menu_check_item(
+        self,
+        context_menu_entry_function: Callable[..., Any],
+        display_name: str = "",
+        checked: bool = False,
+        context_menu_namespace: str = "",
+    ) -> None: ...
+
+    def add_context_menu_radio_item(
+        self,
+        context_menu_entry_function: Callable[..., Any],
+        display_name: str = "",
+        group_id: int = 0,
+        context_menu_namespace: str = "",
+    ) -> None: ...
+
+    def add_context_menu_submenu(
+        self,
+        display_name: str,
+        sub_namespace: str,
+        context_menu_namespace: str = "",
+    ) -> None: ...
+
+    def set_context_menu_item_enabled(
+        self, item_index: int, enabled: bool, context_menu_namespace: str = "",
+    ) -> None: ...
+
+    def set_context_menu_item_checked(
+        self, item_index: int, checked: bool, context_menu_namespace: str = "",
+    ) -> None: ...
+
+    def set_context_menu_item_visible(
+        self, item_index: int, visible: bool, context_menu_namespace: str = "",
+    ) -> None: ...
+
+    def set_context_menu_item_accelerator(
+        self,
+        item_index: int,
+        key_code: int,
+        ctrl: bool = False,
+        shift: bool = False,
+        alt: bool = False,
+        context_menu_namespace: str = "",
+    ) -> None: ...
+
+    def clear_context_menu_entries(self, context_menu_namespace: str = "") -> None: ...
+
+    def on_before_context_menu(self, callback: Callable[..., None]) -> None: ...
+
     def create_browser(self, url: str, width: int, height: int, frameless: bool = False, icon_path: str = "") -> int: ...
     def close_browser(self) -> None: ...
     def get_browser_id(self) -> int: ...

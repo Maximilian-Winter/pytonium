@@ -85,6 +85,127 @@ void CefWrapperClientHandler::RegisterBrowserBindings(int browserId,
     }
 }
 
+std::string CefWrapperClientHandler::SerializeContextMenuParams(CefRefPtr<CefContextMenuParams> params)
+{
+    // Build a JSON string from context menu params.
+    // Using manual string building to avoid external JSON library dependency.
+    std::ostringstream ss;
+    ss << "{";
+    ss << "\"x\":" << params->GetXCoord() << ",";
+    ss << "\"y\":" << params->GetYCoord() << ",";
+
+    // Selection text — escape backslashes, quotes, and control characters
+    std::string selText = params->GetSelectionText().ToString();
+    std::string escapedSel;
+    for (char c : selText) {
+        if (c == '"') escapedSel += "\\\"";
+        else if (c == '\\') escapedSel += "\\\\";
+        else if (c == '\n') escapedSel += "\\n";
+        else if (c == '\r') escapedSel += "\\r";
+        else if (c == '\t') escapedSel += "\\t";
+        else escapedSel += c;
+    }
+    ss << "\"selection_text\":\"" << escapedSel << "\",";
+
+    auto escapeStr = [](const std::string& s) -> std::string {
+        std::string out;
+        for (char c : s) {
+            if (c == '"') out += "\\\"";
+            else if (c == '\\') out += "\\\\";
+            else out += c;
+        }
+        return out;
+    };
+
+    ss << "\"link_url\":\"" << escapeStr(params->GetLinkUrl().ToString()) << "\",";
+    ss << "\"source_url\":\"" << escapeStr(params->GetSourceUrl().ToString()) << "\",";
+    ss << "\"page_url\":\"" << escapeStr(params->GetPageUrl().ToString()) << "\",";
+    ss << "\"is_editable\":" << (params->IsEditable() ? "true" : "false") << ",";
+    ss << "\"has_image\":" << (params->HasImageContents() ? "true" : "false") << ",";
+    ss << "\"media_type\":" << static_cast<int>(params->GetMediaType()) << ",";
+    ss << "\"type_flags\":" << static_cast<int>(params->GetTypeFlags()) << ",";
+    ss << "\"edit_state_flags\":" << static_cast<int>(params->GetEditStateFlags());
+    ss << "}";
+    return ss.str();
+}
+
+void CefWrapperClientHandler::BuildMenuRecursive(CefRefPtr<CefMenuModel> model,
+                                                  PerBrowserState& state,
+                                                  const std::string& ns,
+                                                  int& nextCommandId)
+{
+    auto it = state.contextMenuBindingsMap.find(ns);
+    if (it == state.contextMenuBindingsMap.end())
+        return;
+
+    auto& entries = it->second;
+    for (size_t i = 0; i < entries.size(); ++i)
+    {
+        auto& entry = entries[i];
+        if (!entry.Visible)
+            continue;
+
+        switch (entry.ItemType)
+        {
+            case ContextMenuItemType::SEPARATOR:
+                model->AddSeparator();
+                break;
+
+            case ContextMenuItemType::COMMAND:
+            {
+                int cmdId = nextCommandId++;
+                model->AddItem(cmdId, entry.DisplayName);
+                if (!entry.Enabled)
+                    model->SetEnabled(cmdId, false);
+                if (entry.AccelKeyCode > 0)
+                    model->SetAccelerator(cmdId, entry.AccelKeyCode,
+                                          entry.AccelShift, entry.AccelCtrl, entry.AccelAlt);
+                state.activeCommandMap[cmdId] = &entry;
+                break;
+            }
+
+            case ContextMenuItemType::CHECK:
+            {
+                int cmdId = nextCommandId++;
+                model->AddCheckItem(cmdId, entry.DisplayName);
+                model->SetChecked(cmdId, entry.Checked);
+                if (!entry.Enabled)
+                    model->SetEnabled(cmdId, false);
+                if (entry.AccelKeyCode > 0)
+                    model->SetAccelerator(cmdId, entry.AccelKeyCode,
+                                          entry.AccelShift, entry.AccelCtrl, entry.AccelAlt);
+                state.activeCommandMap[cmdId] = &entry;
+                break;
+            }
+
+            case ContextMenuItemType::RADIO:
+            {
+                int cmdId = nextCommandId++;
+                model->AddRadioItem(cmdId, entry.DisplayName, entry.RadioGroupId);
+                model->SetChecked(cmdId, entry.Checked);
+                if (!entry.Enabled)
+                    model->SetEnabled(cmdId, false);
+                if (entry.AccelKeyCode > 0)
+                    model->SetAccelerator(cmdId, entry.AccelKeyCode,
+                                          entry.AccelShift, entry.AccelCtrl, entry.AccelAlt);
+                state.activeCommandMap[cmdId] = &entry;
+                break;
+            }
+
+            case ContextMenuItemType::SUBMENU:
+            {
+                int cmdId = nextCommandId++;
+                CefRefPtr<CefMenuModel> subModel = model->AddSubMenu(cmdId, entry.DisplayName);
+                if (!entry.Enabled)
+                    model->SetEnabled(cmdId, false);
+                // Recursively build submenu from the sub-namespace
+                BuildMenuRecursive(subModel, state, entry.SubMenuNamespace, nextCommandId);
+                break;
+            }
+        }
+    }
+}
+
 void CefWrapperClientHandler::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
                                                   CefRefPtr<CefFrame> frame,
                                                   CefRefPtr<CefContextMenuParams> params,
@@ -109,10 +230,18 @@ void CefWrapperClientHandler::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
         model->AddSeparator();
     }
 
-    for (const auto& contextMenuEntry: state.contextMenuBindingsMap[state.currentContextMenuNamespace])
+    // Fire the on_before_context_menu callback so Python can modify
+    // enabled/checked/visible state before the menu is built
+    if (state.onBeforeContextMenuCallback)
     {
-        model->AddItem(contextMenuEntry.CommandId + CLIENT_ID_PYTONIUM_CUSTOM_FIRST, contextMenuEntry.DisplayName);
+        std::string paramsJson = SerializeContextMenuParams(params);
+        state.onBeforeContextMenuCallback(state.onBeforeContextMenuUserData, paramsJson.c_str());
     }
+
+    // Clear the active command map and build fresh
+    state.activeCommandMap.clear();
+    int nextCommandId = CLIENT_ID_PYTONIUM_CUSTOM_FIRST;
+    BuildMenuRecursive(model, state, state.currentContextMenuNamespace, nextCommandId);
 }
 
 bool CefWrapperClientHandler::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
@@ -136,8 +265,41 @@ bool CefWrapperClientHandler::OnContextMenuCommand(CefRefPtr<CefBrowser> browser
             ShowDevTools(browser, CefPoint(params->GetXCoord(), params->GetYCoord()));
             return true;
         default:
-            state.contextMenuBindingsMap[state.currentContextMenuNamespace][command_id-CLIENT_ID_PYTONIUM_CUSTOM_FIRST].OnContextMenuEntryClicked();
+        {
+            auto it = state.activeCommandMap.find(command_id);
+            if (it != state.activeCommandMap.end())
+            {
+                auto* binding = it->second;
+
+                // Auto-toggle for check items
+                if (binding->ItemType == ContextMenuItemType::CHECK)
+                {
+                    binding->Checked = !binding->Checked;
+                }
+                // Auto-select for radio items: uncheck others in same group, check this one
+                else if (binding->ItemType == ContextMenuItemType::RADIO)
+                {
+                    auto mapIt = state.contextMenuBindingsMap.find(binding->Namespace);
+                    if (mapIt != state.contextMenuBindingsMap.end())
+                    {
+                        for (auto& entry : mapIt->second)
+                        {
+                            if (entry.ItemType == ContextMenuItemType::RADIO &&
+                                entry.RadioGroupId == binding->RadioGroupId)
+                            {
+                                entry.Checked = false;
+                            }
+                        }
+                    }
+                    binding->Checked = true;
+                }
+
+                // Serialize context params and invoke the Python callback
+                std::string paramsJson = SerializeContextMenuParams(params);
+                binding->OnContextMenuEntryClicked(paramsJson);
+            }
             return true;
+        }
     }
 }
 
@@ -525,6 +687,67 @@ void CefWrapperClientHandler::SetContextMenuBindings(int browserId, std::vector<
     {
         state.contextMenuBindingsMap[contextMenuEntry.Namespace].emplace_back(contextMenuEntry);
     }
+}
+
+void CefWrapperClientHandler::SetContextMenuItemEnabled(int browserId, const std::string& ns, int index, bool enabled)
+{
+    auto& state = GetBrowserState(browserId);
+    auto it = state.contextMenuBindingsMap.find(ns);
+    if (it != state.contextMenuBindingsMap.end() && index >= 0 && index < static_cast<int>(it->second.size()))
+    {
+        it->second[index].Enabled = enabled;
+    }
+}
+
+void CefWrapperClientHandler::SetContextMenuItemChecked(int browserId, const std::string& ns, int index, bool checked)
+{
+    auto& state = GetBrowserState(browserId);
+    auto it = state.contextMenuBindingsMap.find(ns);
+    if (it != state.contextMenuBindingsMap.end() && index >= 0 && index < static_cast<int>(it->second.size()))
+    {
+        it->second[index].Checked = checked;
+    }
+}
+
+void CefWrapperClientHandler::SetContextMenuItemVisible(int browserId, const std::string& ns, int index, bool visible)
+{
+    auto& state = GetBrowserState(browserId);
+    auto it = state.contextMenuBindingsMap.find(ns);
+    if (it != state.contextMenuBindingsMap.end() && index >= 0 && index < static_cast<int>(it->second.size()))
+    {
+        it->second[index].Visible = visible;
+    }
+}
+
+void CefWrapperClientHandler::SetContextMenuItemAccelerator(int browserId, const std::string& ns, int index,
+                                                             int keyCode, bool shift, bool ctrl, bool alt)
+{
+    auto& state = GetBrowserState(browserId);
+    auto it = state.contextMenuBindingsMap.find(ns);
+    if (it != state.contextMenuBindingsMap.end() && index >= 0 && index < static_cast<int>(it->second.size()))
+    {
+        it->second[index].AccelKeyCode = keyCode;
+        it->second[index].AccelShift = shift;
+        it->second[index].AccelCtrl = ctrl;
+        it->second[index].AccelAlt = alt;
+    }
+}
+
+void CefWrapperClientHandler::ClearContextMenuEntries(int browserId, const std::string& ns)
+{
+    auto& state = GetBrowserState(browserId);
+    auto it = state.contextMenuBindingsMap.find(ns);
+    if (it != state.contextMenuBindingsMap.end())
+    {
+        it->second.clear();
+    }
+}
+
+void CefWrapperClientHandler::SetOnBeforeContextMenuCallback(int browserId, before_context_menu_callback_ptr callback, void* user_data)
+{
+    auto& state = GetBrowserState(browserId);
+    state.onBeforeContextMenuCallback = callback;
+    state.onBeforeContextMenuUserData = user_data;
 }
 
 void CefWrapperClientHandler::SetOnTitleChangeCallback(int browserId, window_event_string_callback_ptr callback, void* user_data)

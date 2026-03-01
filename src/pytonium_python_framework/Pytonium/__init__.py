@@ -48,6 +48,40 @@ if os.name == 'posix':
     pytonium_process_path = f'{pytonium_path}/{bin_folder}/pytonium_subprocess'
     cdll.LoadLibrary(f'{pytonium_path}/{bin_folder}/libcef.so')
 
+from dataclasses import dataclass
+
+
+@dataclass
+class ContextMenuParams:
+    """Context data for the right-click location, passed to context menu handlers
+    and the ``on_before_context_menu`` callback.
+
+    Attributes:
+        x: Mouse X coordinate relative to the browser view.
+        y: Mouse Y coordinate relative to the browser view.
+        selection_text: Currently selected text (empty if none).
+        link_url: URL of the link under the cursor (empty if none).
+        source_url: URL of the element (image, video, etc.) under the cursor.
+        page_url: URL of the top-level page.
+        is_editable: True if the right-clicked element is an editable field.
+        has_image: True if the element has image contents.
+        media_type: CEF media type enum value (0=none, 1=image, 2=video, 3=audio).
+        type_flags: Bitmask of context type flags (page, frame, link, media, selection, editable).
+        edit_state_flags: Bitmask of edit capabilities (undo, redo, cut, copy, paste, etc.).
+    """
+    x: int = 0
+    y: int = 0
+    selection_text: str = ""
+    link_url: str = ""
+    source_url: str = ""
+    page_url: str = ""
+    is_editable: bool = False
+    has_image: bool = False
+    media_type: int = 0
+    type_flags: int = 0
+    edit_state_flags: int = 0
+
+
 from .pytonium import Pytonium as Pytonium
 
 # Initialize the class-level attribute upon import

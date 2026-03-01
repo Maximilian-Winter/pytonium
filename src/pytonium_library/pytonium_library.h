@@ -75,6 +75,26 @@ public:
 
     void AddContextMenuEntry(context_menu_handler_function_ptr context_menuHandlerFunctionPtr, context_menu_handler_object_ptr context_menuCallbackObjectPtr, const std::string& contextMenuNameSpace, const std::string& contextMenuDisplayName, int contextMenuId);
 
+    // New context menu entry types
+    void AddContextMenuSeparator(const std::string& contextMenuNameSpace);
+    void AddContextMenuCheckItem(context_menu_handler_function_ptr cb, context_menu_handler_object_ptr obj,
+                                  const std::string& ns, const std::string& displayName, int id, bool checked);
+    void AddContextMenuRadioItem(context_menu_handler_function_ptr cb, context_menu_handler_object_ptr obj,
+                                  const std::string& ns, const std::string& displayName, int id, int groupId);
+    void AddContextMenuSubMenu(const std::string& ns, const std::string& displayName, int id,
+                                const std::string& subNamespace);
+
+    // Runtime context menu modifications
+    void SetContextMenuItemEnabled(const std::string& ns, int index, bool enabled);
+    void SetContextMenuItemChecked(const std::string& ns, int index, bool checked);
+    void SetContextMenuItemVisible(const std::string& ns, int index, bool visible);
+    void SetContextMenuItemAccelerator(const std::string& ns, int index,
+                                       int keyCode, bool shift, bool ctrl, bool alt);
+    void ClearContextMenuEntries(const std::string& ns);
+
+    // on_before_context_menu callback
+    void SetOnBeforeContextMenuCallback(before_context_menu_callback_ptr callback, void* user_data);
+
     void SetCurrentContextMenuNamespace(const std::string& contextMenuNamespace);
 
     void SetShowDebugContextMenu(bool show);
