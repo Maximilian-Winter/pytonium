@@ -3,6 +3,7 @@
 #if defined(_WIN32)
 
 #include <iostream>
+#include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
 
 const wchar_t* OsrWindowWin::kWindowClass = L"PytoniumOsrWindow";
 bool OsrWindowWin::s_ClassRegistered = false;
@@ -348,6 +349,26 @@ LRESULT CALLBACK OsrWindowWin::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 
     if (self) {
         switch (msg) {
+            case WM_NCHITTEST: {
+                // Per-pixel alpha hit testing for layered windows.
+                // Return HTCLIENT for pixels with alpha > 0 (opaque content),
+                // HTTRANSPARENT for fully transparent pixels (click passes through).
+                POINT pt = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                ScreenToClient(hwnd, &pt);
+
+                if (pt.x >= 0 && pt.x < self->m_Width &&
+                    pt.y >= 0 && pt.y < self->m_Height &&
+                    self->m_BitmapBits) {
+                    uint8_t* pixels = static_cast<uint8_t*>(self->m_BitmapBits);
+                    int offset = (pt.y * self->m_Width + pt.x) * 4;
+                    uint8_t alpha = pixels[offset + 3];  // BGRA format — alpha is byte 3
+                    if (alpha > 0) {
+                        return HTCLIENT;
+                    }
+                }
+                return HTTRANSPARENT;
+            }
+
             case WM_MOUSEMOVE:
             case WM_LBUTTONDOWN:
             case WM_LBUTTONUP:
