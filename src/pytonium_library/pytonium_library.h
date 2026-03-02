@@ -138,6 +138,9 @@ public:
     // Initiate native OS window drag (smooth, zero-latency title bar drag)
     void StartWindowDrag();
 
+    // Center window on its current monitor
+    void CenterWindow();
+
     // Get window position
     void GetWindowPosition(int& x, int& y);
 

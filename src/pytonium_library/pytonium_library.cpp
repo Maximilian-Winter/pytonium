@@ -729,6 +729,36 @@ void PytoniumLibrary::StartWindowDrag()
 #endif
 }
 
+void PytoniumLibrary::CenterWindow()
+{
+#if defined(OS_WIN)
+    HWND hwnd = GetActiveHwnd();
+    if (!hwnd || !IsWindow(hwnd)) return;
+
+    // Get the window's current size
+    RECT windowRect;
+    if (!GetWindowRect(hwnd, &windowRect)) return;
+    int winWidth = windowRect.right - windowRect.left;
+    int winHeight = windowRect.bottom - windowRect.top;
+
+    // Get the work area of the monitor the window is currently on
+    HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi = {};
+    mi.cbSize = sizeof(MONITORINFO);
+    if (!GetMonitorInfo(monitor, &mi)) return;
+
+    int monX = mi.rcWork.left;
+    int monY = mi.rcWork.top;
+    int monWidth = mi.rcWork.right - mi.rcWork.left;
+    int monHeight = mi.rcWork.bottom - mi.rcWork.top;
+
+    int x = monX + (monWidth - winWidth) / 2;
+    int y = monY + (monHeight - winHeight) / 2;
+
+    SetWindowPos(hwnd, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+#endif
+}
+
 void PytoniumLibrary::GetWindowPosition(int& x, int& y)
 {
     x = 0;

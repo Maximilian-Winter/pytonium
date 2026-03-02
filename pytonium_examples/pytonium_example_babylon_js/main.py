@@ -82,8 +82,8 @@ def main():
     pytonium.set_custom_icon_path(os.path.join(current_dir, "radioactive.ico"))
 
     pytonium.set_show_debug_context_menu(True)
-    pytonium.initialize(f"file:///{html_path}", 800, 900)
-
+    pytonium.initialize(f"file:///{html_path}", 1920, 1080)
+    pytonium.center_window()
     while pytonium.is_running():
         pytonium.update_message_loop()
         time.sleep(0.01)

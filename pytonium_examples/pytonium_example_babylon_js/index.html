@@ -85,7 +85,8 @@
     // Right-click drag orbits the Babylon.js camera
     // ======================================================================
     document.addEventListener('pointerdown', function (e) {
-        if (e.button === 0) {
+        // Don't start drag if clicking on interactive elements (close button, etc.)
+        if (e.button === 0 && !e.target.closest('button, a, input, select')) {
             Pytonium.window.startDrag();
         }
     }, true);

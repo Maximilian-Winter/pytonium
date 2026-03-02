@@ -1000,6 +1000,14 @@ cdef class Pytonium:
         """
         self.pytonium_library.StartWindowDrag()
 
+    def center_window(self):
+        """Center the window on its current monitor's work area.
+
+        Uses the monitor the window is currently on, accounting for taskbar
+        and multi-monitor setups. Call after initialize() to start centered.
+        """
+        self.pytonium_library.CenterWindow()
+
     def get_window_position(self) -> tuple:
         """Get the current window position as (x, y)."""
         cdef int x = 0
