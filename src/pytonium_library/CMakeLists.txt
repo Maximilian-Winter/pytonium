@@ -31,17 +31,20 @@ set(PYTONIUM_LIBRARY_SRCS
         application_state_javascript_handler.h
         Logging.h
         application_context_menu_binding.h
-        cef_custom_scheme.h)
+        cef_custom_scheme.h
+        osr_render_handler_dispatcher.h
+        osr_render_handler_dispatcher.cc)
 
 set(PYTONIUM_LIBRARY_SRCS_WINDOWS
         cef_wrapper_client_handler_win.cc
         osr_window_win.h
         osr_window_win.cc
-        osr_render_handler_dispatcher.h
-        osr_render_handler_dispatcher.cc
   )
 set(PYTONIUM_LIBRARY_SRCS_LINUX
         cef_wrapper_client_handler_linux.cc
+        x11_helpers.h
+        osr_window_x11.h
+        osr_window_x11.cc
         )
 APPEND_PLATFORM_SOURCES(PYTONIUM_LIBRARY_SRCS)
 source_group(pytonium_library FILES ${PYTONIUM_LIBRARY_SRCS})
@@ -87,7 +90,7 @@ if(OS_LINUX)
   SET_LIBRARY_TARGET_PROPERTIES(${CEF_TARGET})
   add_dependencies(${CEF_TARGET} libcef_dll_wrapper)
   target_include_directories(${CEF_TARGET} PUBLIC ${CEF_INCLUDE_PATH})
-  target_link_libraries(${CEF_TARGET} libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS})
+  target_link_libraries(${CEF_TARGET} libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS} X11 Xext)
   add_compile_definitions(symbol_level=2)
   if(USE_SANDBOX)
     # Logical target used to link the cef_sandbox library.

@@ -1,9 +1,7 @@
 #include "osr_render_handler_dispatcher.h"
 
-#if defined(_WIN32)
-
 void OsrRenderHandlerDispatcher::RegisterWindow(int browserId,
-                                                  CefRefPtr<OsrWindowWin> window) {
+                                                  CefRefPtr<CefRenderHandler> window) {
     m_Windows[browserId] = window;
 }
 
@@ -32,5 +30,3 @@ void OsrRenderHandlerDispatcher::OnPaint(CefRefPtr<CefBrowser> browser,
         it->second->OnPaint(browser, type, dirtyRects, buffer, width, height);
     }
 }
-
-#endif // _WIN32

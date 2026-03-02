@@ -10,6 +10,10 @@
 #include <Windows.h>
 #include "include/cef_sandbox_win.h"
 #include "osr_window_win.h"
+#elif defined(OS_LINUX)
+#include <X11/Xlib.h>
+#include "x11_helpers.h"
+#include "osr_window_x11.h"
 #endif
 
 
@@ -115,10 +119,8 @@ public:
 
     // Show the OSR window in the taskbar (default: hidden with WS_EX_TOOLWINDOW)
     void SetShowInTaskbar(bool show);
-#if defined(OS_WIN)
     int CreateBrowserOsr(const std::string& url, int width, int height,
                          const std::string& iconPath, bool clickThrough);
-#endif
 
     // Window control methods for frameless windows
     void MinimizeWindow();
@@ -199,6 +201,11 @@ private:
 #if defined(OS_WIN)
     // Returns the correct HWND: OSR layered window or regular browser window
     HWND GetActiveHwnd();
+#elif defined(OS_LINUX)
+    // Returns the X11 Window for the active browser (OSR or windowed)
+    ::Window GetActiveX11Window();
+    // Get the X11 Display* (shared with CEF)
+    ::Display* GetX11Display();
 #endif
 
     bool m_IsFullscreen = false;
@@ -209,10 +216,20 @@ private:
         LONG savedExStyle = 0;
     };
     FullscreenState m_FullscreenState;
+#elif defined(OS_LINUX)
+    struct FullscreenStateLinux {
+        int savedX = 0;
+        int savedY = 0;
+        int savedWidth = 0;
+        int savedHeight = 0;
+    };
+    FullscreenStateLinux m_FullscreenState;
 #endif
 
 #if defined(OS_WIN)
     CefRefPtr<OsrWindowWin> m_OsrWindow;
+#elif defined(OS_LINUX)
+    CefRefPtr<OsrWindowX11> m_OsrWindow;
 #endif
 
     std::vector<JavascriptBinding> m_Javascript_Bindings;

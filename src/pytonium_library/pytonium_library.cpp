@@ -14,6 +14,13 @@
 
 #if defined(OS_WIN)
 #include <Windows.h>
+#elif defined(OS_LINUX)
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xatom.h>
+#include "x11_helpers.h"
+// cef_get_xdisplay() is provided by CEF on Linux
+extern "C" { Display* cef_get_xdisplay(); }
 #endif
 
 // Static member definitions
@@ -176,7 +183,7 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 int PytoniumLibrary::CreateBrowser(const std::string& url, int width, int height,
                                     bool frameless, const std::string& iconPath)
 {
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(OS_LINUX)
     if (m_OsrMode) {
         return CreateBrowserOsr(url, width, height, iconPath, false);
     }
@@ -352,7 +359,15 @@ void PytoniumLibrary::ShutdownPytonium() {
 
 bool PytoniumLibrary::IsRunning() { return g_BrowserCount.load(std::memory_order_acquire) > 0; }
 
-void PytoniumLibrary::UpdateMessageLoop() { CefDoMessageLoopWork(); }
+void PytoniumLibrary::UpdateMessageLoop() {
+    CefDoMessageLoopWork();
+#if defined(OS_LINUX)
+    // Pump X11 events for OSR windows (input forwarding, expose, resize)
+    if (m_OsrMode && m_OsrWindow) {
+        m_OsrWindow->ProcessEvents();
+    }
+#endif
+}
 
 bool PytoniumLibrary::IsReadyToExecuteJavascript() {
   auto* client = CefWrapperClientHandler::GetInstance();
@@ -574,6 +589,13 @@ void PytoniumLibrary::MinimizeWindow()
     if (hwnd && IsWindow(hwnd)) {
         ShowWindow(hwnd, SW_MINIMIZE);
     }
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+    XIconifyWindow(display, window, DefaultScreen(display));
+    XFlush(display);
 #endif
 }
 
@@ -586,6 +608,14 @@ void PytoniumLibrary::MaximizeWindow()
     if (hwnd && IsWindow(hwnd)) {
         ShowWindow(hwnd, SW_MAXIMIZE);
     }
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+    Atom maxH = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+    Atom maxV = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+    x11_helpers::SendNetWmStateEvent(display, window, 1, maxH, maxV);  // 1 = add
 #endif
 }
 
@@ -597,6 +627,21 @@ void PytoniumLibrary::RestoreWindow()
     if (hwnd && IsWindow(hwnd)) {
         ShowWindow(hwnd, SW_RESTORE);
     }
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+    // Remove maximized state
+    Atom maxH = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+    Atom maxV = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+    x11_helpers::SendNetWmStateEvent(display, window, 0, maxH, maxV);  // 0 = remove
+    // Remove fullscreen state if set
+    Atom fullscreen = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", False);
+    x11_helpers::SendNetWmStateEvent(display, window, 0, fullscreen);
+    // Ensure window is mapped (un-iconify)
+    XMapWindow(display, window);
+    XFlush(display);
 #endif
 }
 
@@ -619,6 +664,15 @@ bool PytoniumLibrary::IsMaximized()
             return wp.showCmd == SW_SHOWMAXIMIZED;
         }
     }
+#elif defined(OS_LINUX)
+    if (!m_Browser) return false;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return false;
+    Atom maxH = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+    Atom maxV = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+    return x11_helpers::HasNetWmState(display, window, maxH) &&
+           x11_helpers::HasNetWmState(display, window, maxV);
 #endif
     return false;
 }
@@ -673,6 +727,38 @@ void PytoniumLibrary::SetFullscreen(bool fullscreen)
     }
 
     m_IsFullscreen = fullscreen;
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+
+    if (fullscreen == m_IsFullscreen) return;
+
+    if (fullscreen) {
+        // Save current geometry before going fullscreen
+        x11_helpers::GetRootRelativePosition(display, window,
+            m_FullscreenState.savedX, m_FullscreenState.savedY);
+        XWindowAttributes attrs;
+        if (XGetWindowAttributes(display, window, &attrs)) {
+            m_FullscreenState.savedWidth = attrs.width;
+            m_FullscreenState.savedHeight = attrs.height;
+        }
+    }
+
+    Atom fullscreenAtom = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", False);
+    // 1=add, 0=remove
+    x11_helpers::SendNetWmStateEvent(display, window, fullscreen ? 1 : 0, fullscreenAtom);
+
+    if (!fullscreen) {
+        // Restore saved geometry
+        XMoveResizeWindow(display, window,
+            m_FullscreenState.savedX, m_FullscreenState.savedY,
+            m_FullscreenState.savedWidth, m_FullscreenState.savedHeight);
+        XFlush(display);
+    }
+
+    m_IsFullscreen = fullscreen;
 #endif
 }
 
@@ -697,6 +783,23 @@ HWND PytoniumLibrary::GetActiveHwnd()
     }
     return nullptr;
 }
+#elif defined(OS_LINUX)
+::Display* PytoniumLibrary::GetX11Display()
+{
+    return cef_get_xdisplay();
+}
+
+::Window PytoniumLibrary::GetActiveX11Window()
+{
+    if (m_OsrMode && m_OsrWindow) {
+        return m_OsrWindow->GetWindow();
+    }
+    if (m_Browser && m_Browser->GetHost()) {
+        // CEF returns the X11 Window handle on Linux
+        return static_cast<::Window>(m_Browser->GetHost()->GetWindowHandle());
+    }
+    return None;
+}
 #endif
 
 void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
@@ -712,6 +815,15 @@ void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
             SetWindowPos(hwnd, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
         }
     }
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+    int x = 0, y = 0;
+    x11_helpers::GetRootRelativePosition(display, window, x, y);
+    XMoveWindow(display, window, x + deltaX, y + deltaY);
+    XFlush(display);
 #endif
 }
 
@@ -726,6 +838,20 @@ void PytoniumLibrary::StartWindowDrag()
         // This enters a modal move loop handled entirely by the OS — zero latency.
         SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
     }
+#elif defined(OS_LINUX)
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+
+    // Get current pointer position (root coordinates) for _NET_WM_MOVERESIZE
+    ::Window root_return, child_return;
+    int root_x, root_y, win_x, win_y;
+    unsigned int mask;
+    XQueryPointer(display, window, &root_return, &child_return,
+                  &root_x, &root_y, &win_x, &win_y, &mask);
+
+    // direction=8 means _NET_WM_MOVERESIZE_MOVE
+    x11_helpers::SendNetWmMoveResize(display, window, root_x, root_y, 8);
 #endif
 }
 
@@ -756,6 +882,26 @@ void PytoniumLibrary::CenterWindow()
     int y = monY + (monHeight - winHeight) / 2;
 
     SetWindowPos(hwnd, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+#elif defined(OS_LINUX)
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+
+    // Get window size
+    XWindowAttributes attrs;
+    if (!XGetWindowAttributes(display, window, &attrs)) return;
+    int winWidth = attrs.width;
+    int winHeight = attrs.height;
+
+    // Get work area
+    int waX, waY, waWidth, waHeight;
+    if (!x11_helpers::GetWorkArea(display, waX, waY, waWidth, waHeight)) return;
+
+    int x = waX + (waWidth - winWidth) / 2;
+    int y = waY + (waHeight - winHeight) / 2;
+
+    XMoveWindow(display, window, x, y);
+    XFlush(display);
 #endif
 }
 
@@ -773,6 +919,12 @@ void PytoniumLibrary::GetWindowPosition(int& x, int& y)
             y = rect.top;
         }
     }
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+    x11_helpers::GetRootRelativePosition(display, window, x, y);
 #endif
 }
 
@@ -784,6 +936,13 @@ void PytoniumLibrary::SetWindowPosition(int x, int y)
     if (hwnd && IsWindow(hwnd)) {
         SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+    XMoveWindow(display, window, x, y);
+    XFlush(display);
 #endif
 }
 
@@ -803,6 +962,16 @@ void PytoniumLibrary::GetWindowSize(int& width, int& height)
         width = rect.right - rect.left;
         height = rect.bottom - rect.top;
     }
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+    XWindowAttributes attrs;
+    if (XGetWindowAttributes(display, window, &attrs)) {
+        width = attrs.width;
+        height = attrs.height;
+    }
 #endif
 }
 
@@ -817,6 +986,14 @@ void PytoniumLibrary::SetWindowSize(int width, int height)
 
     SetWindowPos(hwnd, NULL, 0, 0, width, height,
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    if (IsMaximized()) return;  // Don't resize while maximized
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+    XResizeWindow(display, window, width, height);
+    XFlush(display);
 #endif
 }
 
@@ -885,6 +1062,34 @@ void PytoniumLibrary::ResizeWindow(int newWidth, int newHeight, int anchor)
 
     SetWindowPos(hwnd, NULL, newX, newY, newWidth, newHeight,
                  SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+#elif defined(OS_LINUX)
+    if (!m_Browser) return;
+    if (IsMaximized()) return;
+    Display* display = GetX11Display();
+    ::Window window = GetActiveX11Window();
+    if (!display || window == None) return;
+
+    // Get current position and size
+    int currX = 0, currY = 0;
+    x11_helpers::GetRootRelativePosition(display, window, currX, currY);
+    XWindowAttributes attrs;
+    if (!XGetWindowAttributes(display, window, &attrs)) return;
+    int currWidth = attrs.width;
+    int currHeight = attrs.height;
+
+    int newX = currX;
+    int newY = currY;
+
+    // anchor: 0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right
+    if (anchor == 1 || anchor == 3) {
+        newX = currX + (currWidth - newWidth);
+    }
+    if (anchor == 2 || anchor == 3) {
+        newY = currY + (currHeight - newHeight);
+    }
+
+    XMoveResizeWindow(display, window, newX, newY, newWidth, newHeight);
+    XFlush(display);
 #endif
 }
 
@@ -896,7 +1101,7 @@ void PytoniumLibrary::SetShowInTaskbar(bool show) {
     m_ShowInTaskbar = show;
 }
 
-#if defined(OS_WIN)
+#if defined(OS_WIN) || defined(OS_LINUX)
 int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int height,
                                        const std::string& iconPath, bool clickThrough)
 {
@@ -909,6 +1114,10 @@ int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int hei
         handler = CefWrapperClientHandler::GetInstance();
     }
 
+    // Platform-specific: create the OSR host window
+    CefWindowHandle osrWindowHandle = kNullWindowHandle;
+
+#if defined(OS_WIN)
     // Create the OSR window (layered Win32 window)
     m_OsrWindow = new OsrWindowWin(width, height, clickThrough, m_ShowInTaskbar);
     HWND osrHwnd = m_OsrWindow->Create();
@@ -917,6 +1126,18 @@ int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int hei
         m_OsrWindow = nullptr;
         return -1;
     }
+    osrWindowHandle = osrHwnd;
+#elif defined(OS_LINUX)
+    // On Linux, create an OsrWindowX11 for transparent rendering
+    m_OsrWindow = new OsrWindowX11(width, height, clickThrough, m_ShowInTaskbar);
+    ::Window x11Window = m_OsrWindow->Create();
+    if (x11Window == None) {
+        std::cerr << "CreateBrowserOsr: Failed to create OSR X11 window!" << std::endl;
+        m_OsrWindow = nullptr;
+        return -1;
+    }
+    osrWindowHandle = x11Window;
+#endif
 
     // Configure browser settings for OSR
     cef_browser_settings_t cefBrowserSettings;
@@ -928,8 +1149,10 @@ int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int hei
 
     // Configure window info for windowless (OSR) rendering
     CefWindowInfo window_info;
-    window_info.SetAsWindowless(osrHwnd);
+    window_info.SetAsWindowless(osrWindowHandle);
+#if defined(OS_WIN)
     window_info.runtime_style = CEF_RUNTIME_STYLE_ALLOY;
+#endif
 
     // Serialize bindings into extra_info for the renderer
     CefRefPtr<CefDictionaryValue> extra = CefDictionaryValue::Create();

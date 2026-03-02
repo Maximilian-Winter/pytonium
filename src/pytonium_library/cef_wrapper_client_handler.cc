@@ -42,9 +42,7 @@ namespace
 CefWrapperClientHandler::CefWrapperClientHandler(bool use_views)
     : use_views_(use_views), is_closing_(false)
 {
-#if defined(OS_WIN)
     m_OsrDispatcher = new OsrRenderHandlerDispatcher();
-#endif
     g_instance.store(this, std::memory_order_release);
 }
 
@@ -426,9 +424,7 @@ void CefWrapperClientHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
     {
         auto it = m_BrowserStates.find(browser->GetIdentifier());
         if (it != m_BrowserStates.end() && it->second.isOsr) {
-#if defined(OS_WIN)
             m_OsrDispatcher->UnregisterWindow(browser->GetIdentifier());
-#endif
         }
     }
 
