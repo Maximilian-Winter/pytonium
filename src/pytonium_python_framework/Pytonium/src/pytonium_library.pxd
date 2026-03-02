@@ -74,6 +74,9 @@ cdef extern from "src/pytonium_library/application_context_menu_binding.h":
     ctypedef void (*context_menu_handler_function_ptr)(context_menu_handler_object_ptr python_callback_object, string contextMenuNamespace, int contextMenuIndex, string paramsJson)
     ctypedef void (*before_context_menu_callback_ptr)(void* user_data, const char* params_json)
 
+cdef extern from "src/pytonium_library/osr_window_headless.h":
+    ctypedef void (*headless_paint_callback_ptr)(void* user_data, const void* buffer, int width, int height)
+
 # Declare the class with cdef
 cdef extern from "src/pytonium_library/pytonium_library.h":
     cdef cppclass PytoniumLibrary:
@@ -124,6 +127,20 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         # OSR (off-screen rendering) mode for transparent windows
         void SetOsrMode(bool osr);
         void SetShowInTaskbar(bool show);
+
+        # Headless OSR mode
+        void SetHeadlessMode(bool headless);
+        void SetOnPaintCallback(headless_paint_callback_ptr callback, void* user_data);
+        void SetHeadlessSize(int width, int height);
+        const void* GetPaintBuffer(int& width, int& height);
+
+        # Input forwarding
+        void SendMouseMoveEvent(int x, int y, bool mouseLeave, unsigned int modifiers);
+        void SendMouseClickEvent(int x, int y, int button, bool mouseUp, int clickCount, unsigned int modifiers);
+        void SendMouseWheelEvent(int x, int y, int deltaX, int deltaY, unsigned int modifiers);
+        void SendKeyEvent(int windowsKeyCode, int nativeKeyCode, int type, unsigned int modifiers, bool isSystemKey);
+        void SendCharEvent(int charCode, unsigned int modifiers);
+        void SendFocusEvent(bool setFocus);
 
         # Window control methods
         void SetFramelessWindow(bool frameless)

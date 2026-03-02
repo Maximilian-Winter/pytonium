@@ -183,11 +183,9 @@ void PytoniumLibrary::InitPytonium(std::string start_url, int init_width, int in
 int PytoniumLibrary::CreateBrowser(const std::string& url, int width, int height,
                                     bool frameless, const std::string& iconPath)
 {
-#if defined(OS_WIN) || defined(OS_LINUX)
     if (m_OsrMode) {
         return CreateBrowserOsr(url, width, height, iconPath, false);
     }
-#endif
 
     // Get or create the shared client handler
     CefWrapperClientHandler* handler = CefWrapperClientHandler::GetInstance();
@@ -1097,11 +1095,114 @@ void PytoniumLibrary::SetOsrMode(bool osr) {
     m_OsrMode = osr;
 }
 
+void PytoniumLibrary::SetHeadlessMode(bool headless) {
+    m_HeadlessMode = headless;
+    if (headless) {
+        m_OsrMode = true;  // headless implies OSR
+    }
+}
+
+void PytoniumLibrary::SetOnPaintCallback(headless_paint_callback_ptr callback, void* user_data) {
+    if (m_OsrWindowHeadless) {
+        m_OsrWindowHeadless->SetPaintCallback(callback, user_data);
+    }
+}
+
+void PytoniumLibrary::SetHeadlessSize(int width, int height) {
+    if (m_OsrWindowHeadless) {
+        m_OsrWindowHeadless->SetSize(width, height);
+    }
+}
+
+const void* PytoniumLibrary::GetPaintBuffer(int& width, int& height) {
+    if (!m_OsrWindowHeadless || !m_OsrWindowHeadless->HasFrame()) {
+        width = 0;
+        height = 0;
+        return nullptr;
+    }
+    width = m_OsrWindowHeadless->GetWidth();
+    height = m_OsrWindowHeadless->GetHeight();
+    return m_OsrWindowHeadless->GetBuffer();
+}
+
+void PytoniumLibrary::SendMouseMoveEvent(int x, int y, bool mouseLeave, uint32_t modifiers) {
+    if (!m_Browser || !m_Browser->GetHost()) return;
+    CefMouseEvent event;
+    event.x = x;
+    event.y = y;
+    event.modifiers = modifiers;
+    m_Browser->GetHost()->SendMouseMoveEvent(event, mouseLeave);
+}
+
+void PytoniumLibrary::SendMouseClickEvent(int x, int y, int button, bool mouseUp,
+                                           int clickCount, uint32_t modifiers) {
+    if (!m_Browser || !m_Browser->GetHost()) return;
+    CefMouseEvent event;
+    event.x = x;
+    event.y = y;
+    event.modifiers = modifiers;
+
+    CefBrowserHost::MouseButtonType cefButton;
+    switch (button) {
+        case 0: cefButton = MBT_LEFT; break;
+        case 1: cefButton = MBT_MIDDLE; break;
+        case 2: cefButton = MBT_RIGHT; break;
+        default: cefButton = MBT_LEFT; break;
+    }
+
+    m_Browser->GetHost()->SendMouseClickEvent(event, cefButton, mouseUp, clickCount);
+}
+
+void PytoniumLibrary::SendMouseWheelEvent(int x, int y, int deltaX, int deltaY, uint32_t modifiers) {
+    if (!m_Browser || !m_Browser->GetHost()) return;
+    CefMouseEvent event;
+    event.x = x;
+    event.y = y;
+    event.modifiers = modifiers;
+    m_Browser->GetHost()->SendMouseWheelEvent(event, deltaX, deltaY);
+}
+
+void PytoniumLibrary::SendKeyEvent(int windowsKeyCode, int nativeKeyCode, int type,
+                                    uint32_t modifiers, bool isSystemKey) {
+    if (!m_Browser || !m_Browser->GetHost()) return;
+    CefKeyEvent event;
+    event.windows_key_code = windowsKeyCode;
+    event.native_key_code = nativeKeyCode;
+    event.modifiers = modifiers;
+    event.is_system_key = isSystemKey;
+
+    switch (type) {
+        case 0: event.type = KEYEVENT_RAWKEYDOWN; break;
+        case 1: event.type = KEYEVENT_KEYUP; break;
+        case 2: event.type = KEYEVENT_CHAR; break;
+        default: event.type = KEYEVENT_RAWKEYDOWN; break;
+    }
+
+    m_Browser->GetHost()->SendKeyEvent(event);
+}
+
+void PytoniumLibrary::SendCharEvent(int charCode, uint32_t modifiers) {
+    if (!m_Browser || !m_Browser->GetHost()) return;
+    CefKeyEvent event;
+    event.type = KEYEVENT_CHAR;
+    event.windows_key_code = charCode;
+    event.character = static_cast<char16_t>(charCode);
+    event.unmodified_character = static_cast<char16_t>(charCode);
+    event.native_key_code = 0;
+    event.modifiers = modifiers;
+    event.is_system_key = false;
+    m_Browser->GetHost()->SendKeyEvent(event);
+}
+
+void PytoniumLibrary::SendFocusEvent(bool setFocus) {
+    if (!m_Browser || !m_Browser->GetHost()) return;
+    m_Browser->GetHost()->SetFocus(setFocus);
+}
+
 void PytoniumLibrary::SetShowInTaskbar(bool show) {
     m_ShowInTaskbar = show;
 }
 
-#if defined(OS_WIN) || defined(OS_LINUX)
 int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int height,
                                        const std::string& iconPath, bool clickThrough)
 {
@@ -1114,29 +1215,38 @@ int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int hei
         handler = CefWrapperClientHandler::GetInstance();
     }
 
-    // Platform-specific: create the OSR host window
+    // Create the OSR host window (or headless handler)
     CefWindowHandle osrWindowHandle = kNullWindowHandle;
 
+    if (m_HeadlessMode) {
+        // Headless: no OS window, just a buffer + callback
+        m_OsrWindowHeadless = new OsrWindowHeadless(width, height);
+        // osrWindowHandle stays kNullWindowHandle — CEF supports this for headless
+    }
 #if defined(OS_WIN)
-    // Create the OSR window (layered Win32 window)
-    m_OsrWindow = new OsrWindowWin(width, height, clickThrough, m_ShowInTaskbar);
-    HWND osrHwnd = m_OsrWindow->Create();
-    if (!osrHwnd) {
-        std::cerr << "CreateBrowserOsr: Failed to create OSR window!" << std::endl;
-        m_OsrWindow = nullptr;
-        return -1;
+    else {
+        // Create the OSR window (layered Win32 window)
+        m_OsrWindow = new OsrWindowWin(width, height, clickThrough, m_ShowInTaskbar);
+        HWND osrHwnd = m_OsrWindow->Create();
+        if (!osrHwnd) {
+            std::cerr << "CreateBrowserOsr: Failed to create OSR window!" << std::endl;
+            m_OsrWindow = nullptr;
+            return -1;
+        }
+        osrWindowHandle = osrHwnd;
     }
-    osrWindowHandle = osrHwnd;
 #elif defined(OS_LINUX)
-    // On Linux, create an OsrWindowX11 for transparent rendering
-    m_OsrWindow = new OsrWindowX11(width, height, clickThrough, m_ShowInTaskbar);
-    ::Window x11Window = m_OsrWindow->Create();
-    if (x11Window == None) {
-        std::cerr << "CreateBrowserOsr: Failed to create OSR X11 window!" << std::endl;
-        m_OsrWindow = nullptr;
-        return -1;
+    else {
+        // On Linux, create an OsrWindowX11 for transparent rendering
+        m_OsrWindow = new OsrWindowX11(width, height, clickThrough, m_ShowInTaskbar);
+        ::Window x11Window = m_OsrWindow->Create();
+        if (x11Window == None) {
+            std::cerr << "CreateBrowserOsr: Failed to create OSR X11 window!" << std::endl;
+            m_OsrWindow = nullptr;
+            return -1;
+        }
+        osrWindowHandle = x11Window;
     }
-    osrWindowHandle = x11Window;
 #endif
 
     // Configure browser settings for OSR
@@ -1206,26 +1316,37 @@ int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int hei
                                                    browser_settings, extra, nullptr);
     if (!m_Browser) {
         std::cerr << "CreateBrowserOsr: CreateBrowserSync failed!" << std::endl;
-        m_OsrWindow->Destroy();
-        m_OsrWindow = nullptr;
+        if (m_HeadlessMode) {
+            m_OsrWindowHeadless = nullptr;
+        } else {
+#if defined(OS_WIN) || defined(OS_LINUX)
+            m_OsrWindow->Destroy();
+            m_OsrWindow = nullptr;
+#endif
+        }
         return -1;
     }
 
     m_BrowserId = m_Browser->GetIdentifier();
     s_InstanceCount++;
 
-    // Connect the browser to the OSR window
-    m_OsrWindow->SetBrowser(m_Browser);
-
-    // Register with the OSR dispatcher
-    handler->GetOsrDispatcher()->RegisterWindow(m_BrowserId, m_OsrWindow);
+    // Connect the browser to the appropriate OSR handler and register with dispatcher
+    if (m_HeadlessMode) {
+        m_OsrWindowHeadless->SetBrowser(m_Browser);
+        handler->GetOsrDispatcher()->RegisterWindow(m_BrowserId, m_OsrWindowHeadless);
+    } else {
+#if defined(OS_WIN) || defined(OS_LINUX)
+        m_OsrWindow->SetBrowser(m_Browser);
+        handler->GetOsrDispatcher()->RegisterWindow(m_BrowserId, m_OsrWindow);
+#endif
+    }
 
     // Register per-browser bindings and mark as OSR
     handler->RegisterBrowserBindings(m_BrowserId,
         m_Javascript_Bindings, m_Javascript_Python_Bindings,
         m_StateHandlerPythonBindings, m_ContextMenuBindings);
     handler->GetBrowserState(m_BrowserId).isOsr = true;
+    handler->GetBrowserState(m_BrowserId).isHeadless = m_HeadlessMode;
 
     return m_BrowserId;
 }
-#endif

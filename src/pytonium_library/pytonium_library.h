@@ -16,6 +16,8 @@
 #include "osr_window_x11.h"
 #endif
 
+#include "osr_window_headless.h"
+
 
 #include "javascript_binding.h"
 #include "cef_value_wrapper.h"
@@ -117,6 +119,44 @@ public:
     // OSR (off-screen rendering) mode for transparent windows
     void SetOsrMode(bool osr);
 
+    // Headless OSR mode — no OS window, buffer delivered via callback.
+    // Enables embedding Pytonium's rendered output into external renderers
+    // (Vulkan, OpenGL, DirectX, etc.) as a texture overlay.
+    void SetHeadlessMode(bool headless);
+
+    // Register a paint callback for headless mode. Called on CEF's render
+    // thread each frame. Buffer is BGRA, valid only during callback.
+    void SetOnPaintCallback(headless_paint_callback_ptr callback, void* user_data);
+
+    // Resize the headless viewport. Reallocs the internal buffer.
+    void SetHeadlessSize(int width, int height);
+
+    // Poll the last rendered frame (zero-copy read). Returns nullptr if no
+    // frame has been rendered yet. Valid until next OnPaint or SetHeadlessSize.
+    const void* GetPaintBuffer(int& width, int& height);
+
+    // --- Input forwarding (works for any browser mode) ---
+
+    // Forward mouse move event to CEF browser
+    void SendMouseMoveEvent(int x, int y, bool mouseLeave, uint32_t modifiers);
+
+    // Forward mouse click event (button: 0=left, 1=middle, 2=right)
+    void SendMouseClickEvent(int x, int y, int button, bool mouseUp,
+                             int clickCount, uint32_t modifiers);
+
+    // Forward mouse wheel event
+    void SendMouseWheelEvent(int x, int y, int deltaX, int deltaY, uint32_t modifiers);
+
+    // Forward key event (type: 0=RAWKEYDOWN, 1=KEYUP, 2=CHAR)
+    void SendKeyEvent(int windowsKeyCode, int nativeKeyCode, int type,
+                      uint32_t modifiers, bool isSystemKey);
+
+    // Forward character input
+    void SendCharEvent(int charCode, uint32_t modifiers);
+
+    // Forward focus change to CEF browser
+    void SendFocusEvent(bool setFocus);
+
     // Show the OSR window in the taskbar (default: hidden with WS_EX_TOOLWINDOW)
     void SetShowInTaskbar(bool show);
     int CreateBrowserOsr(const std::string& url, int width, int height,
@@ -194,6 +234,7 @@ private:
 
     bool m_FramelessWindow = false;
     bool m_OsrMode = false;
+    bool m_HeadlessMode = false;
     bool m_ShowInTaskbar = false;
     void* m_ParentHwnd = nullptr;
 
@@ -231,6 +272,7 @@ private:
 #elif defined(OS_LINUX)
     CefRefPtr<OsrWindowX11> m_OsrWindow;
 #endif
+    CefRefPtr<OsrWindowHeadless> m_OsrWindowHeadless;
 
     std::vector<JavascriptBinding> m_Javascript_Bindings;
     std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;

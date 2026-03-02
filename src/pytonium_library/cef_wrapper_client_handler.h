@@ -21,6 +21,7 @@ using window_event_bool_callback_ptr = void (*)(void* user_data, bool value);
 // Per-browser state stored in the shared client handler, keyed by browser ID.
 struct PerBrowserState {
     bool isOsr = false;
+    bool isHeadless = false;  // true for headless OSR (no OS window)
     bool isReadyToExecuteJs = false;
     std::string currentContextMenuNamespace = "app";
     bool showDebugContextMenu = false;

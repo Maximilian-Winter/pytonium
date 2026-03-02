@@ -6,7 +6,7 @@
 import inspect
 import warnings
 
-from .pytonium_library cimport PytoniumLibrary, CefValueWrapper, state_callback_object_ptr
+from .pytonium_library cimport PytoniumLibrary, CefValueWrapper, state_callback_object_ptr, headless_paint_callback_ptr
 from libcpp.string cimport string
 
 from libcpp cimport bool as boolie
@@ -382,6 +382,33 @@ cdef inline void _on_fullscreen_change_callback(void* user_data, boolie value) n
     except Exception:
         import traceback
         traceback.print_exc()
+
+
+cdef class PytoniumPaintCallbackWrapper:
+    """Wraps a Python callable for headless OSR paint callbacks."""
+    cdef object python_callback
+
+    def __init__(self, callback):
+        self.python_callback = callback
+
+    def __call__(self, buffer_view, width, height):
+        self.python_callback(buffer_view, width, height)
+
+
+cdef inline void _on_paint_callback(void* user_data, const void* buffer, int width, int height) noexcept with gil:
+    """Trampoline from C headless paint callback to Python.
+
+    Creates a memoryview wrapping the BGRA buffer. The memoryview is valid
+    ONLY during the callback — callers should copy with bytes(buffer) or
+    numpy.copy() if they need to retain it.
+    """
+    try:
+        cdef const unsigned char[:] buf_view = <const unsigned char[:width * height * 4]>(<const unsigned char*>buffer)
+        (<PytoniumPaintCallbackWrapper>user_data)(buf_view, width, height)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
 
 cdef str _global_pytonium_subprocess_path = ""
 
@@ -928,6 +955,137 @@ cdef class Pytonium:
         Call this with True to use WS_EX_APPWINDOW instead, giving the window a taskbar button.
         """
         self.pytonium_library.SetShowInTaskbar(show)
+
+    def set_headless_mode(self, headless: bool):
+        """Enable headless OSR mode — no OS window, raw BGRA buffer via callback.
+
+        Use this to embed Pytonium's rendered output into external renderers
+        (Vulkan, OpenGL, DirectX, etc.) as a texture overlay. Implies set_osr_mode(True).
+        Must be called before initialize().
+
+        Args:
+            headless: True to enable headless mode.
+        """
+        self.pytonium_library.SetHeadlessMode(headless)
+
+    def on_paint(self, callback):
+        """Register a paint callback for headless OSR mode.
+
+        The callback receives (buffer, width, height) where buffer is a
+        memoryview of BGRA pixel data (width * height * 4 bytes).
+
+        IMPORTANT: The buffer memoryview is valid ONLY during the callback.
+        If you need to retain the data, copy it immediately:
+            bytes(buffer) or numpy.frombuffer(buffer, dtype=numpy.uint8).copy()
+
+        Args:
+            callback: A callable(buffer, width, height) to receive each frame.
+        """
+        if not callable(callback):
+            raise TypeError(f"callback must be callable, got {type(callback).__name__}")
+        wrapper = PytoniumPaintCallbackWrapper(callback)
+        self._event_callback_wrappers.append(wrapper)
+        self.pytonium_library.SetOnPaintCallback(_on_paint_callback, <void*>wrapper)
+
+    def set_headless_size(self, width: int, height: int):
+        """Resize the headless OSR viewport.
+
+        Reallocs the internal buffer and notifies CEF to re-render at the
+        new size. Can be called at any time after initialize().
+
+        Args:
+            width: New viewport width in pixels.
+            height: New viewport height in pixels.
+        """
+        self.pytonium_library.SetHeadlessSize(width, height)
+
+    def get_paint_buffer(self):
+        """Poll the last rendered headless frame (zero-copy read).
+
+        Returns a tuple (buffer, width, height) where buffer is a memoryview
+        of BGRA pixel data, or (None, 0, 0) if no frame has been rendered.
+
+        The returned memoryview is valid until the next paint or resize.
+
+        Returns:
+            Tuple of (memoryview_or_None, width, height).
+        """
+        cdef int width = 0
+        cdef int height = 0
+        cdef const void* buf = self.pytonium_library.GetPaintBuffer(width, height)
+        if buf == NULL or width == 0 or height == 0:
+            return (None, 0, 0)
+        cdef const unsigned char[:] buf_view = <const unsigned char[:width * height * 4]>(<const unsigned char*>buf)
+        return (buf_view, width, height)
+
+    # --- Input forwarding ---
+
+    def send_mouse_move(self, x: int, y: int, mouse_leave: bool = False, modifiers: int = 0):
+        """Forward a mouse move event to the CEF browser.
+
+        Args:
+            x: X position in pixels (relative to browser viewport).
+            y: Y position in pixels (relative to browser viewport).
+            mouse_leave: True if the mouse is leaving the viewport.
+            modifiers: Bitfield of CefEventFlags (e.g., SHIFT_DOWN | LEFT_MOUSE_BUTTON).
+        """
+        self.pytonium_library.SendMouseMoveEvent(x, y, mouse_leave, modifiers)
+
+    def send_mouse_click(self, x: int, y: int, button: int = 0, mouse_up: bool = False,
+                         click_count: int = 1, modifiers: int = 0):
+        """Forward a mouse click event to the CEF browser.
+
+        Args:
+            x: X position in pixels.
+            y: Y position in pixels.
+            button: Mouse button (0=left, 1=middle, 2=right).
+            mouse_up: True for button release, False for button press.
+            click_count: Number of clicks (1=single, 2=double).
+            modifiers: Bitfield of CefEventFlags.
+        """
+        self.pytonium_library.SendMouseClickEvent(x, y, button, mouse_up, click_count, modifiers)
+
+    def send_mouse_wheel(self, x: int, y: int, delta_x: int = 0, delta_y: int = 0, modifiers: int = 0):
+        """Forward a mouse wheel event to the CEF browser.
+
+        Args:
+            x: X position in pixels.
+            y: Y position in pixels.
+            delta_x: Horizontal scroll amount.
+            delta_y: Vertical scroll amount (positive = scroll up).
+            modifiers: Bitfield of CefEventFlags.
+        """
+        self.pytonium_library.SendMouseWheelEvent(x, y, delta_x, delta_y, modifiers)
+
+    def send_key_event(self, windows_key_code: int, native_key_code: int = 0,
+                       event_type: int = 0, modifiers: int = 0, is_system_key: bool = False):
+        """Forward a key event to the CEF browser.
+
+        Args:
+            windows_key_code: Windows virtual key code (e.g., 0x41 for 'A').
+            native_key_code: Platform native key code (0 if unknown).
+            event_type: 0=RAWKEYDOWN, 1=KEYUP, 2=CHAR.
+            modifiers: Bitfield of CefEventFlags.
+            is_system_key: True for system keys (Alt+key on Windows).
+        """
+        self.pytonium_library.SendKeyEvent(windows_key_code, native_key_code, event_type, modifiers, is_system_key)
+
+    def send_char_event(self, char_code: int, modifiers: int = 0):
+        """Forward a character input event to the CEF browser.
+
+        Args:
+            char_code: Unicode character code.
+            modifiers: Bitfield of CefEventFlags.
+        """
+        self.pytonium_library.SendCharEvent(char_code, modifiers)
+
+    def send_focus_event(self, set_focus: bool):
+        """Forward a focus change to the CEF browser.
+
+        Args:
+            set_focus: True to set focus, False to remove focus.
+        """
+        self.pytonium_library.SendFocusEvent(set_focus)
 
     def set_parent_window(self, parent_hwnd: int):
         """Set the parent window for child window creation.

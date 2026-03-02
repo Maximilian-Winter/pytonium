@@ -33,7 +33,9 @@ set(PYTONIUM_LIBRARY_SRCS
         application_context_menu_binding.h
         cef_custom_scheme.h
         osr_render_handler_dispatcher.h
-        osr_render_handler_dispatcher.cc)
+        osr_render_handler_dispatcher.cc
+        osr_window_headless.h
+        osr_window_headless.cc)
 
 set(PYTONIUM_LIBRARY_SRCS_WINDOWS
         cef_wrapper_client_handler_win.cc

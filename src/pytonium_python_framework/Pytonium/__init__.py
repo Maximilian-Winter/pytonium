@@ -84,6 +84,44 @@ class ContextMenuParams:
 
 from .pytonium import Pytonium as Pytonium
 
+
+# --- CEF Event Constants for input forwarding ---
+
+class CefEventFlags:
+    """Bitfield flags for mouse/key event modifiers.
+
+    Combine with bitwise OR: ``CefEventFlags.SHIFT_DOWN | CefEventFlags.LEFT_MOUSE_BUTTON``
+    """
+    NONE = 0
+    CAPS_LOCK_ON = 1 << 0
+    SHIFT_DOWN = 1 << 1
+    CONTROL_DOWN = 1 << 2
+    ALT_DOWN = 1 << 3
+    LEFT_MOUSE_BUTTON = 1 << 4
+    MIDDLE_MOUSE_BUTTON = 1 << 5
+    RIGHT_MOUSE_BUTTON = 1 << 6
+    COMMAND_DOWN = 1 << 7      # macOS Command key
+    NUM_LOCK_ON = 1 << 8
+    IS_KEY_PAD = 1 << 9
+    IS_LEFT = 1 << 10
+    IS_RIGHT = 1 << 11
+    ALTGR_DOWN = 1 << 12
+    IS_REPEAT = 1 << 13
+
+
+class CefKeyEventType:
+    """Key event type constants for send_key_event()."""
+    RAWKEYDOWN = 0
+    KEYUP = 1
+    CHAR = 2
+
+
+class CefMouseButton:
+    """Mouse button constants for send_mouse_click()."""
+    LEFT = 0
+    MIDDLE = 1
+    RIGHT = 2
+
 # Initialize the class-level attribute upon import
 Pytonium.set_subprocess_path(pytonium_process_path)
 
