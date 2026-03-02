@@ -136,7 +136,8 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         void SetFullscreen(bool fullscreen);
         bool IsFullscreen();
         void ToggleFullscreen();
-        void DragWindow(int deltaX, int deltaY);
+        void DragWindow(int deltaX, int deltaY)
+        void StartWindowDrag();
         void GetWindowPosition(int& x, int& y);
         void SetWindowPosition(int x, int y);
         void GetWindowSize(int& width, int& height);

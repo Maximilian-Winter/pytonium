@@ -355,61 +355,25 @@
         }
     }
     
-    // Draggable title bar functionality - smooth dragging
-    let isDragging = false;
-    let dragStartMouseX = 0;
-    let dragStartMouseY = 0;
-    let dragStartWindowX = 0;
-    let dragStartWindowY = 0;
-    
+    // Draggable title bar — native OS drag (smooth, zero-latency)
     async function initDraggableTitlebar() {
         const titlebar = document.querySelector('.titlebar');
         if (!titlebar) return;
-        
+
         titlebar.addEventListener('mousedown', async function(e) {
             // Don't drag if clicking on buttons
             if (e.target.tagName === 'BUTTON' || e.target.closest('.controls')) {
                 return;
             }
-            
+
             // Check if window is maximized
             try {
                 let result = await Pytonium.window.isMaximized();
                 if (result) return;
             } catch (err) {}
-            
-            isDragging = true;
-            dragStartMouseX = e.screenX;
-            dragStartMouseY = e.screenY;
-            
-            // Get current window position
-            try {
-                let pos = await Pytonium.window.getPosition();
-                dragStartWindowX = pos.x;
-                dragStartWindowY = pos.y;
-            } catch (err) {
-                dragStartWindowX = 0;
-                dragStartWindowY = 0;
-            }
-            
-            e.preventDefault();
-        });
-        
-        document.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-            
-            const deltaX = e.screenX - dragStartMouseX;
-            const deltaY = e.screenY - dragStartMouseY;
-            
-            const newX = dragStartWindowX + deltaX;
-            const newY = dragStartWindowY + deltaY;
-            
-            // Direct position update - much smoother than delta accumulation
-            Pytonium.window.setPosition(newX, newY);
-        });
-        
-        document.addEventListener('mouseup', function() {
-            isDragging = false;
+
+            // Initiate native OS window drag
+            Pytonium.window.startDrag();
         });
     }
     

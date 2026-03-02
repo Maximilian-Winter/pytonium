@@ -444,51 +444,28 @@
     }
     
     // =========================================================================
-    // Draggable Title Bar
+    // Draggable Title Bar (native OS drag — smooth, zero-latency)
     // =========================================================================
-    let isDragging = false;
-    let dragStartMouseX = 0;
-    let dragStartMouseY = 0;
-    
     async function initDraggableTitlebar() {
         const titlebar = document.getElementById('titlebar');
         if (!titlebar) return;
-        
+
         titlebar.addEventListener('mousedown', async function(e) {
             // Don't drag if clicking on buttons
             if (e.target.tagName === 'BUTTON' || e.target.closest('.controls')) {
                 return;
             }
-            
+
             // Check if window is maximized
             try {
                 let result = await Pytonium.window.isMaximized();
                 if (result) return;
             } catch (err) {}
-            
-            isDragging = true;
-            dragStartMouseX = e.screenX;
-            dragStartMouseY = e.screenY;
-            
-            e.preventDefault();
-        });
-        
-        document.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-            
-            const deltaX = e.screenX - dragStartMouseX;
-            const deltaY = e.screenY - dragStartMouseY;
-            
-            dragStartMouseX = e.screenX;
-            dragStartMouseY = e.screenY;
-            
+
+            // Initiate native OS window drag — the OS handles all movement
             try {
-                Pytonium.window.drag(deltaX, deltaY);
+                Pytonium.window.startDrag();
             } catch (err) {}
-        });
-        
-        document.addEventListener('mouseup', function() {
-            isDragging = false;
         });
     }
     

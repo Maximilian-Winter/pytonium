@@ -715,6 +715,20 @@ void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
 #endif
 }
 
+void PytoniumLibrary::StartWindowDrag()
+{
+#if defined(OS_WIN)
+    HWND hwnd = GetActiveHwnd();
+    if (hwnd && IsWindow(hwnd)) {
+        // Release any existing mouse capture (CEF sets capture on LBUTTONDOWN)
+        ReleaseCapture();
+        // Tell Windows to start a native title-bar drag from the current cursor position.
+        // This enters a modal move loop handled entirely by the OS — zero latency.
+        SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+    }
+#endif
+}
+
 void PytoniumLibrary::GetWindowPosition(int& x, int& y)
 {
     x = 0;

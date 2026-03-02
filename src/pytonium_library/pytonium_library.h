@@ -135,6 +135,9 @@ public:
     // Drag window by delta (for draggable custom title bar)
     void DragWindow(int deltaX, int deltaY);
 
+    // Initiate native OS window drag (smooth, zero-latency title bar drag)
+    void StartWindowDrag();
+
     // Get window position
     void GetWindowPosition(int& x, int& y);
 

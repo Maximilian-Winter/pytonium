@@ -14,6 +14,7 @@ declare namespace Pytonium {
     function maximize(): void;
     function close(): void;
     function drag(delta_x: number, delta_y: number): void;
+    function startDrag(): void;
     function setPosition(x: number, y: number): void;
     function setSize(width: number, height: number): void;
     function resize(new_width: number, new_height: number, anchor: number): void;

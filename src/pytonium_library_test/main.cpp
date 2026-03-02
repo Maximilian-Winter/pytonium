@@ -44,13 +44,16 @@ void testfuncReturn(void *python_callback_object, int size, CefValueWrapper *arg
     }
 }
 
-void context_menu_test(void *python_callback_object, std::string entryNamespace, int command_id)
+void context_menu_test(void *python_callback_object, std::string entryNamespace, int command_id, std::string paramsJson)
 {
     std::cout << "Context Menu Namespace: " << entryNamespace << " Context Menu Id: " << command_id << std::endl;
+    if (!paramsJson.empty()) {
+        std::cout << "Context Params: " << paramsJson << std::endl;
+    }
     cefSimpleWrapper.SetCurrentContextMenuNamespace("test");
 }
 
-void context_menu_test2(void *python_callback_object, std::string entryNamespace, int command_id)
+void context_menu_test2(void *python_callback_object, std::string entryNamespace, int command_id, std::string paramsJson)
 {
     std::cout << "Context Menu Namespace: " << entryNamespace << " Context Menu Id: " << command_id << std::endl;
     cefSimpleWrapper.SetShowDebugContextMenu(true);
@@ -98,6 +101,11 @@ void windowDrag(void *python_callback_object, int size, CefValueWrapper *args, i
         int deltaY = args[1].GetInt();
         cefSimpleWrapper.DragWindow(deltaX, deltaY);
     }
+}
+
+void windowStartDrag(void *python_callback_object, int size, CefValueWrapper *args, int message_id)
+{
+    cefSimpleWrapper.StartWindowDrag();
 }
 
 // Returns current window position as an object {x, y}
@@ -179,6 +187,7 @@ int main()
     cefSimpleWrapper.AddJavascriptPythonBinding("maximize", windowMaximize, nullptr, "window", false);
     cefSimpleWrapper.AddJavascriptPythonBinding("close", windowClose, nullptr, "window", false);
     cefSimpleWrapper.AddJavascriptPythonBinding("drag", windowDrag, nullptr, "window", false);
+    cefSimpleWrapper.AddJavascriptPythonBinding("startDrag", windowStartDrag, nullptr, "window", false);
     cefSimpleWrapper.AddJavascriptPythonBinding("getPosition", windowGetPosition, nullptr, "window", true);
     cefSimpleWrapper.AddJavascriptPythonBinding("setPosition", windowSetPosition, nullptr, "window", false);
     cefSimpleWrapper.AddJavascriptPythonBinding("isMaximized", windowIsMaximized, nullptr, "window", true);

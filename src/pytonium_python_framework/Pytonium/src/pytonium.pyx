@@ -991,6 +991,15 @@ cdef class Pytonium:
         """Drag the window by the specified delta (for frameless windows)."""
         self.pytonium_library.DragWindow(delta_x, delta_y)
 
+    def start_window_drag(self):
+        """Initiate a native OS window drag from the current cursor position.
+
+        Call this on a mouse-down event to let the OS handle window movement
+        natively. This is much smoother than delta-based dragging because the
+        OS handles the entire drag loop with zero IPC latency.
+        """
+        self.pytonium_library.StartWindowDrag()
+
     def get_window_position(self) -> tuple:
         """Get the current window position as (x, y)."""
         cdef int x = 0

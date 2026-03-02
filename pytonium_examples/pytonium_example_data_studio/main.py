@@ -53,6 +53,11 @@ def window_drag(delta_x: int, delta_y: int):
     pytonium.drag_window(delta_x, delta_y)
 
 
+def window_start_drag():
+    """Initiate native OS window drag — smooth, zero-latency."""
+    pytonium.start_window_drag()
+
+
 def window_resize(new_width: int, new_height: int, anchor: int):
     pytonium.resize_window(new_width, new_height, anchor)
 
@@ -162,6 +167,7 @@ def main():
     pytonium.bind_function_to_javascript(window_maximize, "maximize", "window")
     pytonium.bind_function_to_javascript(window_close, "close", "window")
     pytonium.bind_function_to_javascript(window_drag, "drag", "window")
+    pytonium.bind_function_to_javascript(window_start_drag, "startDrag", "window")
     pytonium.bind_function_to_javascript(window_resize, "resize", "window")
     
     # File dialog

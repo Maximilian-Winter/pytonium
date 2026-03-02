@@ -6,7 +6,8 @@ Demonstrates a 3D animated character floating over the desktop using:
 - Babylon.js with transparent background
 - Custom URL schemes for local resource loading
 - MIME type registration for binary 3D model files (.glb)
-- Window drag (right-click + drag) and close (Escape key) controls
+- Window drag (left-click + drag) and camera orbit (right-click + drag)
+- Close via Escape key or floating close button
 
 The character dances directly on your desktop with no background!
 
@@ -25,9 +26,9 @@ from Pytonium import Pytonium, returns_value_to_javascript
 # Window Control Functions
 # ============================================================================
 
-def window_drag(delta_x: int, delta_y: int):
-    """Drag the window by delta pixels."""
-    pytonium.drag_window(delta_x, delta_y)
+def window_start_drag():
+    """Initiate native OS window drag — smooth, zero-latency."""
+    pytonium.start_window_drag()
 
 
 def window_close():
@@ -66,8 +67,8 @@ def main():
     pytonium.add_custom_scheme("pytonium", current_dir + "/")
     pytonium.add_custom_scheme("pytonium-data", os.path.join(current_dir, "data") + "/")
 
-    # Window controls — drag and close for the transparent window
-    pytonium.bind_function_to_javascript(window_drag, "drag", "window")
+    # Window controls — native drag, close, position for the transparent window
+    pytonium.bind_function_to_javascript(window_start_drag, "startDrag", "window")
     pytonium.bind_function_to_javascript(window_close, "close", "window")
     pytonium.bind_function_to_javascript(window_get_position, "getPosition", "window")
     pytonium.bind_function_to_javascript(window_set_position, "setPosition", "window")

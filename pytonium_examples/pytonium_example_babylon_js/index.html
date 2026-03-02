@@ -76,51 +76,24 @@
 </head>
 <body>
 <div id="gameContainer"></div>
-<button class="close-btn" onclick="window.close()" title="Close">&#x2715;</button>
-<div class="drag-hint">Shift + drag to move &bull; Esc to close</div>
+<button class="close-btn" onclick="Pytonium.window.close()" title="Close">&#x2715;</button>
+<div class="drag-hint">Drag to move &bull; Right-drag to orbit &bull; Esc to close</div>
 </body>
 <script>
     // ======================================================================
-    // Window dragging: hold Shift + left-click drag to move the window
-    // (Regular left-click drag controls the Babylon.js camera as normal)
+    // Window dragging: left-click initiates native OS drag (smooth, zero-latency)
+    // Right-click drag orbits the Babylon.js camera
     // ======================================================================
-    var isDragging = false;
-    var dragStartX = 0, dragStartY = 0;
-
-    document.addEventListener('mousedown', function (e) {
-        if (e.shiftKey && e.button === 0) {
-            isDragging = true;
-            dragStartX = e.screenX;
-            dragStartY = e.screenY;
-            e.preventDefault();
-            e.stopPropagation();
-        }
-    }, true);
-
-    document.addEventListener('mousemove', function (e) {
-        if (isDragging) {
-            var dx = e.screenX - dragStartX;
-            var dy = e.screenY - dragStartY;
-            dragStartX = e.screenX;
-            dragStartY = e.screenY;
-            window.drag(dx, dy);
-            e.preventDefault();
-            e.stopPropagation();
-        }
-    }, true);
-
-    document.addEventListener('mouseup', function (e) {
-        if (isDragging) {
-            isDragging = false;
-            e.preventDefault();
-            e.stopPropagation();
+    document.addEventListener('pointerdown', function (e) {
+        if (e.button === 0) {
+            Pytonium.window.startDrag();
         }
     }, true);
 
     // Escape key to close
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
-            window.close();
+            Pytonium.window.close();
         }
     });
 
@@ -157,7 +130,9 @@
                     new BABYLON.Vector3(0, 0.8, 0),  // target: character mid-body
                     scene
                 );
+                // Right-click drag orbits the camera; left-click drag moves the window
                 camera.attachControl(canvas, true);
+                camera.inputs.attached.pointers.buttons = [1, 2]; // middle + right only
                 camera.lowerRadiusLimit = 1.5;
                 camera.upperRadiusLimit = 8;
 

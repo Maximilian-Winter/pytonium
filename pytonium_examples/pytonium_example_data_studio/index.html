@@ -748,30 +748,15 @@
         
         document.addEventListener('mouseup', () => { isResizing = false; currentResizeHandle = null; });
         
-        // Draggable Titlebar
-        let isDragging = false, dragStartX, dragStartY;
+        // Draggable Titlebar (native OS drag — smooth, zero-latency)
         document.getElementById('titlebar').addEventListener('mousedown', async function(e) {
             if (e.target.closest('.titlebar-controls')) return;
             try {
                 let maximized = await Pytonium.window.isMaximized();
                 if (maximized) return;
             } catch (err) {}
-            isDragging = true;
-            dragStartX = e.screenX;
-            dragStartY = e.screenY;
-            e.preventDefault();
+            try { Pytonium.window.startDrag(); } catch (err) {}
         });
-        
-        document.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-            const deltaX = e.screenX - dragStartX;
-            const deltaY = e.screenY - dragStartY;
-            dragStartX = e.screenX;
-            dragStartY = e.screenY;
-            try { Pytonium.window.drag(deltaX, deltaY); } catch (err) {}
-        });
-        
-        document.addEventListener('mouseup', () => isDragging = false);
         
         // File Drop Zone
         const dropZone = document.getElementById('drop-zone');
