@@ -9,7 +9,7 @@
 
 class OsrWindowWin : public CefRenderHandler {
 public:
-    OsrWindowWin(int width, int height, bool click_through);
+    OsrWindowWin(int width, int height, bool click_through, bool show_in_taskbar = false);
     ~OsrWindowWin() override;
 
     // Create the layered Win32 window. Returns the HWND.
@@ -43,6 +43,7 @@ private:
     int m_Width;
     int m_Height;
     bool m_ClickThrough;
+    bool m_ShowInTaskbar;
     CefRefPtr<CefBrowser> m_Browser;
 
     // Off-screen rendering DIB

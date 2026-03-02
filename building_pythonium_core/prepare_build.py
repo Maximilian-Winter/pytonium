@@ -470,7 +470,7 @@ Examples:
     print("Next step: Build the wheel with:")
     print(f"  cd {PYTHON_FRAMEWORK_DIR}")
     print(f"  python -m build --wheel")
-
+    print(f"  After build, install. For example: pip install dist/pytonium-0.0.13-cp313-cp313-win_amd64.whl --force-reinstall")
     return 0
 
 

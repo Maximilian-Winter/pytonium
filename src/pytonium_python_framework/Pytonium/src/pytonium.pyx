@@ -921,6 +921,14 @@ cdef class Pytonium:
         """Enable/disable off-screen rendering mode for transparent windows (must be called before initialize)."""
         self.pytonium_library.SetOsrMode(osr)
 
+    def set_show_in_taskbar(self, show: bool):
+        """Show/hide the OSR window in the Windows taskbar (must be called before initialize).
+
+        By default, OSR windows use WS_EX_TOOLWINDOW and are hidden from the taskbar.
+        Call this with True to use WS_EX_APPWINDOW instead, giving the window a taskbar button.
+        """
+        self.pytonium_library.SetShowInTaskbar(show)
+
     def set_parent_window(self, parent_hwnd: int):
         """Set the parent window for child window creation.
 

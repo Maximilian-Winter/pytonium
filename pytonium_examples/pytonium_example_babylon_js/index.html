@@ -6,13 +6,127 @@
     <script src="pytonium://babylon.js"></script>
     <script src="pytonium://babylonjs.loaders.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+        }
+        #gameContainer {
+            width: 100%;
+            height: 100vh;
+            background: transparent;
+        }
+        canvas {
+            background: transparent !important;
+        }
+
+        /* Floating close button — top-right corner */
+        .close-btn {
+            position: fixed;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(200, 50, 50, 0.7);
+            color: white;
+            font-size: 16px;
+            line-height: 28px;
+            text-align: center;
+            cursor: pointer;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .close-btn:hover {
+            background: rgba(220, 50, 50, 1);
+        }
+        body:hover .close-btn {
+            opacity: 1;
+        }
+
+        /* Drag hint — fades in briefly on load */
+        .drag-hint {
+            position: fixed;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: #ccc;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 12px;
+            z-index: 1000;
+            opacity: 0;
+            animation: hintFade 4s ease-in-out;
+            pointer-events: none;
+        }
+        @keyframes hintFade {
+            0%   { opacity: 0; }
+            15%  { opacity: 1; }
+            75%  { opacity: 1; }
+            100% { opacity: 0; }
+        }
     </style>
 </head>
 <body>
-<div id="gameContainer" style="width: 100%; height: 100vh;"></div>
+<div id="gameContainer"></div>
+<button class="close-btn" onclick="window.close()" title="Close">&#x2715;</button>
+<div class="drag-hint">Shift + drag to move &bull; Esc to close</div>
 </body>
 <script>
+    // ======================================================================
+    // Window dragging: hold Shift + left-click drag to move the window
+    // (Regular left-click drag controls the Babylon.js camera as normal)
+    // ======================================================================
+    var isDragging = false;
+    var dragStartX = 0, dragStartY = 0;
+
+    document.addEventListener('mousedown', function (e) {
+        if (e.shiftKey && e.button === 0) {
+            isDragging = true;
+            dragStartX = e.screenX;
+            dragStartY = e.screenY;
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+
+    document.addEventListener('mousemove', function (e) {
+        if (isDragging) {
+            var dx = e.screenX - dragStartX;
+            var dy = e.screenY - dragStartY;
+            dragStartX = e.screenX;
+            dragStartY = e.screenY;
+            window.drag(dx, dy);
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+
+    document.addEventListener('mouseup', function (e) {
+        if (isDragging) {
+            isDragging = false;
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+
+    // Escape key to close
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            window.close();
+        }
+    });
+
+    // ======================================================================
+    // Babylon.js 3D Scene
+    // ======================================================================
     function Init() {
         window.addEventListener('DOMContentLoaded', function () {
             var canvas = document.createElement("canvas");
@@ -21,28 +135,57 @@
             canvas.width = container.offsetWidth;
             canvas.height = container.offsetHeight;
 
-            var engine = new BABYLON.Engine(canvas, true);
+            // Enable alpha (transparency) in the WebGL engine
+            var engine = new BABYLON.Engine(canvas, true, {
+                preserveDrawingBuffer: true,
+                premultipliedAlpha: false,
+                alpha: true
+            });
 
             var createScene = function () {
                 var scene = new BABYLON.Scene(engine);
 
+                // Fully transparent background — the desktop shows through
+                scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+
+                // Camera: positioned to frame a standing/dancing character
                 var camera = new BABYLON.ArcRotateCamera(
-                    "Camera", Math.PI / 2, Math.PI / 4, 3,
-                    new BABYLON.Vector3(0, 1, 0), scene
+                    "Camera",
+                    Math.PI / 2,    // alpha: looking from the front
+                    Math.PI / 2.5,  // beta: slightly above, looking down
+                    3.5,            // radius: zoom distance
+                    new BABYLON.Vector3(0, 0.8, 0),  // target: character mid-body
+                    scene
                 );
                 camera.attachControl(canvas, true);
+                camera.lowerRadiusLimit = 1.5;
+                camera.upperRadiusLimit = 8;
 
-                var light = new BABYLON.HemisphericLight(
-                    "light1", new BABYLON.Vector3(0, 1, 0), scene
+                // Warm lighting for a character floating on desktop
+                var mainLight = new BABYLON.HemisphericLight(
+                    "mainLight",
+                    new BABYLON.Vector3(0, 1, 0),
+                    scene
                 );
+                mainLight.intensity = 0.9;
+                mainLight.groundColor = new BABYLON.Color3(0.2, 0.2, 0.3);
+
+                // Subtle rim light from behind for depth
+                var rimLight = new BABYLON.DirectionalLight(
+                    "rimLight",
+                    new BABYLON.Vector3(-0.5, -0.3, -1),
+                    scene
+                );
+                rimLight.intensity = 0.4;
+                rimLight.diffuse = new BABYLON.Color3(0.6, 0.7, 1.0);
 
                 // Load animated character model from data/ directory
-                // Place a .glb file (e.g. HipHopDancing.glb) in the data/ subdirectory
                 BABYLON.SceneLoader.ImportMesh(
                     "", "pytonium-data://", "HipHopDancing.glb", scene,
                     function (meshes, particleSystems, skeletons) {
                         var character = meshes[0];
                         character.position = new BABYLON.Vector3(0, 0, 0);
+
                         if (skeletons.length > 0) {
                             scene.beginAnimation(skeletons[0], 0, 100, true, 0.8);
                         }
@@ -64,6 +207,8 @@
             });
 
             window.addEventListener("resize", function () {
+                canvas.width = container.offsetWidth;
+                canvas.height = container.offsetHeight;
                 engine.resize();
             });
         });

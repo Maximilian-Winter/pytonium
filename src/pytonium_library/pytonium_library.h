@@ -112,6 +112,9 @@ public:
 
     // OSR (off-screen rendering) mode for transparent windows
     void SetOsrMode(bool osr);
+
+    // Show the OSR window in the taskbar (default: hidden with WS_EX_TOOLWINDOW)
+    void SetShowInTaskbar(bool show);
 #if defined(OS_WIN)
     int CreateBrowserOsr(const std::string& url, int width, int height,
                          const std::string& iconPath, bool clickThrough);
@@ -183,9 +186,15 @@ private:
 
     bool m_FramelessWindow = false;
     bool m_OsrMode = false;
+    bool m_ShowInTaskbar = false;
     void* m_ParentHwnd = nullptr;
 
     // Fullscreen state
+#if defined(OS_WIN)
+    // Returns the correct HWND: OSR layered window or regular browser window
+    HWND GetActiveHwnd();
+#endif
+
     bool m_IsFullscreen = false;
 #if defined(OS_WIN)
     struct FullscreenState {

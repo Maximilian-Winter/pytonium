@@ -7,11 +7,12 @@
 const wchar_t* OsrWindowWin::kWindowClass = L"PytoniumOsrWindow";
 bool OsrWindowWin::s_ClassRegistered = false;
 
-OsrWindowWin::OsrWindowWin(int width, int height, bool click_through)
+OsrWindowWin::OsrWindowWin(int width, int height, bool click_through, bool show_in_taskbar)
     : m_Hwnd(nullptr),
       m_Width(width),
       m_Height(height),
       m_ClickThrough(click_through),
+      m_ShowInTaskbar(show_in_taskbar),
       m_MemDC(nullptr),
       m_Bitmap(nullptr),
       m_BitmapBits(nullptr) {
@@ -44,7 +45,12 @@ void OsrWindowWin::RegisterWindowClass() {
 HWND OsrWindowWin::Create(HWND parent) {
     RegisterWindowClass();
 
-    DWORD ex_style = WS_EX_LAYERED | WS_EX_TOOLWINDOW;
+    DWORD ex_style = WS_EX_LAYERED;
+    if (m_ShowInTaskbar) {
+        ex_style |= WS_EX_APPWINDOW;
+    } else {
+        ex_style |= WS_EX_TOOLWINDOW;
+    }
     if (m_ClickThrough) {
         ex_style |= WS_EX_TRANSPARENT;
     }

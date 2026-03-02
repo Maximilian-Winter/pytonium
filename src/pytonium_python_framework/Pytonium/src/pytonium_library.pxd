@@ -123,6 +123,7 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         
         # OSR (off-screen rendering) mode for transparent windows
         void SetOsrMode(bool osr);
+        void SetShowInTaskbar(bool show);
 
         # Window control methods
         void SetFramelessWindow(bool frameless)

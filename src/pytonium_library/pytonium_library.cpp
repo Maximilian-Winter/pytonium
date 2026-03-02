@@ -296,7 +296,7 @@ int PytoniumLibrary::CreateBrowser(const std::string& url, int width, int height
 #if defined(OS_WIN)
         std::filesystem::path iconFsPath(iconPath);
         LPCWSTR w_icon_path = iconFsPath.c_str();
-        CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+        HWND hwnd = GetActiveHwnd();
         if (hwnd)
         {
             HICON hIcon = (HICON)LoadImageW(NULL, w_icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
@@ -570,7 +570,7 @@ void PytoniumLibrary::MinimizeWindow()
 {
 #if defined(OS_WIN)
     if (!m_Browser) return;
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (hwnd && IsWindow(hwnd)) {
         ShowWindow(hwnd, SW_MINIMIZE);
     }
@@ -582,7 +582,7 @@ void PytoniumLibrary::MaximizeWindow()
 #if defined(OS_WIN)
     if (!m_Browser) return;
     m_Browser->GetHost()->SetFocus(true);
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (hwnd && IsWindow(hwnd)) {
         ShowWindow(hwnd, SW_MAXIMIZE);
     }
@@ -593,7 +593,7 @@ void PytoniumLibrary::RestoreWindow()
 {
 #if defined(OS_WIN)
     if (!m_Browser) return;
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (hwnd && IsWindow(hwnd)) {
         ShowWindow(hwnd, SW_RESTORE);
     }
@@ -611,7 +611,7 @@ bool PytoniumLibrary::IsMaximized()
 {
 #if defined(OS_WIN)
     if (!m_Browser) return false;
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (hwnd && IsWindow(hwnd)) {
         WINDOWPLACEMENT wp;
         wp.length = sizeof(WINDOWPLACEMENT);
@@ -627,7 +627,7 @@ void PytoniumLibrary::SetFullscreen(bool fullscreen)
 {
 #if defined(OS_WIN)
     if (!m_Browser) return;
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (!hwnd || !IsWindow(hwnd)) return;
 
     if (fullscreen == m_IsFullscreen) return;
@@ -686,11 +686,24 @@ void PytoniumLibrary::ToggleFullscreen()
     SetFullscreen(!m_IsFullscreen);
 }
 
+#if defined(OS_WIN)
+HWND PytoniumLibrary::GetActiveHwnd()
+{
+    if (m_OsrMode && m_OsrWindow) {
+        return m_OsrWindow->GetHwnd();
+    }
+    if (m_Browser && m_Browser->GetHost()) {
+        return m_Browser->GetHost()->GetWindowHandle();
+    }
+    return nullptr;
+}
+#endif
+
 void PytoniumLibrary::DragWindow(int deltaX, int deltaY)
 {
 #if defined(OS_WIN)
     if (!m_Browser) return;
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (hwnd && IsWindow(hwnd)) {
         RECT rect;
         if (GetWindowRect(hwnd, &rect)) {
@@ -708,7 +721,7 @@ void PytoniumLibrary::GetWindowPosition(int& x, int& y)
     y = 0;
 #if defined(OS_WIN)
     if (!m_Browser) return;
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (hwnd && IsWindow(hwnd)) {
         RECT rect;
         if (GetWindowRect(hwnd, &rect)) {
@@ -723,7 +736,7 @@ void PytoniumLibrary::SetWindowPosition(int x, int y)
 {
 #if defined(OS_WIN)
     if (!m_Browser) return;
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (hwnd && IsWindow(hwnd)) {
         SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
@@ -738,7 +751,7 @@ void PytoniumLibrary::GetWindowSize(int& width, int& height)
 #if defined(OS_WIN)
     if (!m_Browser) return;
 
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (!hwnd || !IsWindow(hwnd)) return;
 
     RECT rect;
@@ -754,7 +767,7 @@ void PytoniumLibrary::SetWindowSize(int width, int height)
 #if defined(OS_WIN)
     if (!m_Browser) return;
 
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (!hwnd || !IsWindow(hwnd)) return;
     if (IsZoomed(hwnd)) return;
 
@@ -790,15 +803,13 @@ void PytoniumLibrary::SetOnFullscreenChangeCallback(void (*callback)(void*, bool
 void* PytoniumLibrary::GetNativeWindowHandle()
 {
 #if defined(OS_WIN)
-    // For OSR browsers, return the layered window handle
-    if (m_OsrMode && m_OsrWindow) {
-        return reinterpret_cast<void*>(m_OsrWindow->GetHwnd());
-    }
-#endif
+    return reinterpret_cast<void*>(GetActiveHwnd());
+#else
     if (!m_Browser || !m_Browser->GetHost()) {
         return nullptr;
     }
     return reinterpret_cast<void*>(m_Browser->GetHost()->GetWindowHandle());
+#endif
 }
 
 void PytoniumLibrary::ResizeWindow(int newWidth, int newHeight, int anchor)
@@ -806,7 +817,7 @@ void PytoniumLibrary::ResizeWindow(int newWidth, int newHeight, int anchor)
 #if defined(OS_WIN)
     if (!m_Browser) return;
 
-    CefWindowHandle hwnd = m_Browser->GetHost()->GetWindowHandle();
+    HWND hwnd = GetActiveHwnd();
     if (!hwnd || !IsWindow(hwnd)) return;
     if (IsZoomed(hwnd)) return;
 
@@ -837,6 +848,10 @@ void PytoniumLibrary::SetOsrMode(bool osr) {
     m_OsrMode = osr;
 }
 
+void PytoniumLibrary::SetShowInTaskbar(bool show) {
+    m_ShowInTaskbar = show;
+}
+
 #if defined(OS_WIN)
 int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int height,
                                        const std::string& iconPath, bool clickThrough)
@@ -851,7 +866,7 @@ int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int hei
     }
 
     // Create the OSR window (layered Win32 window)
-    m_OsrWindow = new OsrWindowWin(width, height, clickThrough);
+    m_OsrWindow = new OsrWindowWin(width, height, clickThrough, m_ShowInTaskbar);
     HWND osrHwnd = m_OsrWindow->Create();
     if (!osrHwnd) {
         std::cerr << "CreateBrowserOsr: Failed to create OSR window!" << std::endl;
