@@ -3,1179 +3,1050 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pytonium Control Center</title>
+    <title>System Control Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         :root {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-card: rgba(20, 20, 30, 0.8);
-            --accent-primary: #6366f1;
-            --accent-secondary: #8b5cf6;
-            --accent-success: #10b981;
-            --accent-warning: #f59e0b;
-            --accent-danger: #ef4444;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --border-color: rgba(255, 255, 255, 0.1);
-            --glow-primary: 0 0 20px rgba(99, 102, 241, 0.4);
-            --glow-success: 0 0 20px rgba(16, 185, 129, 0.3);
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d27;
+            --bg-tertiary: #242837;
+            --border: #2d3348;
+            --text-primary: #e4e7ef;
+            --text-secondary: #8b92a8;
+            --accent-blue: #4a9eff;
+            --accent-green: #34d399;
+            --accent-yellow: #fbbf24;
+            --accent-red: #f87171;
+            --accent-purple: #a78bfa;
         }
-        
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
         }
-        
-        /* Animated background gradient */
-        .bg-gradient {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-        }
-        
-        /* Resize handles */
-        .resize-handle {
-            position: fixed;
-            z-index: 10000;
-        }
-        .resize-handle.n { top: 0; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
-        .resize-handle.s { bottom: 0; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
-        .resize-handle.e { top: 8px; right: 0; bottom: 8px; width: 8px; cursor: ew-resize; }
-        .resize-handle.w { top: 8px; left: 0; bottom: 8px; width: 8px; cursor: ew-resize; }
-        .resize-handle.nw { top: 0; left: 0; width: 8px; height: 8px; cursor: nwse-resize; }
-        .resize-handle.ne { top: 0; right: 0; width: 8px; height: 8px; cursor: nesw-resize; }
-        .resize-handle.sw { bottom: 0; left: 0; width: 8px; height: 8px; cursor: nesw-resize; }
-        .resize-handle.se { bottom: 0; right: 0; width: 8px; height: 8px; cursor: nwse-resize; }
-        
-        /* Title Bar */
+
+        /* ---- Resize Handles ---- */
+        .resize-handle { position: fixed; z-index: 10000; }
+        .resize-handle.n { top:0; left:8px; right:8px; height:8px; cursor:ns-resize; }
+        .resize-handle.s { bottom:0; left:8px; right:8px; height:8px; cursor:ns-resize; }
+        .resize-handle.e { top:8px; right:0; bottom:8px; width:8px; cursor:ew-resize; }
+        .resize-handle.w { top:8px; left:0; bottom:8px; width:8px; cursor:ew-resize; }
+        .resize-handle.nw { top:0; left:0; width:8px; height:8px; cursor:nwse-resize; }
+        .resize-handle.ne { top:0; right:0; width:8px; height:8px; cursor:nesw-resize; }
+        .resize-handle.sw { bottom:0; left:0; width:8px; height:8px; cursor:nesw-resize; }
+        .resize-handle.se { bottom:0; right:0; width:8px; height:8px; cursor:nwse-resize; }
+
+        /* ---- Titlebar ---- */
         .titlebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            height: 56px;
-            background: rgba(10, 10, 15, 0.9);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            height: 48px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 16px;
+            user-select: none;
         }
-        
-        .titlebar-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .logo {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 18px;
-        }
-        
-        .title-text {
-            font-size: 16px;
-            font-weight: 600;
-            background: linear-gradient(90deg, var(--text-primary), var(--accent-primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .titlebar-controls {
-            display: flex;
-            gap: 8px;
-        }
-        
+        .titlebar-left { display: flex; align-items: center; gap: 10px; }
+        .title-text { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .titlebar-controls { display: flex; gap: 4px; }
         .titlebar-btn {
-            width: 36px;
-            height: 36px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-secondary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            font-size: 14px;
+            width: 32px; height: 32px; border: none; border-radius: 6px;
+            background: transparent; color: var(--text-secondary);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 13px; transition: background 0.15s, color 0.15s;
         }
-        
-        .titlebar-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
+        .titlebar-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .titlebar-btn.close:hover { background: var(--accent-red); color: white; }
+
+        /* ---- Tab Bar ---- */
+        .tab-bar {
+            position: fixed; top: 48px; left: 0; right: 0; z-index: 999;
+            height: 40px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: stretch;
+            padding: 0 16px;
         }
-        
-        .titlebar-btn.close:hover {
-            background: var(--accent-danger);
-            color: white;
+        .tab-btn {
+            background: none; border: none; border-bottom: 2px solid transparent;
+            color: var(--text-secondary); font-size: 13px; font-weight: 500;
+            padding: 0 16px; cursor: pointer; transition: color 0.15s, border-color 0.15s;
+            white-space: nowrap;
         }
-        
-        /* Main Content */
+        .tab-btn:hover { color: var(--text-primary); }
+        .tab-btn.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+
+        /* ---- Main Content ---- */
         .main-content {
-            position: relative;
-            z-index: 1;
-            padding: 76px 24px 24px;
-            max-width: 1600px;
+            padding: 104px 24px 24px;
+            max-width: 1400px;
             margin: 0 auto;
         }
-        
-        /* Dashboard Grid */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-        
-        @media (max-width: 1400px) {
-            .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        
-        @media (max-width: 800px) {
-            .dashboard-grid { grid-template-columns: 1fr; }
-        }
-        
-        /* Glass Cards */
-        .glass-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ---- Cards ---- */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
             padding: 20px;
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
         }
-        
-        .glass-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--glow-primary);
-        }
-        
-        .glass-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        }
-        
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        
-        .card-title {
-            font-size: 14px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .card-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-        
-        .card-icon.cpu { background: rgba(99, 102, 241, 0.2); }
-        .card-icon.memory { background: rgba(16, 185, 129, 0.2); }
-        .card-icon.disk { background: rgba(245, 158, 11, 0.2); }
-        .card-icon.network { background: rgba(139, 92, 246, 0.2); }
-        
-        .card-value {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-        
-        .card-subtitle {
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-        
-        /* Progress Ring */
-        .progress-ring {
-            position: relative;
-            width: 60px;
-            height: 60px;
-        }
-        
-        .progress-ring svg {
-            transform: rotate(-90deg);
-        }
-        
-        .progress-ring-bg {
-            fill: none;
-            stroke: rgba(255, 255, 255, 0.1);
-            stroke-width: 4;
-        }
-        
-        .progress-ring-fill {
-            fill: none;
-            stroke: var(--accent-primary);
-            stroke-width: 4;
-            stroke-linecap: round;
-            transition: stroke-dashoffset 0.5s;
-        }
-        
-        /* Content Grid */
-        .content-grid {
+        .card-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-        }
-        
-        @media (max-width: 1200px) {
-            .content-grid { grid-template-columns: 1fr; }
-        }
-        
-        /* Chart Container */
-        .chart-container {
-            height: 300px;
-            position: relative;
-        }
-        
-        .chart-canvas {
-            width: 100%;
-            height: 100%;
-        }
-        
-        /* Interactive Panel */
-        .panel-section {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
             margin-bottom: 20px;
         }
-        
-        .panel-title {
-            font-size: 13px;
-            color: var(--text-secondary);
+        .metric-card { text-align: center; }
+        .metric-label {
+            font-size: 12px; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+        }
+        .metric-value {
+            font-size: 2rem; font-weight: 700;
+            font-family: 'Consolas', 'SF Mono', 'Fira Code', monospace;
+        }
+        .metric-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        .metric-value.green { color: var(--accent-green); }
+        .metric-value.yellow { color: var(--accent-yellow); }
+        .metric-value.red { color: var(--accent-red); }
+        .metric-value.blue { color: var(--accent-blue); }
+        .metric-value.purple { color: var(--accent-purple); }
+
+        /* ---- Section Titles ---- */
+        .section-title {
+            font-size: 13px; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.5px;
             margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
-        
-        /* Form Elements */
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 12px;
+
+        /* ---- Charts ---- */
+        .chart-container { position: relative; height: 250px; }
+        .chart-row {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;
         }
-        
-        .dark-input {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px 14px;
-            color: var(--text-primary);
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s;
+        @media (max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
+
+        /* ---- Core Bars ---- */
+        .core-bar-list {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px;
         }
-        
-        .dark-input:focus {
-            border-color: var(--accent-primary);
+        .core-bar { display: flex; align-items: center; gap: 10px; }
+        .core-bar-label {
+            font-size: 12px; color: var(--text-secondary);
+            min-width: 60px; font-family: monospace;
         }
-        
-        .dark-input::placeholder {
-            color: var(--text-secondary);
+        .core-bar-track {
+            flex: 1; height: 16px; background: var(--bg-tertiary);
+            border-radius: 4px; overflow: hidden;
         }
-        
-        /* Select dropdown with dark theme */
-        .dark-select {
-            flex: 1;
-            background-color: #16213e;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px 36px 10px 14px;
-            color: var(--text-primary);
-            font-size: 14px;
-            outline: none;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
+        .core-bar-fill {
+            height: 100%; border-radius: 4px;
+            transition: width 0.3s, background-color 0.3s;
         }
-        
-        .dark-select:focus {
-            border-color: var(--accent-primary);
+        .core-bar-pct {
+            font-size: 12px; min-width: 40px; text-align: right; font-family: monospace;
         }
-        
-        /* Dropdown options */
-        .dark-select option {
-            background-color: #16213e;
-            color: #f1f5f9;
-            padding: 10px;
+
+        /* ---- Tables ---- */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th {
+            text-align: left; padding: 10px 12px; color: var(--text-secondary);
+            font-weight: 600; font-size: 11px; text-transform: uppercase;
+            letter-spacing: 0.5px; border-bottom: 1px solid var(--border);
         }
-        
-        .dark-select option:hover,
-        .dark-select option:focus {
-            background-color: #0f3460;
-        }
-        
+        td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+        tr:hover td { background: var(--bg-tertiary); }
+        tr:last-child td { border-bottom: none; }
+
+        /* ---- Buttons ---- */
         .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
+            background: transparent; color: var(--text-secondary); font-size: 12px;
+            cursor: pointer; transition: all 0.15s;
         }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            color: white;
+        .btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+        .btn-danger { border-color: var(--accent-red); color: var(--accent-red); }
+        .btn-danger:hover { background: var(--accent-red); color: white; }
+        .btn-small { padding: 4px 10px; font-size: 11px; }
+
+        /* ---- Usage Bars ---- */
+        .usage-bar-track {
+            width: 100%; height: 8px; background: var(--bg-tertiary);
+            border-radius: 4px; overflow: hidden; margin-top: 8px;
         }
-        
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--glow-primary);
+        .usage-bar-fill { height: 100%; border-radius: 4px; }
+
+        /* ---- Network Interface Cards ---- */
+        .if-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px; margin-bottom: 20px;
         }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
+        .if-card { padding: 16px; }
+        .if-name {
+            font-weight: 600; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 8px;
         }
-        
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.15);
+        .if-status {
+            width: 8px; height: 8px; border-radius: 50%; display: inline-block;
         }
-        
-        /* Result Display */
-        .result-box {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
-            min-height: 50px;
-            font-family: 'Consolas', monospace;
-            font-size: 13px;
-            color: var(--accent-success);
+        .if-status.up { background: var(--accent-green); }
+        .if-status.down { background: var(--accent-red); }
+        .if-detail {
+            font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        
-        /* Task List */
-        .task-item {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
+
+        /* ---- Partition Cards ---- */
+        .partition-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px; margin-bottom: 20px;
+        }
+        .partition-card { padding: 16px; }
+        .partition-header {
+            display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 8px;
         }
-        
-        .task-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
+        .partition-device { font-weight: 600; font-family: monospace; }
+        .partition-details { font-size: 12px; color: var(--text-secondary); }
+        .partition-details span { margin-right: 12px; }
+
+        /* ---- System Info ---- */
+        .info-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
         }
-        
-        .task-name {
-            font-size: 13px;
-            font-weight: 500;
+        .info-card { padding: 20px; }
+        .info-card h3 {
+            font-size: 14px; margin-bottom: 12px; color: var(--accent-blue);
         }
-        
-        .task-status {
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            background: rgba(245, 158, 11, 0.2);
-            color: var(--accent-warning);
+        .info-row {
+            display: flex; justify-content: space-between; padding: 6px 0;
+            border-bottom: 1px solid var(--border); font-size: 13px;
         }
-        
-        .task-status.completed {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--accent-success);
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: var(--text-secondary); }
+        .info-value { font-family: monospace; text-align: right; max-width: 60%; word-break: break-all; }
+
+        /* ---- Donut Chart (SVG) ---- */
+        .donut-wrap {
+            display: flex; align-items: center; gap: 24px; margin-bottom: 16px;
         }
-        
-        .progress-bar {
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            overflow: hidden;
+        .donut-svg { width: 120px; height: 120px; flex-shrink: 0; }
+        .donut-legend { font-size: 13px; }
+        .donut-legend div {
+            margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
         }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-            transition: width 0.3s;
+        .donut-legend .dot {
+            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
         }
-        
-        /* Color Palette */
-        .palette-container {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
+
+        /* ---- Confirm Dialog ---- */
+        .dialog-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.6);
+            align-items: center; justify-content: center;
         }
-        
-        .palette-color {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        .dialog-overlay.show { display: flex; }
+        .dialog-box {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 10px; padding: 24px;
+            min-width: 360px; max-width: 440px;
         }
-        
-        .palette-color:hover {
-            transform: scale(1.1);
+        .dialog-box h3 { margin-bottom: 12px; font-size: 16px; }
+        .dialog-box p {
+            color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;
         }
-        
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        .dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        .dialog-actions .btn { padding: 8px 20px; font-size: 13px; }
+
+        /* ---- Quick Stats Row ---- */
+        .quick-stats { display: flex; flex-wrap: wrap; gap: 24px; }
+        .quick-stat { font-size: 13px; color: var(--text-secondary); }
+        .quick-stat strong { color: var(--text-primary); margin-left: 4px; }
+
+        /* ---- Toast Notification ---- */
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; z-index: 9998;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 8px; padding: 12px 20px;
+            font-size: 13px; color: var(--accent-green);
+            transform: translateY(80px); opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
         }
-        
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
+        .toast.show { transform: translateY(0); opacity: 1; }
     </style>
 </head>
 <body>
-    <div class="bg-gradient"></div>
-    
-    <!-- Resize handles -->
-    <div class="resize-handle n" data-edge="n"></div>
-    <div class="resize-handle s" data-edge="s"></div>
-    <div class="resize-handle e" data-edge="e"></div>
-    <div class="resize-handle w" data-edge="w"></div>
-    <div class="resize-handle nw" data-corner="nw"></div>
-    <div class="resize-handle ne" data-corner="ne"></div>
-    <div class="resize-handle sw" data-corner="sw"></div>
-    <div class="resize-handle se" data-corner="se"></div>
-    
-    <!-- Title Bar -->
-    <div class="titlebar" id="titlebar">
-        <div class="titlebar-left">
-            <div class="logo">P</div>
-            <span class="title-text">Pytonium Control Center</span>
-        </div>
-        <div class="titlebar-controls">
-            <button class="titlebar-btn" onclick="minimizeWindow()" title="Minimize">−</button>
-            <button class="titlebar-btn" onclick="maximizeWindow()" title="Maximize">□</button>
-            <button class="titlebar-btn close" onclick="closeWindow()" title="Close">×</button>
-        </div>
+
+<!-- Resize Handles -->
+<div class="resize-handle n" data-edge="n"></div>
+<div class="resize-handle s" data-edge="s"></div>
+<div class="resize-handle e" data-edge="e"></div>
+<div class="resize-handle w" data-edge="w"></div>
+<div class="resize-handle nw" data-corner="nw"></div>
+<div class="resize-handle ne" data-corner="ne"></div>
+<div class="resize-handle sw" data-corner="sw"></div>
+<div class="resize-handle se" data-corner="se"></div>
+
+<!-- Titlebar -->
+<div class="titlebar" id="titlebar">
+    <div class="titlebar-left">
+        <span class="title-text">System Control Center</span>
     </div>
-    
-    <!-- Main Content -->
-    <div class="main-content">
-        <!-- Stats Dashboard -->
-        <div class="dashboard-grid">
-            <div class="glass-card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">CPU Usage <span style="font-size: 11px; opacity: 0.6;">(Real)</span></div>
-                        <div class="card-value" id="cpu-value">0%</div>
-                        <div class="card-subtitle" id="cpu-subtitle">Loading...</div>
-                    </div>
-                    <div class="card-icon cpu">⚡</div>
-                </div>
+    <div class="titlebar-controls">
+        <button class="titlebar-btn" onclick="Pytonium.window.minimize()" title="Minimize">&#x2014;</button>
+        <button class="titlebar-btn" onclick="Pytonium.window.maximize()" title="Maximize">&#x25A1;</button>
+        <button class="titlebar-btn close" onclick="Pytonium.window.close()" title="Close">&#x2715;</button>
+    </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+    <button class="tab-btn active" data-tab="overview">Overview</button>
+    <button class="tab-btn" data-tab="cpu">CPU &amp; Processes</button>
+    <button class="tab-btn" data-tab="memory">Memory &amp; Storage</button>
+    <button class="tab-btn" data-tab="network">Network</button>
+    <button class="tab-btn" data-tab="system">System</button>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+
+    <!-- ===== OVERVIEW TAB ===== -->
+    <div class="tab-panel active" id="tab-overview">
+        <div class="card-grid">
+            <div class="card metric-card">
+                <div class="metric-label">CPU Usage</div>
+                <div class="metric-value" id="ov-cpu">--%</div>
+                <div class="metric-sub" id="ov-cpu-sub">Loading...</div>
             </div>
-            
-            <div class="glass-card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">Memory <span style="font-size: 11px; opacity: 0.6;">(Real)</span></div>
-                        <div class="card-value" id="memory-value">0%</div>
-                        <div class="card-subtitle" id="memory-subtitle">Loading...</div>
-                    </div>
-                    <div class="card-icon memory">💾</div>
-                </div>
+            <div class="card metric-card">
+                <div class="metric-label">Memory</div>
+                <div class="metric-value" id="ov-mem">--%</div>
+                <div class="metric-sub" id="ov-mem-sub">Loading...</div>
             </div>
-            
-            <div class="glass-card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">Disk Usage <span style="font-size: 11px; opacity: 0.6;">(Real)</span></div>
-                        <div class="card-value" id="disk-value">0%</div>
-                        <div class="card-subtitle" id="disk-subtitle">System Drive</div>
-                    </div>
-                    <div class="card-icon disk">💿</div>
-                </div>
+            <div class="card metric-card">
+                <div class="metric-label">Network</div>
+                <div class="metric-value blue" id="ov-net">--</div>
+                <div class="metric-sub" id="ov-net-sub">Loading...</div>
             </div>
-            
-            <div class="glass-card">
-                <div class="card-header">
-                    <div>
-                        <div class="card-title">Network <span style="font-size: 11px; opacity: 0.6;">(Real)</span></div>
-                        <div class="card-value" id="network-value">0</div>
-                        <div class="card-subtitle" id="network-subtitle">MB/s Down</div>
-                    </div>
-                    <div class="card-icon network">🌐</div>
-                </div>
+            <div class="card metric-card">
+                <div class="metric-label">Uptime</div>
+                <div class="metric-value purple" id="ov-uptime">--</div>
+                <div class="metric-sub" id="ov-uptime-sub">Loading...</div>
             </div>
         </div>
-        
-        <!-- Pytonium Advantage Banner -->
-        <div class="glass-card" style="margin-bottom: 20px; background: linear-gradient(90deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2));">
-            <div style="display: flex; align-items: center; gap: 16px; padding: 8px;">
-                <div style="font-size: 24px;">🐍</div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">
-                        The Pytonium Advantage: Real System Monitoring with 5 Lines of Python
-                    </div>
-                    <div style="font-size: 13px; color: var(--text-secondary); font-family: 'Consolas', monospace; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px;">
-                        import psutil<br>
-                        cpu = psutil.cpu_percent()<br>
-                        memory = psutil.virtual_memory().percent<br>
-                        disk = psutil.disk_usage('/').percent<br>
-                        net = psutil.net_io_counters()
-                    </div>
-                </div>
-                <div style="font-size: 24px; opacity: 0.5;">⚡</div>
+        <div class="chart-row">
+            <div class="card">
+                <div class="section-title">CPU History</div>
+                <div class="chart-container"><canvas id="chart-ov-cpu"></canvas></div>
             </div>
-            <div style="margin-top: 12px; font-size: 12px; color: var(--text-secondary);">
-                💡 In Electron, you'd need native Node modules, compilation, and platform-specific builds. 
-                In Pytonium, just <code style="background: rgba(99,102,241,0.3); padding: 2px 6px; border-radius: 4px;">pip install psutil</code> and it just works!
+            <div class="card">
+                <div class="section-title">Memory History</div>
+                <div class="chart-container"><canvas id="chart-ov-mem"></canvas></div>
             </div>
         </div>
-        
-        <!-- Main Content Grid -->
-        <div class="content-grid">
-            <!-- Left Column -->
-            <div class="left-column">
-                <!-- Real-time Chart -->
-                <div class="glass-card">
-                    <div class="panel-section">
-                        <div class="panel-title">Real CPU History (Live from Python)</div>
-                        <div class="chart-container">
-                            <canvas id="mainChart" class="chart-canvas"></canvas>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Interactive Tools -->
-                <div class="glass-card">
-                    <div class="panel-section">
-                        <div class="panel-title">Unit Converter</div>
-                        <div class="input-group">
-                            <select class="dark-select" id="converter-type">
-                                <option value="temperature">Temperature (°C → °F)</option>
-                                <option value="currency">Currency (EUR → USD)</option>
-                                <option value="distance">Distance (km → miles)</option>
-                            </select>
-                            <input type="number" class="dark-input" id="converter-value" placeholder="Enter value">
-                            <button class="btn btn-primary" onclick="convertUnit()">Convert</button>
-                        </div>
-                        <div class="result-box" id="converter-result">Enter a value to convert</div>
-                    </div>
-                    
-                    <div class="panel-section">
-                        <div class="panel-title">Text Analyzer</div>
-                        <div class="input-group">
-                            <input type="text" class="dark-input" id="text-input" placeholder="Enter text to analyze...">
-                            <button class="btn btn-secondary" onclick="analyzeText()">Analyze</button>
-                        </div>
-                        <div class="result-box" id="text-result">Enter text to see analysis</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Right Column -->
-            <div class="right-column">
-                <!-- Color Palette Generator -->
-                <div class="glass-card">
-                    <div class="panel-section">
-                        <div class="panel-title">Color Palette Generator</div>
-                        <div class="palette-container" id="palette-container">
-                            <!-- Colors will be inserted here -->
-                        </div>
-                        <button class="btn btn-primary" onclick="generatePalette()" style="width: 100%; margin-top: 12px;">
-                            Generate New Palette
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Async Tasks -->
-                <div class="glass-card">
-                    <div class="panel-section">
-                        <div class="panel-title">Background Tasks</div>
-                        <div id="task-list">
-                            <div class="task-item" style="opacity: 0.5;">
-                                <div class="task-header">
-                                    <span class="task-name">No tasks running</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="input-group" style="margin-top: 12px;">
-                            <input type="text" class="dark-input" id="task-name" placeholder="Task name">
-                            <button class="btn btn-primary" onclick="startTask()">Start</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Echo Test -->
-                <div class="glass-card">
-                    <div class="panel-section">
-                        <div class="panel-title">Python Echo Test</div>
-                        <div class="input-group">
-                            <input type="text" class="dark-input" id="echo-input" placeholder="Send message to Python...">
-                            <button class="btn btn-secondary" onclick="sendEcho()">Send</button>
-                        </div>
-                        <div class="result-box" id="echo-result">Response will appear here</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Data Analysis & Visualization Section -->
-        <div class="glass-card" style="margin-top: 24px; background: linear-gradient(90deg, rgba(16,185,129,0.15), rgba(99,102,241,0.15));">
-            <div style="padding: 8px; margin-bottom: 16px;">
-                <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">📊 Data Analysis & Visualization</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">
-                    <strong>The Pytonium Superpower:</strong> pandas for data manipulation + matplotlib for charts. 
-                    In Electron you'd struggle with native modules. Here? Just Python! 
-                    <code style="background: rgba(16,185,129,0.3); padding: 2px 6px; border-radius: 4px;">pip install pandas matplotlib</code>
-                </div>
-            </div>
-            
-            <!-- Dataset Selection -->
-            <div class="panel-section">
-                <div class="panel-title">1. Select Dataset</div>
-                <div class="input-group">
-                    <select class="dark-select" id="dataset-select" style="flex: 2;">
-                        <option value="">-- Choose a sample dataset --</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="loadSelectedDataset()">Load Dataset</button>
-                    <button class="btn btn-secondary" onclick="refreshDatasets()">🔄 Refresh</button>
-                </div>
-                <div id="dataset-info" style="margin-top: 8px; font-size: 13px; color: var(--text-secondary);"></div>
-            </div>
-            
-            <!-- Data Stats -->
-            <div class="panel-section" id="data-stats-section" style="display: none;">
-                <div class="panel-title">2. Dataset Overview</div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
-                    <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700;" id="stat-rows">0</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);">Rows</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700;" id="stat-cols">0</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);">Columns</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700;" id="stat-memory">0</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);">MB</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 24px; font-weight: 700;" id="stat-missing">0</div>
-                        <div style="font-size: 11px; color: var(--text-secondary);">Missing</div>
-                    </div>
-                </div>
-                
-                <!-- Data Table -->
-                <div style="overflow-x: auto; max-height: 300px; border: 1px solid var(--border-color); border-radius: 8px;">
-                    <table id="data-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                        <thead id="data-table-head" style="background: rgba(255,255,255,0.1); position: sticky; top: 0;"></thead>
-                        <tbody id="data-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <!-- Chart Generator -->
-            <div class="panel-section" id="chart-section" style="display: none;">
-                <div class="panel-title">3. Generate Visualization (matplotlib)</div>
-                <div class="input-group">
-                    <select class="dark-select" id="chart-type">
-                        <option value="line">Line Chart</option>
-                        <option value="bar">Bar Chart</option>
-                        <option value="scatter">Scatter Plot</option>
-                        <option value="histogram">Histogram</option>
-                        <option value="pie">Pie Chart</option>
-                        <option value="heatmap">Correlation Heatmap</option>
-                    </select>
-                    <select class="dark-select" id="x-column">
-                        <option value="">X Column</option>
-                    </select>
-                    <select class="dark-select" id="y-column">
-                        <option value="">Y Column (optional)</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="generateChart()">Generate Chart</button>
-                </div>
-                
-                <!-- Chart Display -->
-                <div id="chart-display" style="margin-top: 16px; text-align: center; display: none;">
-                    <img id="chart-image" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-                    <div id="chart-info" style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);"></div>
-                </div>
+        <div class="card" style="padding: 16px;">
+            <div class="quick-stats" id="ov-quick-stats">
+                <div class="quick-stat">Loading system stats...</div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Window Controls
-        function minimizeWindow() { Pytonium.window.minimize(); }
-        function maximizeWindow() { Pytonium.window.maximize(); }
-        function closeWindow() { Pytonium.window.close(); }
-        
-        // Resize functionality
-        let isResizing = false, resizeStartX, resizeStartY, resizeStartWidth, resizeStartHeight, resizeStartPosX, resizeStartPosY, currentResizeHandle;
-        
-        document.querySelectorAll('.resize-handle').forEach(handle => {
-            handle.addEventListener('mousedown', async function(e) {
-                e.preventDefault();
-                try {
-                    let maximized = await Pytonium.window.isMaximized();
-                    if (maximized) return;
-                } catch (err) {}
-                
-                isResizing = true;
-                currentResizeHandle = handle;
-                resizeStartX = e.screenX;
-                resizeStartY = e.screenY;
-                
-                try {
-                    let size = await Pytonium.window.getSize();
-                    let pos = await Pytonium.window.getPosition();
-                    resizeStartWidth = size.width;
-                    resizeStartHeight = size.height;
-                    resizeStartPosX = pos.x;
-                    resizeStartPosY = pos.y;
-                } catch (err) {
-                    isResizing = false;
-                    return;
-                }
-            });
-        });
-        
-        document.addEventListener('mousemove', async function(e) {
-            if (!isResizing || !currentResizeHandle) return;
-            
-            const deltaX = e.screenX - resizeStartX;
-            const deltaY = e.screenY - resizeStartY;
-            let newWidth = resizeStartWidth, newHeight = resizeStartHeight, anchor = 0;
-            
-            const edge = currentResizeHandle.dataset.edge;
-            const corner = currentResizeHandle.dataset.corner;
-            
-            if (edge === 'e' || corner === 'ne' || corner === 'se') {
-                newWidth = resizeStartWidth + deltaX;
-                anchor = corner === 'ne' ? 1 : (corner === 'se' ? 3 : 0);
-            } else if (edge === 'w' || corner === 'nw' || corner === 'sw') {
-                newWidth = resizeStartWidth - deltaX;
-                anchor = corner === 'nw' ? 0 : (corner === 'sw' ? 2 : 1);
-            }
-            
-            if (edge === 's' || corner === 'sw' || corner === 'se') {
-                newHeight = resizeStartHeight + deltaY;
-                anchor = corner === 'sw' ? 2 : (corner === 'se' ? 3 : 0);
-            } else if (edge === 'n' || corner === 'nw' || corner === 'ne') {
-                newHeight = resizeStartHeight - deltaY;
-                anchor = corner === 'nw' ? 0 : (corner === 'ne' ? 1 : 2);
-            }
-            
-            newWidth = Math.max(800, newWidth);
-            newHeight = Math.max(600, newHeight);
-            
-            try {
-                await Pytonium.window.resize(newWidth, newHeight, anchor);
-            } catch (err) {}
-        });
-        
-        document.addEventListener('mouseup', () => { isResizing = false; currentResizeHandle = null; });
-        
-        // Draggable Titlebar (native OS drag — smooth, zero-latency)
-        document.getElementById('titlebar').addEventListener('mousedown', async function(e) {
-            if (e.target.closest('.titlebar-controls')) return;
-            try {
-                let maximized = await Pytonium.window.isMaximized();
-                if (maximized) return;
-            } catch (err) {}
-            try { Pytonium.window.startDrag(); } catch (err) {}
-        });
-        
-        // Chart Implementation
-        const chartCanvas = document.getElementById('mainChart');
-        const ctx = chartCanvas.getContext('2d');
-        let chartData = [];
-        
-        function resizeCanvas() {
-            const rect = chartCanvas.parentElement.getBoundingClientRect();
-            chartCanvas.width = rect.width * window.devicePixelRatio;
-            chartCanvas.height = rect.height * window.devicePixelRatio;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-            chartCanvas.style.width = rect.width + 'px';
-            chartCanvas.style.height = rect.height + 'px';
-        }
-        
-        function drawChart() {
-            const width = chartCanvas.width / window.devicePixelRatio;
-            const height = chartCanvas.height / window.devicePixelRatio;
-            
-            ctx.clearRect(0, 0, width, height);
-            
-            if (chartData.length < 2) return;
-            
-            // Gradient fill
-            const gradient = ctx.createLinearGradient(0, 0, 0, height);
-            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
-            gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
-            
-            // Draw area
-            ctx.beginPath();
-            ctx.moveTo(0, height);
-            chartData.forEach((val, i) => {
-                const x = (i / (chartData.length - 1)) * width;
-                const y = height - (val / 100) * height;
-                ctx.lineTo(x, y);
-            });
-            ctx.lineTo(width, height);
-            ctx.closePath();
-            ctx.fillStyle = gradient;
-            ctx.fill();
-            
-            // Draw line
-            ctx.beginPath();
-            ctx.strokeStyle = '#6366f1';
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            chartData.forEach((val, i) => {
-                const x = (i / (chartData.length - 1)) * width;
-                const y = height - (val / 100) * height;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-            
-            // Draw dots
-            chartData.forEach((val, i) => {
-                const x = (i / (chartData.length - 1)) * width;
-                const y = height - (val / 100) * height;
-                ctx.beginPath();
-                ctx.arc(x, y, 4, 0, Math.PI * 2);
-                ctx.fillStyle = '#6366f1';
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(x, y, 2, 0, Math.PI * 2);
-                ctx.fillStyle = '#fff';
-                ctx.fill();
-            });
-        }
-        
-        window.addEventListener('resize', () => { resizeCanvas(); drawChart(); });
-        
-        // Feature Functions
-        async function convertUnit() {
-            const type = document.getElementById('converter-type').value;
-            const value = parseFloat(document.getElementById('converter-value').value);
-            if (isNaN(value)) return;
-            
-            try {
-                const result = await Pytonium.api.processData(type, value);
-                document.getElementById('converter-result').innerHTML = 
-                    `${result.input} = ${result.output}`;
-            } catch (e) {
-                document.getElementById('converter-result').textContent = 'Error: ' + e.message;
-            }
-        }
-        
-        async function analyzeText() {
-            const text = document.getElementById('text-input').value;
-            if (!text) return;
-            
-            try {
-                const result = await Pytonium.api.analyzeText(text);
-                document.getElementById('text-result').innerHTML = 
-                    `${result.words} words, ${result.characters} chars<br>` +
-                    `Avg word length: ${result.average_word_length}`;
-            } catch (e) {
-                document.getElementById('text-result').textContent = 'Error: ' + e.message;
-            }
-        }
-        
-        async function generatePalette() {
-            try {
-                const palette = await Pytonium.api.getColorPalette();
-                const container = document.getElementById('palette-container');
-                container.innerHTML = '';
-                palette[0].colors.forEach(color => {
-                    const div = document.createElement('div');
-                    div.className = 'palette-color';
-                    div.style.backgroundColor = color;
-                    div.title = color;
-                    div.onclick = () => navigator.clipboard.writeText(color);
-                    container.appendChild(div);
-                });
-            } catch (e) {
-                console.error('Failed to generate palette:', e);
-            }
-        }
-        
-        async function startTask() {
-            const name = document.getElementById('task-name').value || 'Task';
-            try {
-                await Pytonium.api.startTask(name, 50); // 50 steps = ~5 seconds
-                document.getElementById('task-name').value = '';
-            } catch (e) {
-                console.error('Failed to start task:', e);
-            }
-        }
-        
-        async function sendEcho() {
-            const message = document.getElementById('echo-input').value;
-            if (!message) return;
-            
-            try {
-                const result = await Pytonium.api.echo(message);
-                document.getElementById('echo-result').textContent = result;
-            } catch (e) {
-                document.getElementById('echo-result').textContent = 'Error: ' + e.message;
-            }
-        }
-        
-        // State Update Handlers - Real System Data from Python!
-        document.addEventListener('SystemStats', function(event) {
-            const stats = event.detail.value;
-            
-            // Update main values
-            document.getElementById('cpu-value').textContent = stats.cpu + '%';
-            document.getElementById('memory-value').textContent = stats.memory + '%';
-            document.getElementById('disk-value').textContent = stats.disk + '%';
-            document.getElementById('network-value').textContent = stats.download_speed.toFixed(1);
-            
-            // Update detailed subtitles
-            document.getElementById('cpu-subtitle').textContent = 
-                (stats.cpu_count || '?') + ' Cores @ ' + Math.round(stats.cpu_freq || 0) + ' MHz';
-            document.getElementById('memory-subtitle').textContent = 
-                stats.memory_used + ' / ' + stats.memory_total + ' GB used';
-            document.getElementById('network-subtitle').textContent = 
-                '↓ ' + stats.download_speed.toFixed(1) + ' MB/s  ↑ ' + stats.upload_speed.toFixed(1) + ' MB/s';
-        });
-        
-        document.addEventListener('Charts', function(event) {
-            if (event.detail.key === 'cpu_history') {
-                chartData = event.detail.value;
-                drawChart();
-            }
-        });
-        
-        document.addEventListener('Tasks', function(event) {
-            updateTaskList(event.detail.key, event.detail.value);
-        });
-        
-        const tasks = {};
-        function updateTaskList(taskId, taskInfo) {
-            tasks[taskId] = taskInfo;
-            
-            const container = document.getElementById('task-list');
-            container.innerHTML = '';
-            
-            Object.entries(tasks).forEach(([id, task]) => {
-                const div = document.createElement('div');
-                div.className = 'task-item';
-                div.innerHTML = `
-                    <div class="task-header">
-                        <span class="task-name">${task.name}</span>
-                        <span class="task-status ${task.status}">${task.status}</span>
+    <!-- ===== CPU & PROCESSES TAB ===== -->
+    <div class="tab-panel" id="tab-cpu">
+        <div class="section-title">Per-Core Usage</div>
+        <div class="card" style="margin-bottom: 20px; padding: 16px;">
+            <div class="core-bar-list" id="core-bars">
+                <div style="color: var(--text-secondary);">Waiting for data...</div>
+            </div>
+        </div>
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="section-title">CPU History</div>
+            <div class="chart-container"><canvas id="chart-cpu-history"></canvas></div>
+        </div>
+        <div class="card">
+            <div class="section-title">Top Processes</div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr>
+                        <th>Name</th><th>PID</th><th>CPU %</th><th>Memory (MB)</th><th>Status</th><th style="width: 70px;"></th>
+                    </tr></thead>
+                    <tbody id="process-table">
+                        <tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">Waiting for data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MEMORY & STORAGE TAB ===== -->
+    <div class="tab-panel" id="tab-memory">
+        <div class="card-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="card">
+                <div class="section-title">RAM Usage</div>
+                <div class="donut-wrap">
+                    <svg class="donut-svg" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--bg-tertiary)" stroke-width="3"/>
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--accent-blue)" stroke-width="3"
+                            stroke-dasharray="0 100" stroke-linecap="round" id="ram-donut-fill"
+                            transform="rotate(-90 18 18)"/>
+                        <text x="18" y="19" text-anchor="middle" dominant-baseline="middle"
+                            fill="var(--text-primary)" font-size="6" font-weight="bold"
+                            font-family="monospace" id="ram-donut-text">--%</text>
+                    </svg>
+                    <div class="donut-legend" id="ram-legend">
+                        <div style="color:var(--text-secondary)">Loading...</div>
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${task.progress}%"></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="section-title">Swap</div>
+                <div class="donut-wrap">
+                    <svg class="donut-svg" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--bg-tertiary)" stroke-width="3"/>
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--accent-purple)" stroke-width="3"
+                            stroke-dasharray="0 100" stroke-linecap="round" id="swap-donut-fill"
+                            transform="rotate(-90 18 18)"/>
+                        <text x="18" y="19" text-anchor="middle" dominant-baseline="middle"
+                            fill="var(--text-primary)" font-size="6" font-weight="bold"
+                            font-family="monospace" id="swap-donut-text">--%</text>
+                    </svg>
+                    <div class="donut-legend" id="swap-legend">
+                        <div style="color:var(--text-secondary)">Loading...</div>
                     </div>
-                `;
-                container.appendChild(div);
-            });
+                </div>
+            </div>
+        </div>
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="section-title">Memory History</div>
+            <div class="chart-container"><canvas id="chart-mem-history"></canvas></div>
+        </div>
+        <div class="section-title">Disk Partitions</div>
+        <div class="partition-grid" id="disk-partitions">
+            <div class="card" style="color: var(--text-secondary);">Loading partitions...</div>
+        </div>
+    </div>
+
+    <!-- ===== NETWORK TAB ===== -->
+    <div class="tab-panel" id="tab-network">
+        <div class="section-title">Interfaces</div>
+        <div class="if-grid" id="net-interfaces">
+            <div class="card" style="color: var(--text-secondary);">Waiting for data...</div>
+        </div>
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="section-title">Network Speed</div>
+            <div class="chart-container"><canvas id="chart-net-speed"></canvas></div>
+        </div>
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div class="section-title" style="margin-bottom: 0;">Active Connections</div>
+                <button class="btn btn-small" onclick="refreshConnections()">Refresh</button>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr>
+                        <th>Local Address</th><th>Remote Address</th><th>Status</th><th>Process</th>
+                    </tr></thead>
+                    <tbody id="connections-table">
+                        <tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">Click Refresh to load</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SYSTEM TAB ===== -->
+    <div class="tab-panel" id="tab-system">
+        <div class="info-grid" id="system-info-grid">
+            <div class="card info-card" style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary);">
+                Loading system information...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kill Process Confirm Dialog -->
+<div class="dialog-overlay" id="kill-dialog">
+    <div class="dialog-box">
+        <h3>Kill Process</h3>
+        <p id="kill-dialog-msg">Are you sure you want to kill this process?</p>
+        <div class="dialog-actions">
+            <button class="btn" onclick="closeKillDialog()">Cancel</button>
+            <button class="btn btn-danger" onclick="confirmKill()">Kill Process</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ========================================================================
+// Tab Navigation
+// ========================================================================
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabPanels = document.querySelectorAll('.tab-panel');
+let activeTab = 'overview';
+let systemInfoLoaded = false;
+let partitionsLoaded = false;
+
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        activeTab = tab;
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabPanels.forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
+
+        if (tab === 'memory' && !partitionsLoaded) loadDiskPartitions();
+        if (tab === 'system' && !systemInfoLoaded) loadSystemInfo();
+    });
+});
+
+// ========================================================================
+// Helpers
+// ========================================================================
+function formatBytes(bytes) {
+    if (bytes < 1024) return bytes.toFixed(0) + ' B/s';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB/s';
+    return (bytes / 1048576).toFixed(2) + ' MB/s';
+}
+
+function formatUptime(seconds) {
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return d + 'd ' + h + 'h';
+    if (h > 0) return h + 'h ' + m + 'm';
+    return m + 'm';
+}
+
+function formatUptimeLong(seconds) {
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return d + 'd ' + h + 'h ' + m + 'm';
+}
+
+function usageColor(pct) {
+    if (pct < 50) return 'var(--accent-green)';
+    if (pct < 80) return 'var(--accent-yellow)';
+    return 'var(--accent-red)';
+}
+
+function usageClass(pct) {
+    if (pct < 50) return 'green';
+    if (pct < 80) return 'yellow';
+    return 'red';
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+
+// ========================================================================
+// Chart.js Setup
+// ========================================================================
+const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    plugins: { legend: { display: false } },
+    scales: {
+        x: { display: false },
+        y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(45, 51, 72, 0.5)' },
+            ticks: { color: '#8b92a8', font: { size: 11 } },
         }
-        
-        // Data Analysis Functions
-        let currentColumns = [];
-        
-        async function refreshDatasets() {
-            try {
-                const result = await Pytonium.data.getSampleDatasets();
-                const select = document.getElementById('dataset-select');
-                select.innerHTML = '<option value="">-- Choose a sample dataset --</option>';
-                
-                result.datasets.forEach(ds => {
-                    const option = document.createElement('option');
-                    option.value = ds.name;
-                    option.textContent = ds.name;
-                    option.dataset.description = ds.description;
-                    select.appendChild(option);
-                });
-                
-                // Show description on change
-                select.onchange = function() {
-                    const selected = this.options[this.selectedIndex];
-                    document.getElementById('dataset-info').textContent = 
-                        selected.dataset.description || '';
-                };
-            } catch (e) {
-                console.error('Failed to load datasets:', e);
+    }
+};
+
+function makeLineChart(canvasId, label, color, maxY) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    return new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: Array(60).fill(''),
+            datasets: [{
+                label: label,
+                data: Array(60).fill(null),
+                borderColor: color,
+                backgroundColor: color + '20',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0,
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            ...chartDefaults,
+            scales: {
+                ...chartDefaults.scales,
+                y: { ...chartDefaults.scales.y, max: maxY || undefined }
             }
         }
-        
-        async function loadSelectedDataset() {
-            const datasetName = document.getElementById('dataset-select').value;
-            if (!datasetName) return;
-            
-            try {
-                const result = await Pytonium.data.loadSampleDataset(datasetName);
-                displayDataResult(result);
-            } catch (e) {
-                console.error('Failed to load dataset:', e);
-            }
-        }
-        
-        function displayDataResult(result) {
-            if (result.error) {
-                alert('Error: ' + result.error);
-                return;
-            }
-            
-            // Show sections
-            document.getElementById('data-stats-section').style.display = 'block';
-            document.getElementById('chart-section').style.display = 'block';
-            
-            // Update stats
-            document.getElementById('stat-rows').textContent = result.stats.rows.toLocaleString();
-            document.getElementById('stat-cols').textContent = result.stats.columns;
-            document.getElementById('stat-memory').textContent = result.stats.memory_mb;
-            document.getElementById('stat-missing').textContent = result.stats.missing_values;
-            
-            // Store columns
-            currentColumns = result.columns;
-            
-            // Update column selects
-            const xSelect = document.getElementById('x-column');
-            const ySelect = document.getElementById('y-column');
-            xSelect.innerHTML = '<option value="">X Column</option>';
-            ySelect.innerHTML = '<option value="">Y Column (optional)</option>';
-            
-            result.columns.forEach(col => {
-                xSelect.add(new Option(col.name, col.name));
-                ySelect.add(new Option(col.name, col.name));
-            });
-            
-            // Update table
-            updateDataTable(result);
-        }
-        
-        function updateDataTable(result) {
-            const thead = document.getElementById('data-table-head');
-            const tbody = document.getElementById('data-table-body');
-            
-            // Header
-            thead.innerHTML = '<tr>' + result.columns.map(col => 
-                `<th style="padding: 8px; text-align: left; font-weight: 600;">${col.name}<br><small style="opacity: 0.6;">${col.type}</small></th>`
-            ).join('') + '</tr>';
-            
-            // Body (first 100 rows)
-            tbody.innerHTML = result.preview.slice(0, 100).map(row => 
-                '<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">' + 
-                result.columns.map(col => 
-                    `<td style="padding: 6px 8px;">${row[col.name] !== null ? row[col.name] : '<em style="opacity: 0.4;">null</em>'}</td>`
-                ).join('') + 
-                '</tr>'
-            ).join('');
-        }
-        
-        async function generateChart() {
-            const chartType = document.getElementById('chart-type').value;
-            const xColumn = document.getElementById('x-column').value;
-            const yColumn = document.getElementById('y-column').value;
-            
-            if (!xColumn) {
-                alert('Please select an X column');
-                return;
-            }
-            
-            // Show loading
-            const display = document.getElementById('chart-display');
-            const img = document.getElementById('chart-image');
-            const info = document.getElementById('chart-info');
-            display.style.display = 'block';
-            img.src = '';
-            info.textContent = 'Generating chart with matplotlib...';
-            
-            try {
-                const result = await Pytonium.data.generateChart(
-                    chartType, xColumn, yColumn || null, null,
-                    `${chartType.title()} Chart: ${xColumn}`
-                );
-                
-                if (result.error) {
-                    info.textContent = 'Error: ' + result.error;
-                    return;
+    });
+}
+
+function makeDualLineChart(canvasId, label1, color1, label2, color2) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    return new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: Array(60).fill(''),
+            datasets: [
+                {
+                    label: label1, data: Array(60).fill(null),
+                    borderColor: color1, backgroundColor: color1 + '20',
+                    fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
+                },
+                {
+                    label: label2, data: Array(60).fill(null),
+                    borderColor: color2, backgroundColor: color2 + '20',
+                    fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
                 }
-                
-                img.src = result.image;
-                info.textContent = `Chart generated from ${result.rows_used.toLocaleString()} rows using matplotlib`;
-            } catch (e) {
-                info.textContent = 'Error: ' + e.message;
+            ]
+        },
+        options: {
+            ...chartDefaults,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: '#8b92a8', boxWidth: 12, font: { size: 11 } }
+                }
             }
         }
-        
-        // Initialization
-        function Init() {
-            resizeCanvas();
-            generatePalette();
-            refreshDatasets();  // Load sample datasets
-            
-            try {
-                Pytonium.appState.registerForStateUpdates("SystemStats", ["system"], true, true);
-                Pytonium.appState.registerForStateUpdates("Charts", ["charts"], true, true);
-                Pytonium.appState.registerForStateUpdates("Tasks", ["tasks"], true, true);
-            } catch (e) {
-                console.error('Failed to register for state updates:', e);
-            }
-        }
-        
-        if (window.PytoniumReady) {
-            Init();
+    });
+}
+
+let chartOvCpu, chartOvMem, chartCpuHistory, chartMemHistory, chartNetSpeed;
+
+// ========================================================================
+// State Event Handlers
+// ========================================================================
+function updateStats(stats) {
+    // Overview metric cards
+    document.getElementById('ov-cpu').textContent = stats.cpu + '%';
+    document.getElementById('ov-cpu').className = 'metric-value ' + usageClass(stats.cpu);
+    document.getElementById('ov-cpu-sub').textContent =
+        stats.cpu_per_core.length + ' cores @ ' + stats.cpu_freq + ' MHz';
+
+    document.getElementById('ov-mem').textContent = stats.memory_percent + '%';
+    document.getElementById('ov-mem').className = 'metric-value ' + usageClass(stats.memory_percent);
+    document.getElementById('ov-mem-sub').textContent =
+        stats.memory_used_gb + ' / ' + stats.memory_total_gb + ' GB';
+
+    document.getElementById('ov-uptime').textContent = formatUptime(stats.uptime_seconds);
+    document.getElementById('ov-uptime-sub').textContent = formatUptimeLong(stats.uptime_seconds);
+
+    // Quick stats
+    document.getElementById('ov-quick-stats').innerHTML =
+        '<div class="quick-stat">Cores:<strong>' + stats.cpu_per_core.length + '</strong></div>' +
+        '<div class="quick-stat">Frequency:<strong>' + stats.cpu_freq + ' MHz</strong></div>' +
+        '<div class="quick-stat">Disk Read:<strong>' + formatBytes(stats.disk_read_speed) + '</strong></div>' +
+        '<div class="quick-stat">Disk Write:<strong>' + formatBytes(stats.disk_write_speed) + '</strong></div>';
+
+    // Overview charts
+    if (stats.cpu_history && chartOvCpu) {
+        chartOvCpu.data.labels = stats.cpu_history.map((_, i) => i);
+        chartOvCpu.data.datasets[0].data = stats.cpu_history;
+        chartOvCpu.update('none');
+    }
+    if (stats.mem_history && chartOvMem) {
+        chartOvMem.data.labels = stats.mem_history.map((_, i) => i);
+        chartOvMem.data.datasets[0].data = stats.mem_history;
+        chartOvMem.update('none');
+    }
+
+    // CPU tab: history chart
+    if (stats.cpu_history && chartCpuHistory) {
+        chartCpuHistory.data.labels = stats.cpu_history.map((_, i) => i);
+        chartCpuHistory.data.datasets[0].data = stats.cpu_history;
+        chartCpuHistory.update('none');
+    }
+
+    // CPU tab: per-core bars
+    const barsEl = document.getElementById('core-bars');
+    if (barsEl && stats.cpu_per_core) {
+        let html = '';
+        stats.cpu_per_core.forEach((pct, i) => {
+            html += '<div class="core-bar">' +
+                '<span class="core-bar-label">Core ' + i + '</span>' +
+                '<div class="core-bar-track"><div class="core-bar-fill" style="width:' +
+                pct + '%; background:' + usageColor(pct) + ';"></div></div>' +
+                '<span class="core-bar-pct">' + pct + '%</span></div>';
+        });
+        barsEl.innerHTML = html;
+    }
+
+    // Memory tab: history chart
+    if (stats.mem_history && chartMemHistory) {
+        chartMemHistory.data.labels = stats.mem_history.map((_, i) => i);
+        chartMemHistory.data.datasets[0].data = stats.mem_history;
+        chartMemHistory.update('none');
+    }
+
+    // Memory tab: RAM donut
+    const ramFill = document.getElementById('ram-donut-fill');
+    const ramText = document.getElementById('ram-donut-text');
+    const ramLegend = document.getElementById('ram-legend');
+    if (ramFill) {
+        const pct = stats.memory_percent;
+        ramFill.setAttribute('stroke-dasharray', pct + ' ' + (100 - pct));
+        ramFill.setAttribute('stroke', usageColor(pct));
+        ramText.textContent = pct + '%';
+        ramLegend.innerHTML =
+            '<div><span class="dot" style="background:' + usageColor(pct) + '"></span>Used: ' +
+            stats.memory_used_gb + ' GB</div>' +
+            '<div><span class="dot" style="background:var(--bg-tertiary)"></span>Available: ' +
+            stats.memory_available_gb + ' GB</div>' +
+            '<div><span class="dot" style="background:var(--text-secondary)"></span>Total: ' +
+            stats.memory_total_gb + ' GB</div>';
+    }
+
+    // Memory tab: Swap donut
+    const swapFill = document.getElementById('swap-donut-fill');
+    const swapText = document.getElementById('swap-donut-text');
+    const swapLegend = document.getElementById('swap-legend');
+    if (swapFill) {
+        if (stats.swap_total_gb > 0) {
+            swapFill.setAttribute('stroke-dasharray',
+                stats.swap_percent + ' ' + (100 - stats.swap_percent));
+            swapText.textContent = stats.swap_percent + '%';
+            swapLegend.innerHTML =
+                '<div><span class="dot" style="background:var(--accent-purple)"></span>Used: ' +
+                stats.swap_used_gb + ' GB</div>' +
+                '<div><span class="dot" style="background:var(--bg-tertiary)"></span>Total: ' +
+                stats.swap_total_gb + ' GB</div>';
         } else {
-            window.addEventListener('PytoniumReady', Init);
+            swapFill.setAttribute('stroke-dasharray', '0 100');
+            swapText.textContent = 'N/A';
+            swapLegend.innerHTML =
+                '<div style="color:var(--text-secondary)">No swap configured</div>';
         }
-    </script>
+    }
+
+    // Network speed chart (history comes from stats push)
+    if (chartNetSpeed) {
+        if (stats.net_down_history) {
+            chartNetSpeed.data.labels = stats.net_down_history.map((_, i) => i);
+            chartNetSpeed.data.datasets[0].data = stats.net_down_history;
+        }
+        if (stats.net_up_history) {
+            chartNetSpeed.data.datasets[1].data = stats.net_up_history;
+        }
+        chartNetSpeed.update('none');
+    }
+}
+
+function updateNetwork(data) {
+    // Overview network card
+    document.getElementById('ov-net').textContent = formatBytes(data.total_down);
+    document.getElementById('ov-net-sub').textContent =
+        '\u2193 ' + formatBytes(data.total_down) + '  \u2191 ' + formatBytes(data.total_up);
+
+    // Network tab: interface cards
+    const ifGrid = document.getElementById('net-interfaces');
+    if (ifGrid && data.interfaces) {
+        let html = '';
+        data.interfaces.forEach(iface => {
+            if (!iface.ip && !iface.is_up) return;
+            const ipDisplay = iface.ip || 'N/A';
+            const copyBtn = iface.ip
+                ? ' <button class="btn btn-small" onclick="copyIP(\'' +
+                  escapeHtml(iface.ip) + '\')">Copy</button>'
+                : '';
+            html += '<div class="card if-card">' +
+                '<div class="if-name"><span class="if-status ' +
+                (iface.is_up ? 'up' : 'down') + '"></span>' +
+                escapeHtml(iface.name) + '</div>' +
+                '<div class="if-detail"><span>IP</span><span>' + ipDisplay + copyBtn + '</span></div>' +
+                '<div class="if-detail"><span>MAC</span><span>' +
+                (iface.mac || 'N/A') + '</span></div>' +
+                '</div>';
+        });
+        if (html) ifGrid.innerHTML = html;
+    }
+}
+
+function updateProcesses(data) {
+    const tbody = document.getElementById('process-table');
+    if (!tbody || !data.top) return;
+    let html = '';
+    data.top.forEach(proc => {
+        const safeName = escapeHtml(proc.name);
+        html += '<tr>' +
+            '<td>' + safeName + '</td>' +
+            '<td style="font-family:monospace; color:var(--text-secondary);">' + proc.pid + '</td>' +
+            '<td style="color:' + usageColor(proc.cpu) + '">' + proc.cpu + '%</td>' +
+            '<td>' + proc.memory + '</td>' +
+            '<td style="color:var(--text-secondary)">' + proc.status + '</td>' +
+            '<td><button class="btn btn-danger btn-small" onclick="showKillDialog(' +
+            proc.pid + ', \'' + safeName.replace(/'/g, "\\'") +
+            '\')">Kill</button></td></tr>';
+    });
+    tbody.innerHTML = html;
+}
+
+// ========================================================================
+// On-Demand Data Loading
+// ========================================================================
+async function loadDiskPartitions() {
+    try {
+        const partitions = await Pytonium.system.getDiskPartitions();
+        const grid = document.getElementById('disk-partitions');
+        if (!grid) return;
+        let html = '';
+        partitions.forEach(p => {
+            const safePath = p.mountpoint.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            html += '<div class="card partition-card">' +
+                '<div class="partition-header">' +
+                '<span class="partition-device">' + escapeHtml(p.device) + '</span>' +
+                '<button class="btn btn-small" onclick="openFolder(\'' + safePath + '\')">Open</button>' +
+                '</div>' +
+                '<div class="partition-details">' +
+                '<span>' + p.fstype + '</span>' +
+                '<span>' + p.used_gb + ' / ' + p.total_gb + ' GB (' + p.percent + '%)</span>' +
+                '</div>' +
+                '<div class="usage-bar-track"><div class="usage-bar-fill" style="width:' +
+                p.percent + '%; background:' + usageColor(p.percent) + ';"></div></div>' +
+                '</div>';
+        });
+        grid.innerHTML = html || '<div class="card" style="color:var(--text-secondary);">No partitions found</div>';
+        partitionsLoaded = true;
+    } catch (e) {
+        console.error('Failed to load partitions:', e);
+    }
+}
+
+async function loadSystemInfo() {
+    try {
+        const info = await Pytonium.system.getSystemInfo();
+        const grid = document.getElementById('system-info-grid');
+        if (!grid) return;
+
+        let html = '';
+
+        html += '<div class="card info-card"><h3>Operating System</h3>';
+        html += infoRow('OS', info.os_name);
+        html += infoRow('Version', info.os_version);
+        html += infoRow('Architecture', info.architecture);
+        html += infoRow('Hostname', info.hostname);
+        html += infoRow('Username', info.username);
+        html += '</div>';
+
+        html += '<div class="card info-card"><h3>Hardware</h3>';
+        html += infoRow('CPU', info.cpu_model);
+        html += infoRow('Physical Cores', info.cpu_cores_physical);
+        html += infoRow('Logical Cores', info.cpu_cores_logical);
+        html += infoRow('Max Frequency', info.cpu_freq_max + ' MHz');
+        html += infoRow('Total RAM', info.ram_total_gb + ' GB');
+        html += '</div>';
+
+        html += '<div class="card info-card"><h3>Runtime</h3>';
+        html += infoRow('Boot Time', info.boot_time);
+        html += infoRow('Python', info.python_version);
+        html += '</div>';
+
+        if (info.battery_percent !== null) {
+            html += '<div class="card info-card"><h3>Battery</h3>';
+            html += infoRow('Charge', info.battery_percent + '%');
+            html += infoRow('Plugged In', info.battery_plugged ? 'Yes' : 'No');
+            if (info.battery_secs_left > 0) {
+                html += infoRow('Time Left', formatUptime(info.battery_secs_left));
+            }
+            html += '</div>';
+        }
+
+        grid.innerHTML = html;
+        systemInfoLoaded = true;
+    } catch (e) {
+        console.error('Failed to load system info:', e);
+    }
+}
+
+function infoRow(label, value) {
+    return '<div class="info-row"><span class="info-label">' + escapeHtml(String(label)) +
+        '</span><span class="info-value">' + escapeHtml(String(value)) + '</span></div>';
+}
+
+async function refreshConnections() {
+    const tbody = document.getElementById('connections-table');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">Loading...</td></tr>';
+    try {
+        const conns = await Pytonium.network.getConnections();
+        if (conns.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">No connections found (may require admin)</td></tr>';
+            return;
+        }
+        let html = '';
+        conns.forEach(c => {
+            const statusColor = c.status === 'ESTABLISHED'
+                ? 'var(--accent-green)' : 'var(--text-secondary)';
+            html += '<tr>' +
+                '<td style="font-family:monospace; font-size:12px;">' + escapeHtml(c.local) + '</td>' +
+                '<td style="font-family:monospace; font-size:12px;">' + escapeHtml(c.remote || '-') + '</td>' +
+                '<td style="color:' + statusColor + '">' + c.status + '</td>' +
+                '<td>' + escapeHtml(c.process) + '</td></tr>';
+        });
+        tbody.innerHTML = html;
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--accent-red);">Failed to load connections</td></tr>';
+    }
+}
+
+// ========================================================================
+// Actions
+// ========================================================================
+function copyIP(ip) {
+    navigator.clipboard.writeText(ip).then(() => {
+        showToast('Copied: ' + ip);
+    }).catch(() => {});
+}
+
+async function openFolder(path) {
+    const result = await Pytonium.system.openFolder(path);
+    if (!result) showToast('Failed to open folder');
+}
+
+// Kill process dialog
+let killTargetPid = null;
+
+function showKillDialog(pid, name) {
+    killTargetPid = pid;
+    document.getElementById('kill-dialog-msg').textContent =
+        'Kill "' + name + '" (PID ' + pid + ')?';
+    document.getElementById('kill-dialog').classList.add('show');
+}
+
+function closeKillDialog() {
+    killTargetPid = null;
+    document.getElementById('kill-dialog').classList.remove('show');
+}
+
+async function confirmKill() {
+    if (killTargetPid === null) return;
+    try {
+        const result = await Pytonium.system.killProcess(killTargetPid);
+        closeKillDialog();
+        if (result.success) {
+            showToast('Killed: ' + result.name);
+        } else {
+            showToast('Failed: ' + result.error);
+        }
+    } catch (e) {
+        closeKillDialog();
+        showToast('Error killing process');
+    }
+}
+
+// Close dialog on overlay click
+document.getElementById('kill-dialog').addEventListener('click', function(e) {
+    if (e.target === this) closeKillDialog();
+});
+
+// ========================================================================
+// Window Resize Handles (standard Pytonium pattern)
+// ========================================================================
+document.querySelectorAll('.resize-handle').forEach(handle => {
+    handle.addEventListener('mousedown', async (e) => {
+        e.preventDefault();
+        const edge = handle.dataset.edge;
+        const corner = handle.dataset.corner;
+        const isMaximized = await Pytonium.window.isMaximized();
+        if (isMaximized) return;
+        const startSize = await Pytonium.window.getSize();
+        const startX = e.screenX, startY = e.screenY;
+        const minW = 900, minH = 600;
+
+        function onMove(ev) {
+            const dx = ev.screenX - startX, dy = ev.screenY - startY;
+            let w = startSize.width, h = startSize.height;
+            let anchor = 0;
+
+            if (edge === 'e' || corner === 'ne' || corner === 'se') w = Math.max(minW, startSize.width + dx);
+            if (edge === 'w' || corner === 'nw' || corner === 'sw') w = Math.max(minW, startSize.width - dx);
+            if (edge === 's' || corner === 'sw' || corner === 'se') h = Math.max(minH, startSize.height + dy);
+            if (edge === 'n' || corner === 'nw' || corner === 'ne') h = Math.max(minH, startSize.height - dy);
+
+            if (corner === 'nw') anchor = 3;
+            else if (corner === 'ne') anchor = 2;
+            else if (corner === 'sw') anchor = 1;
+            else if (corner === 'se') anchor = 0;
+            else if (edge === 'n') anchor = 2;
+            else if (edge === 'w') anchor = 1;
+            else anchor = 0;
+
+            Pytonium.window.resize(w, h, anchor);
+        }
+        function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+});
+
+// Titlebar drag
+document.getElementById('titlebar').addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON' || e.target.closest('.titlebar-controls')) return;
+    Pytonium.window.startDrag();
+});
+
+// ========================================================================
+// Initialization
+// ========================================================================
+function Init() {
+    Pytonium.appState.registerForStateUpdates('StatsUpdate', ['stats'], true, true);
+    Pytonium.appState.registerForStateUpdates('NetworkUpdate', ['network'], true, true);
+    Pytonium.appState.registerForStateUpdates('ProcessUpdate', ['processes'], true, true);
+
+    document.addEventListener('StatsUpdate', (e) => {
+        if (e.detail.key === 'stats') updateStats(e.detail.value);
+    });
+
+    document.addEventListener('NetworkUpdate', (e) => {
+        if (e.detail.key === 'stats') updateNetwork(e.detail.value);
+    });
+
+    document.addEventListener('ProcessUpdate', (e) => {
+        if (e.detail.key === 'list') updateProcesses(e.detail.value);
+    });
+
+    // Create all charts
+    chartOvCpu = makeLineChart('chart-ov-cpu', 'CPU %', '#4a9eff', 100);
+    chartOvMem = makeLineChart('chart-ov-mem', 'Memory %', '#34d399', 100);
+    chartCpuHistory = makeLineChart('chart-cpu-history', 'CPU %', '#4a9eff', 100);
+    chartMemHistory = makeLineChart('chart-mem-history', 'Memory %', '#34d399', 100);
+    chartNetSpeed = makeDualLineChart('chart-net-speed', 'Download', '#4a9eff', 'Upload', '#34d399');
+}
+
+if (window.PytoniumReady) { Init(); }
+else { window.addEventListener('PytoniumReady', Init); }
+</script>
 </body>
 </html>
