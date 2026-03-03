@@ -9,7 +9,8 @@
       "Bash(mkdocs build:*)",
       "Bash(cp:*)",
       "Bash(ls:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(python:*)"
     ]
   },
   "outputStyle": "jiuitian"
