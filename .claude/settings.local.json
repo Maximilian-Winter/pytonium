@@ -8,8 +8,9 @@
       "Bash(pip install:*)",
       "Bash(mkdocs build:*)",
       "Bash(cp:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(echo:*)"
     ]
   },
-  "outputStyle": "vajrayogini"
+  "outputStyle": "jiuitian"
 }
