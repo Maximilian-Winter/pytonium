@@ -351,14 +351,19 @@ class Component:
                 event_router=self._event_router,
             )
             element._dynamic_manager = manager
-            # Initialize with current items
-            manager.initialize()
+            # Initialize with current items, reusing elements from to_html()
+            manager.initialize(parent_element=element)
 
         for child in getattr(element, "_children", []):
             self._init_dynamic_children(child)
 
     def _init_conditionals(self, element: Element):
         """Initialize conditional elements (Show/Switch).
+
+        Recursively walks the element tree including the active branches
+        of conditional elements (_current_element), so that nested
+        Show/Switch elements inside conditional branches get their
+        _setup_reactive called.
 
         Args:
             element: Root element to scan.
@@ -371,3 +376,16 @@ class Component:
                     event_router=self._event_router,
                 )
             self._init_conditionals(child)
+
+        # Also recurse into the active branch of Show/Switch elements,
+        # so nested conditionals inside conditional branches are initialized
+        current = getattr(element, "_current_element", None)
+        if current is not None:
+            # The current_element itself might be a Show/Switch
+            if hasattr(current, "_setup_reactive") and callable(current._setup_reactive):
+                current._setup_reactive(
+                    mutation_compiler=self._mutation_compiler,
+                    component=self,
+                    event_router=self._event_router,
+                )
+            self._init_conditionals(current)

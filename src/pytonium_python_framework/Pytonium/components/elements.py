@@ -483,14 +483,19 @@ class Element:
         for child in self._children:
             parts.append(child.to_html())
 
-        # Dynamic children — render initial items
+        # Dynamic children — render initial items and store them for
+        # DynamicChildrenManager.initialize() to pick up (avoiding double-render)
         if self._dynamic_children:
             source_fn = self._dynamic_children["source"]
+            key_fn = self._dynamic_children["key"]
             render_item_fn = self._dynamic_children["render_item"]
+            self._dynamic_initial_elements = []
             try:
                 items = source_fn()
                 for i, item in enumerate(items):
                     child_element = render_item_fn(item, i)
+                    item_key = str(key_fn(item))
+                    self._dynamic_initial_elements.append((item_key, child_element))
                     parts.append(child_element.to_html())
             except Exception:
                 pass

@@ -64,24 +64,41 @@ class DynamicChildrenManager:
         self.current_keys: list[str] = []
         self.key_to_element: dict[str, Element] = {}
 
-    def initialize(self):
+    def initialize(self, parent_element=None):
         """Initialize with the current source items.
 
         Called during component mount after the initial HTML is generated.
         Records the initial keys and elements without emitting DOM commands
         (since the initial HTML already contains these items).
+
+        Reuses elements created during to_html() if available, avoiding a
+        double-render that would create elements with mismatched node_ids.
+
+        Args:
+            parent_element: The parent Element (used to retrieve pre-rendered
+                            elements from to_html()).
         """
+        self.current_keys = []
+        self.key_to_element = {}
+
+        # Reuse elements that were already created during to_html()
+        initial = getattr(parent_element, "_dynamic_initial_elements", None)
+        if initial is not None:
+            for item_key, element in initial:
+                self.current_keys.append(item_key)
+                self.key_to_element[item_key] = element
+            # Clear the temporary storage
+            parent_element._dynamic_initial_elements = None
+            return
+
+        # Fallback: render fresh (e.g., when called outside mount flow)
         try:
             items = self.source()
         except Exception:
             items = []
 
-        self.current_keys = []
-        self.key_to_element = {}
-
         for i, item in enumerate(items):
             item_key = str(self.key(item))
-            # Re-render to get the Element (with its node_id)
             element = self.render_item(item, i)
             self.current_keys.append(item_key)
             self.key_to_element[item_key] = element

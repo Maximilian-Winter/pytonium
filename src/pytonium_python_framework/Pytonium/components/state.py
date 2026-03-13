@@ -155,11 +155,31 @@ class DependencyTracker:
         return result, deps
 
     @classmethod
+    def _cleanup_component(cls, comp_id: int):
+        """Auto-cleanup when a component is garbage collected without unmount.
+
+        Called via weakref.finalize — removes all stale bindings, computed
+        deps, and refs for the given component id, preventing id() reuse
+        from triggering stale bindings on a new object at the same address.
+        """
+        keys_to_remove = [k for k in cls._dependency_map if k[0] == comp_id]
+        for key in keys_to_remove:
+            del cls._dependency_map[key]
+        computed_keys = [k for k in cls._computed_deps if k[0] == comp_id]
+        for key in computed_keys:
+            del cls._computed_deps[key]
+        cls._component_refs.pop(comp_id, None)
+        cls._component_compilers.pop(comp_id, None)
+        cls._component_instances.pop(comp_id, None)
+
+    @classmethod
     def register_component(cls, component):
         """Register a component for dependency tracking.
 
         Must be called before analyze(). Stores a weak reference to the
-        component and its MutationCompiler.
+        component and its MutationCompiler. Also installs a weak-reference
+        finalizer to auto-clean the dependency map if the component is
+        garbage collected without unmount() being called.
 
         Args:
             component: Component instance to register.
@@ -169,6 +189,8 @@ class DependencyTracker:
         cls._component_instances[comp_id] = weakref.ref(component)
         if hasattr(component, "_mutation_compiler") and component._mutation_compiler:
             cls._component_compilers[comp_id] = component._mutation_compiler
+        # Install GC finalizer to prevent stale bindings on id() reuse
+        weakref.finalize(component, cls._cleanup_component, comp_id)
 
     @classmethod
     def unregister_component(cls, component):
@@ -263,9 +285,8 @@ class DependencyTracker:
                         update_type=UpdateType.REPLACE_INNER_HTML,
                         key="_dynamic_children",
                         transform=None,  # Handled by DynamicChildrenManager
+                        _dynamic_manager_element=element,
                     )
-                    # Store reference to the manager for update dispatch
-                    binding._dynamic_manager_element = element
                     cls.add_binding(dep_comp_id, dep_field, binding)
 
         # Analyze conditional elements (Show/Switch)
@@ -280,8 +301,8 @@ class DependencyTracker:
                         update_type=UpdateType.REPLACE_INNER_HTML,
                         key="_conditional",
                         transform=None,
+                        _conditional_element=element,
                     )
-                    binding._conditional_element = element
                     cls.add_binding(dep_comp_id, dep_field, binding)
 
         # Recurse into children

@@ -58,11 +58,15 @@ class Binding:
         update_type: What kind of mutation this binding produces.
         key: Attribute name, class name, or style property (for non-text bindings).
         transform: Lambda that produces the current value when called.
+        _dynamic_manager_element: Element with DynamicChildrenManager (for children_from bindings).
+        _conditional_element: Element with conditional logic (for Show/Switch bindings).
     """
     node_id: str
     update_type: UpdateType
     key: str = ""
     transform: Optional[Callable] = None
+    _dynamic_manager_element: Any = None
+    _conditional_element: Any = None
 
 
 class BindingType(Enum):
