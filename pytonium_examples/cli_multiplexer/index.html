@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Termux</title>
+
+    <!-- xterm.js from CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+
+    <style>
+        /* ─────────────────────────────────────────────────────
+           Design tokens
+           ───────────────────────────────────────────────────── */
+        :root {
+            --bg-base:      #08090d;
+            --bg-surface:   #0e1017;
+            --bg-elevated:  #151821;
+            --bg-hover:     #1a1e2a;
+            --border:       rgba(255,255,255,0.06);
+            --border-focus: #5b6ef7;
+            --text-primary: #d0d6e2;
+            --text-secondary: #7a8194;
+            --text-muted:   #454d60;
+            --accent-blue:  #5b6ef7;
+            --accent-green: #4ade80;
+            --accent-red:   #ef5466;
+            --accent-amber: #f0a84c;
+            --radius:       6px;
+            --radius-sm:    4px;
+            --titlebar-h:   38px;
+            --sidebar-w:    210px;
+            --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+            --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg-base);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        button {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        /* ─────────────────────────────────────────────────────
+           Title bar (frameless window chrome)
+           ───────────────────────────────────────────────────── */
+        #titlebar {
+            display: flex;
+            align-items: center;
+            height: var(--titlebar-h);
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            -webkit-app-region: drag;
+            flex-shrink: 0;
+            padding: 0 0 0 14px;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        #titlebar .brand {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--accent-blue);
+            opacity: 0.9;
+        }
+
+        #titlebar .session-count {
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 2px 7px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+        }
+
+        .titlebar-spacer { flex: 1; }
+
+        .win-controls {
+            display: flex;
+            -webkit-app-region: no-drag;
+            height: 100%;
+        }
+
+        .win-controls button {
+            width: 46px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.1s;
+            color: var(--text-secondary);
+        }
+
+        .win-controls button:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .win-controls button.close:hover {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        .win-controls svg {
+            width: 11px;
+            height: 11px;
+            stroke: currentColor;
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        /* ─────────────────────────────────────────────────────
+           Main layout: sidebar + terminal area
+           ───────────────────────────────────────────────────── */
+        #app {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ─── Sidebar ─── */
+        #sidebar {
+            width: var(--sidebar-w);
+            min-width: var(--sidebar-w);
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .side-header {
+            padding: 10px 12px 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .side-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            flex: 1;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 2px;
+        }
+
+        .mode-btn {
+            padding: 3px 5px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 24px;
+            transition: all 0.15s;
+        }
+
+        .mode-btn:hover { background: var(--bg-hover); }
+
+        .mode-btn.active {
+            border-color: var(--accent-blue);
+            background: rgba(91, 110, 247, 0.12);
+            color: var(--accent-blue);
+        }
+
+        .mode-btn svg {
+            width: 13px;
+            height: 13px;
+            stroke: currentColor;
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        .btn-new {
+            padding: 3px 10px;
+            border-radius: var(--radius-sm);
+            background: var(--accent-blue);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            transition: opacity 0.15s;
+        }
+
+        .btn-new:hover { opacity: 0.85; }
+
+        .session-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+
+        .session-list::-webkit-scrollbar { width: 4px; }
+        .session-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        .session-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: background 0.12s, border-color 0.12s;
+        }
+
+        .session-item:hover { background: var(--bg-hover); }
+
+        .session-item.active {
+            background: var(--bg-elevated);
+            border-left-color: var(--accent-blue);
+        }
+
+        .session-name {
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .session-meta {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            margin-right: 5px;
+            flex-shrink: 0;
+        }
+
+        .kill-btn {
+            padding: 1px 5px;
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1;
+            transition: color 0.15s;
+        }
+
+        .kill-btn:hover { color: var(--accent-red); }
+
+        .side-empty {
+            padding: 24px 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* ─── Main terminal area ─── */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg-base);
+        }
+
+        /* Focused view: stack of abs-positioned panes */
+        .term-stack {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .focused-pane {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .focused-pane.hidden {
+            visibility: hidden;
+        }
+
+        /* Grid view */
+        .term-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
+            gap: 3px;
+            padding: 3px;
+            overflow: auto;
+            align-content: start;
+        }
+
+        .grid-cell {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            min-height: 260px;
+            background: var(--bg-base);
+        }
+
+        .grid-cell.active {
+            border: 2px solid var(--accent-blue);
+            box-shadow: 0 0 16px rgba(91, 110, 247, 0.1);
+        }
+
+        .grid-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            gap: 6px;
+        }
+
+        .grid-header-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .grid-header-label .shell-name { font-weight: 600; color: var(--text-primary); }
+
+        .grid-header-label .cwd {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-muted);
+        }
+
+        .grid-header-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .grid-max-btn {
+            padding: 1px 5px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .grid-max-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
+
+        .term-container {
+            flex: 1;
+            padding: 2px 0 0 2px;
+            overflow: hidden;
+        }
+
+        /* ─── Status bar ─── */
+        #statusbar {
+            padding: 5px 14px;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .status-kill-btn {
+            padding: 2px 8px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            font-size: 11px;
+            font-weight: 600;
+            transition: background 0.15s;
+        }
+
+        .status-kill-btn:hover { background: rgba(239, 84, 102, 0.12); }
+
+        /* ─── Empty state ─── */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 52px;
+            opacity: 0.1;
+            font-family: var(--mono);
+        }
+
+        .empty-msg { font-size: 13px; }
+
+        /* ─── Resize handles (frameless) ─── */
+        .rh { position: fixed; z-index: 200; }
+        .rh.n  { top:0; left:8px; right:8px; height:6px; cursor:ns-resize; }
+        .rh.s  { bottom:0; left:8px; right:8px; height:6px; cursor:ns-resize; }
+        .rh.e  { top:8px; right:0; bottom:8px; width:6px; cursor:ew-resize; }
+        .rh.w  { top:8px; left:0; bottom:8px; width:6px; cursor:ew-resize; }
+        .rh.nw { top:0; left:0; width:8px; height:8px; cursor:nwse-resize; }
+        .rh.ne { top:0; right:0; width:8px; height:8px; cursor:nesw-resize; }
+        .rh.sw { bottom:0; left:0; width:8px; height:8px; cursor:nesw-resize; }
+        .rh.se { bottom:0; right:0; width:8px; height:8px; cursor:nwse-resize; }
+
+        /* Keyboard hint badge */
+        .kbd {
+            font-size: 9px;
+            padding: 1px 4px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-muted);
+            font-family: var(--mono);
+            margin-left: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Resize handles (frameless) -->
+<div class="rh n" data-dir="n"></div>
+<div class="rh s" data-dir="s"></div>
+<div class="rh e" data-dir="e"></div>
+<div class="rh w" data-dir="w"></div>
+<div class="rh nw" data-dir="nw"></div>
+<div class="rh ne" data-dir="ne"></div>
+<div class="rh sw" data-dir="sw"></div>
+<div class="rh se" data-dir="se"></div>
+
+<!-- Title bar -->
+<div id="titlebar">
+    <span class="brand">Termux</span>
+    <span class="session-count" id="session-count">0 sessions</span>
+    <span class="titlebar-spacer"></span>
+    <div class="win-controls">
+        <button id="btn-min" title="Minimize">
+            <svg viewBox="0 0 11 11"><line x1="1" y1="5.5" x2="10" y2="5.5"/></svg>
+        </button>
+        <button id="btn-max" title="Maximize">
+            <svg viewBox="0 0 11 11"><rect x="1" y="1" width="9" height="9" rx="1.5"/></svg>
+        </button>
+        <button id="btn-close" class="close" title="Close">
+            <svg viewBox="0 0 11 11"><line x1="1" y1="1" x2="10" y2="10"/><line x1="10" y1="1" x2="1" y2="10"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- App layout -->
+<div id="app">
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="side-header">
+            <span class="side-title">Terminals</span>
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="mode-focused" title="Focused view">
+                    <svg viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" rx="2"/></svg>
+                </button>
+                <button class="mode-btn" id="mode-grid" title="Grid view">
+                    <svg viewBox="0 0 14 14">
+                        <rect x="1" y="1" width="5" height="5" rx="1"/>
+                        <rect x="8" y="1" width="5" height="5" rx="1"/>
+                        <rect x="1" y="8" width="5" height="5" rx="1"/>
+                        <rect x="8" y="8" width="5" height="5" rx="1"/>
+                    </svg>
+                </button>
+            </div>
+            <button class="btn-new" id="btn-new" title="New terminal (Ctrl+T)">+ New</button>
+        </div>
+        <div class="session-list" id="session-list"></div>
+    </div>
+
+    <!-- Main area -->
+    <div id="main"></div>
+</div>
+
+<!-- Status bar -->
+<div id="statusbar" style="display:none">
+    <span id="status-info"></span>
+    <button class="status-kill-btn" id="status-kill">Kill</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// Termux Client — vanilla JS, no build step
+// ═══════════════════════════════════════════════════════════════════
+
+(() => {
+    "use strict";
+
+    // ── State ─────────────────────────────────────────────────
+    const sessions = new Map();          // id → { info, term, fit, container, lineBuffer }
+    let activeId = null;
+    let viewMode = "focused";            // "focused" | "grid"
+
+    // Output cache — persists across view rebuilds
+    const outputCache = new Map();       // id → Uint8Array[]
+    const MAX_CACHE = 512 * 1024;
+
+    function cacheOutput(id, data) {
+        let chunks = outputCache.get(id);
+        if (!chunks) { chunks = []; outputCache.set(id, chunks); }
+        chunks.push(new Uint8Array(data));
+        let total = chunks.reduce((s, c) => s + c.length, 0);
+        while (total > MAX_CACHE && chunks.length > 1) {
+            total -= chunks.shift().length;
+        }
+    }
+
+    function replayCache(id, term) {
+        const chunks = outputCache.get(id);
+        if (chunks) chunks.forEach(c => term.write(c));
+    }
+
+    // ── DOM refs ─────────────────────────────────────────────
+    const $main       = document.getElementById("main");
+    const $list       = document.getElementById("session-list");
+    const $statusbar  = document.getElementById("statusbar");
+    const $statusInfo = document.getElementById("status-info");
+    const $count      = document.getElementById("session-count");
+
+    // ── Global hooks called from Python ───────────────────────
+    window.__termux_onData = (sessionId, b64) => {
+        const entry = sessions.get(sessionId);
+        if (!entry) return;
+        const raw = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        cacheOutput(sessionId, raw);
+        entry.term.write(raw);
+    };
+
+    window.__termux_onExit = (sessionId) => {
+        const entry = sessions.get(sessionId);
+        if (!entry) return;
+        entry.info.status = "exited";
+        entry.term.write("\r\n\x1b[90m[Session ended]\x1b[0m\r\n");
+        renderSidebar();
+    };
+
+    // ── Pytonium ready gate ──────────────────────────────────
+    function onReady() {
+        // Wire window controls
+        document.getElementById("btn-min").addEventListener("click", () => Pytonium.win.minimize());
+        document.getElementById("btn-max").addEventListener("click", () => Pytonium.win.maximize());
+        document.getElementById("btn-close").addEventListener("click", () => Pytonium.win.close());
+
+        // New terminal
+        document.getElementById("btn-new").addEventListener("click", createTerminal);
+
+        // View mode toggle
+        document.getElementById("mode-focused").addEventListener("click", () => setViewMode("focused"));
+        document.getElementById("mode-grid").addEventListener("click", () => setViewMode("grid"));
+
+        // Status bar kill
+        document.getElementById("status-kill").addEventListener("click", () => {
+            if (activeId) killTerminal(activeId);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener("keydown", (e) => {
+            if (e.ctrlKey && e.key === "t") { e.preventDefault(); createTerminal(); }
+            if (e.ctrlKey && e.key === "w") { e.preventDefault(); if (activeId) killTerminal(activeId); }
+        });
+
+        // Resize handles
+        setupResizeHandles();
+
+        // Load existing sessions
+        loadSessions();
+    }
+
+    if (window.PytoniumReady) onReady();
+    else window.addEventListener("PytoniumReady", onReady);
+
+    // ── Session management ───────────────────────────────────
+
+    async function loadSessions() {
+        const list = await Pytonium.terminal.list();
+        if (list && list.length > 0) {
+            for (const info of list) {
+                mountSession(info);
+            }
+            setActive(list[0].id);
+        }
+        renderAll();
+    }
+
+    async function createTerminal() {
+        const info = await Pytonium.terminal.create("", 80, 24);
+        if (info.error) {
+            console.error("Failed to create terminal:", info.error);
+            return;
+        }
+        mountSession(info);
+        setActive(info.id);
+        renderAll();
+    }
+
+    async function killTerminal(id) {
+        await Pytonium.terminal.kill(id);
+        const entry = sessions.get(id);
+        if (entry) {
+            entry.term.dispose();
+        }
+        sessions.delete(id);
+        outputCache.delete(id);
+
+        if (activeId === id) {
+            const remaining = [...sessions.keys()];
+            setActive(remaining.length > 0 ? remaining[0] : null);
+        }
+        renderAll();
+    }
+
+    function mountSession(info) {
+        // Create xterm instance
+        const term = new Terminal({
+            cursorBlink: true,
+            fontSize: 13,
+            fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace",
+            theme: {
+                background:       "#08090d",
+                foreground:       "#c8cdd8",
+                cursor:           "#5b6ef7",
+                selectionBackground: "rgba(91,110,247,0.25)",
+                black: "#08090d",   red: "#e06070",     green: "#7ecf6a",
+                yellow: "#e0a84c",  blue: "#5b6ef7",    magenta: "#b07af7",
+                cyan: "#5cc9d0",    white: "#c8cdd8",
+                brightBlack: "#4a5070", brightRed: "#e88090", brightGreen: "#98df8a",
+                brightYellow: "#f0c87c", brightBlue: "#9aaefc", brightMagenta: "#c89af7",
+                brightCyan: "#7cd9e0",   brightWhite: "#e8edf8",
+            },
+            allowProposedApi: true,
+        });
+
+        const fit = new FitAddon.FitAddon();
+        const links = new WebLinksAddon.WebLinksAddon();
+        term.loadAddon(fit);
+        term.loadAddon(links);
+
+        // Line buffer for pipe mode
+        const lineBuffer = { value: "" };
+
+        // Wire input
+        term.onData((data) => {
+            if (info.mode === "pipe") {
+                // Local echo + line buffering
+                for (const ch of data) {
+                    if (ch === "\r") {
+                        term.write("\r\n");
+                        Pytonium.terminal.write(info.id, lineBuffer.value + "\r\n");
+                        lineBuffer.value = "";
+                    } else if (ch === "\x7f" || ch === "\b") {
+                        if (lineBuffer.value.length > 0) {
+                            lineBuffer.value = lineBuffer.value.slice(0, -1);
+                            term.write("\b \b");
+                        }
+                    } else if (ch === "\x03") {
+                        lineBuffer.value = "";
+                        term.write("^C\r\n");
+                        Pytonium.terminal.write(info.id, "\x03");
+                    } else if (ch === "\x04") {
+                        Pytonium.terminal.write(info.id, "\x04");
+                    } else if (ch >= " " || ch === "\t") {
+                        lineBuffer.value += ch;
+                        term.write(ch);
+                    }
+                }
+            } else {
+                // PTY mode — send raw
+                Pytonium.terminal.write(info.id, data);
+            }
+        });
+
+        sessions.set(info.id, { info, term, fit, container: null, lineBuffer });
+    }
+
+    // ── View rendering ───────────────────────────────────────
+
+    function renderAll() {
+        renderSidebar();
+        renderMain();
+        updateCount();
+        updateStatusBar();
+    }
+
+    function updateCount() {
+        const n = sessions.size;
+        $count.textContent = `${n} session${n !== 1 ? "s" : ""}`;
+    }
+
+    function renderSidebar() {
+        $list.innerHTML = "";
+        if (sessions.size === 0) {
+            $list.innerHTML = `<div class="side-empty">No terminals open.<br><span class="kbd">Ctrl+T</span> to create one.</div>`;
+            return;
+        }
+
+        for (const [id, entry] of sessions) {
+            const isActive = id === activeId;
+            const isRunning = entry.info.status === "running";
+            const shell = (entry.info.shell || "shell").split(/[/\\]/).pop();
+
+            const el = document.createElement("div");
+            el.className = "session-item" + (isActive ? " active" : "");
+            el.innerHTML = `
+                <div class="session-name">
+                    <span>
+                        <span class="status-dot" style="background:${isRunning ? "var(--accent-green)" : "var(--text-muted)"}"></span>
+                        ${shell} #${id}
+                    </span>
+                    <button class="kill-btn" title="Kill terminal">&times;</button>
+                </div>
+                <div class="session-meta">${entry.info.working_dir}</div>
+            `;
+
+            el.addEventListener("click", () => { setActive(id); renderAll(); });
+            el.addEventListener("dblclick", () => { setActive(id); setViewMode("focused"); });
+            el.querySelector(".kill-btn").addEventListener("click", (e) => {
+                e.stopPropagation();
+                killTerminal(id);
+            });
+
+            $list.appendChild(el);
+        }
+    }
+
+    function renderMain() {
+        // Detach all xterm instances from DOM (without disposing them)
+        for (const [, entry] of sessions) {
+            entry.container = null;
+        }
+        $main.innerHTML = "";
+
+        if (sessions.size === 0) {
+            $main.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">&gt;_</div>
+                    <div class="empty-msg">No terminals open</div>
+                    <button class="btn-new" style="font-size:13px;padding:6px 16px;" onclick="document.getElementById('btn-new').click()">
+                        Create Terminal
+                    </button>
+                </div>
+            `;
+            $statusbar.style.display = "none";
+            return;
+        }
+
+        if (viewMode === "focused") {
+            renderFocusedView();
+        } else {
+            renderGridView();
+        }
+    }
+
+    function renderFocusedView() {
+        const stack = document.createElement("div");
+        stack.className = "term-stack";
+
+        for (const [id, entry] of sessions) {
+            const pane = document.createElement("div");
+            pane.className = "focused-pane" + (id !== activeId ? " hidden" : "");
+
+            const container = document.createElement("div");
+            container.className = "term-container";
+            pane.appendChild(container);
+            stack.appendChild(pane);
+
+            entry.container = container;
+        }
+
+        $main.appendChild(stack);
+        $statusbar.style.display = "flex";
+
+        // Open & fit xterm instances
+        requestAnimationFrame(() => {
+            for (const [id, entry] of sessions) {
+                if (entry.container) {
+                    openTermInContainer(entry);
+                }
+            }
+        });
+    }
+
+    function renderGridView() {
+        const grid = document.createElement("div");
+        grid.className = "term-grid";
+
+        for (const [id, entry] of sessions) {
+            const isActive = id === activeId;
+            const isRunning = entry.info.status === "running";
+            const shell = (entry.info.shell || "shell").split(/[/\\]/).pop();
+
+            const cell = document.createElement("div");
+            cell.className = "grid-cell" + (isActive ? " active" : "");
+
+            const header = document.createElement("div");
+            header.className = "grid-header";
+            header.innerHTML = `
+                <div class="grid-header-label">
+                    <span class="status-dot" style="background:${isRunning ? "var(--accent-green)" : "var(--text-muted)"}"></span>
+                    <span class="shell-name">${shell} #${id}</span>
+                    <span class="cwd">${entry.info.working_dir}</span>
+                </div>
+                <div class="grid-header-actions">
+                    <button class="grid-max-btn" title="Maximize">&#9634;</button>
+                    <button class="kill-btn" style="color:var(--accent-red)" title="Kill">&times;</button>
+                </div>
+            `;
+
+            header.addEventListener("click", () => { setActive(id); renderAll(); });
+            header.querySelector(".grid-max-btn").addEventListener("click", (e) => {
+                e.stopPropagation();
+                setActive(id);
+                setViewMode("focused");
+            });
+            header.querySelector(".kill-btn").addEventListener("click", (e) => {
+                e.stopPropagation();
+                killTerminal(id);
+            });
+
+            const container = document.createElement("div");
+            container.className = "term-container";
+            container.addEventListener("click", () => { setActive(id); entry.term.focus(); });
+
+            cell.appendChild(header);
+            cell.appendChild(container);
+            grid.appendChild(cell);
+
+            entry.container = container;
+        }
+
+        $main.appendChild(grid);
+        $statusbar.style.display = "none";
+
+        requestAnimationFrame(() => {
+            for (const [, entry] of sessions) {
+                if (entry.container) {
+                    openTermInContainer(entry);
+                }
+            }
+        });
+    }
+
+    function openTermInContainer(entry) {
+        const { term, fit, container, info } = entry;
+        // If xterm is already open somewhere, we need to reopen it
+        // (xterm.js doesn't support reparenting)
+        if (term._core) {
+            // Already opened — try to reattach by recreating
+            // xterm doesn't support this natively, so we use a trick:
+            // dispose and recreate the Terminal, replaying cache
+            const newTerm = new Terminal(term.options);
+            const newFit = new FitAddon.FitAddon();
+            const links = new WebLinksAddon.WebLinksAddon();
+            newTerm.loadAddon(newFit);
+            newTerm.loadAddon(links);
+
+            // Copy input handler
+            newTerm.onData((data) => {
+                if (info.mode === "pipe") {
+                    for (const ch of data) {
+                        if (ch === "\r") {
+                            newTerm.write("\r\n");
+                            Pytonium.terminal.write(info.id, entry.lineBuffer.value + "\r\n");
+                            entry.lineBuffer.value = "";
+                        } else if (ch === "\x7f" || ch === "\b") {
+                            if (entry.lineBuffer.value.length > 0) {
+                                entry.lineBuffer.value = entry.lineBuffer.value.slice(0, -1);
+                                newTerm.write("\b \b");
+                            }
+                        } else if (ch === "\x03") {
+                            entry.lineBuffer.value = "";
+                            newTerm.write("^C\r\n");
+                            Pytonium.terminal.write(info.id, "\x03");
+                        } else if (ch === "\x04") {
+                            Pytonium.terminal.write(info.id, "\x04");
+                        } else if (ch >= " " || ch === "\t") {
+                            entry.lineBuffer.value += ch;
+                            newTerm.write(ch);
+                        }
+                    }
+                } else {
+                    Pytonium.terminal.write(info.id, data);
+                }
+            });
+
+            // Dispose old term
+            try { term.dispose(); } catch(e) {}
+
+            entry.term = newTerm;
+            entry.fit = newFit;
+
+            newTerm.open(container);
+            replayCache(info.id, newTerm);
+            requestAnimationFrame(() => {
+                newFit.fit();
+                if (info.id === activeId) newTerm.focus();
+                // Notify Python of new size
+                Pytonium.terminal.resize(info.id, newTerm.cols, newTerm.rows);
+            });
+
+            // Observe resize
+            const ro = new ResizeObserver(() => {
+                requestAnimationFrame(() => {
+                    newFit.fit();
+                    Pytonium.terminal.resize(info.id, newTerm.cols, newTerm.rows);
+                });
+            });
+            ro.observe(container);
+            entry._resizeObserver = ro;
+
+        } else {
+            // First open
+            term.open(container);
+            replayCache(info.id, term);
+
+            if (info.mode === "pipe") {
+                term.write("\x1b[90m[Pipe mode \u2014 local echo enabled]\x1b[0m\r\n");
+            }
+
+            requestAnimationFrame(() => {
+                fit.fit();
+                if (info.id === activeId) term.focus();
+                Pytonium.terminal.resize(info.id, term.cols, term.rows);
+            });
+
+            const ro = new ResizeObserver(() => {
+                requestAnimationFrame(() => {
+                    fit.fit();
+                    Pytonium.terminal.resize(info.id, term.cols, term.rows);
+                });
+            });
+            ro.observe(container);
+            entry._resizeObserver = ro;
+        }
+    }
+
+    function setActive(id) {
+        activeId = id;
+        updateStatusBar();
+
+        // In focused view, toggle visibility
+        if (viewMode === "focused") {
+            for (const pane of document.querySelectorAll(".focused-pane")) {
+                pane.classList.add("hidden");
+            }
+            // Find the pane for the active session
+            const panes = document.querySelectorAll(".focused-pane");
+            let idx = 0;
+            for (const [sid] of sessions) {
+                if (sid === id && panes[idx]) {
+                    panes[idx].classList.remove("hidden");
+                    const entry = sessions.get(sid);
+                    if (entry) {
+                        requestAnimationFrame(() => {
+                            entry.fit.fit();
+                            entry.term.focus();
+                        });
+                    }
+                }
+                idx++;
+            }
+        }
+
+        renderSidebar();
+    }
+
+    function setViewMode(mode) {
+        viewMode = mode;
+        document.getElementById("mode-focused").classList.toggle("active", mode === "focused");
+        document.getElementById("mode-grid").classList.toggle("active", mode === "grid");
+        renderMain();
+        renderSidebar();
+        updateStatusBar();
+    }
+
+    function updateStatusBar() {
+        if (viewMode !== "focused" || !activeId) {
+            $statusbar.style.display = "none";
+            return;
+        }
+        const entry = sessions.get(activeId);
+        if (!entry) { $statusbar.style.display = "none"; return; }
+        $statusbar.style.display = "flex";
+        const mode = entry.info.mode === "pty" ? "PTY" : "PIPE";
+        $statusInfo.textContent = `${mode} · ${entry.info.shell} · ${entry.info.working_dir}`;
+    }
+
+    // ── Resize handles (frameless window) ────────────────────
+
+    function setupResizeHandles() {
+        const anchors = { n:2, s:0, e:0, w:1, nw:3, ne:2, sw:1, se:0 };
+
+        document.querySelectorAll(".rh").forEach(handle => {
+            const dir = handle.dataset.dir;
+            let startX, startY, startW, startH;
+
+            handle.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                startX = e.screenX;
+                startY = e.screenY;
+                startW = window.outerWidth;
+                startH = window.outerHeight;
+
+                const onMove = (ev) => {
+                    let dw = 0, dh = 0;
+                    if (dir.includes("e")) dw = ev.screenX - startX;
+                    if (dir.includes("w")) dw = startX - ev.screenX;
+                    if (dir.includes("s")) dh = ev.screenY - startY;
+                    if (dir.includes("n")) dh = startY - ev.screenY;
+                    const nw = Math.max(600, startW + dw);
+                    const nh = Math.max(400, startH + dh);
+                    Pytonium.win.resize(nw, nh, anchors[dir]);
+                };
+
+                const onUp = () => {
+                    document.removeEventListener("mousemove", onMove);
+                    document.removeEventListener("mouseup", onUp);
+                };
+
+                document.addEventListener("mousemove", onMove);
+                document.addEventListener("mouseup", onUp);
+            });
+        });
+    }
+
+})();
+</script>
+</body>
+</html>

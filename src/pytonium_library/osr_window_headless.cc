@@ -14,7 +14,7 @@ OsrWindowHeadless::OsrWindowHeadless(int width, int height)
             std::memset(m_Buffer, 0, static_cast<size_t>(m_Width) * m_Height * 4);
         }
     }
-    LOG_INFO("OsrWindowHeadless created: %dx%d", m_Width, m_Height);
+    //LOG_INFO("OsrWindowHeadless created: %dx%d", m_Width, m_Height);
 }
 
 OsrWindowHeadless::~OsrWindowHeadless() {
@@ -22,7 +22,7 @@ OsrWindowHeadless::~OsrWindowHeadless() {
         std::free(m_Buffer);
         m_Buffer = nullptr;
     }
-    LOG_INFO("OsrWindowHeadless destroyed");
+    //LOG_INFO("OsrWindowHeadless destroyed");
 }
 
 void OsrWindowHeadless::SetBrowser(CefRefPtr<CefBrowser> browser) {
@@ -37,7 +37,7 @@ void OsrWindowHeadless::SetPaintCallback(headless_paint_callback_ptr callback,
 
 void OsrWindowHeadless::SetSize(int width, int height) {
     if (width <= 0 || height <= 0) {
-        LOG_WARNING("OsrWindowHeadless::SetSize: invalid size %dx%d", width, height);
+        //LOG_WARNING("OsrWindowHeadless::SetSize: invalid size %dx%d", width, height);
         return;
     }
     if (width == m_Width && height == m_Height) {
@@ -62,7 +62,7 @@ void OsrWindowHeadless::SetSize(int width, int height) {
         m_Browser->GetHost()->WasResized();
     }
 
-    LOG_INFO("OsrWindowHeadless resized: %dx%d", m_Width, m_Height);
+    //LOG_INFO("OsrWindowHeadless resized: %dx%d", m_Width, m_Height);
 }
 
 void OsrWindowHeadless::GetViewRect(CefRefPtr<CefBrowser> browser,

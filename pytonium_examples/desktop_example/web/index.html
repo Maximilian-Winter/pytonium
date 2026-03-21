@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Windows 11 Pytonium Overlay</title>
+    <style>
+        /* (Previous CSS variables and base styles remain the same) */
+        :root {
+            --bg-image: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop');
+            --glass-bg: rgba(243, 243, 243, 0.85); --glass-border: rgba(255, 255, 255, 0.5);
+            --window-bg: #ffffff; --text-main: #000000; --text-secondary: #666666;
+            --hover-bg: rgba(255, 255, 255, 0.5); --taskbar-bg: rgba(243, 243, 243, 0.9);
+            --start-menu-bg: rgba(243, 243, 243, 0.95);
+        }
+        body.dark-mode {
+            --bg-image: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2670&auto=format&fit=crop');
+            --glass-bg: rgba(32, 32, 32, 0.85); --glass-border: rgba(255, 255, 255, 0.1);
+            --window-bg: #202020; --text-main: #ffffff; --text-secondary: #cccccc;
+            --hover-bg: rgba(255, 255, 255, 0.1); --taskbar-bg: rgba(32, 32, 32, 0.9);
+            --start-menu-bg: rgba(32, 32, 32, 0.95);
+        }
+        * { box-sizing: border-box; user-select: none; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; overflow: hidden; height: 100vh; background: var(--bg-image) no-repeat center center fixed; background-size: cover; color: var(--text-main); }
+        #desktop { height: calc(100vh - 48px); padding: 10px; display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; }
+        .desktop-icon { width: 74px; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 5px; border-radius: 4px; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.5); cursor: pointer; }
+        .desktop-icon:hover { background: rgba(255, 255, 255, 0.1); }
+        .desktop-icon img { width: 40px; height: 40px; margin-bottom: 5px; }
+        .desktop-icon span { font-size: 12px; text-align: center; }
+
+        /* Window & Taskbar CSS */
+        .window { position: absolute; background-color: var(--window-bg); border-radius: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.25), 0 0 0 1px var(--glass-border); display: flex; flex-direction: column; min-width: 450px; min-height: 300px; animation: popIn 0.2s cubic-bezier(0.1, 0.9, 0.2, 1); resize: both; overflow: hidden; }
+        @keyframes popIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .title-bar { height: 32px; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; border-bottom: 1px solid var(--glass-border); }
+        .title-bar-text { font-size: 12px; font-weight: 600; }
+        .window-controls { display: flex; gap: 10px; }
+        .control-btn { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
+        .close-btn { background: #ff5f57; }
+        .window-content { flex: 1; padding: 0; display: flex; flex-direction: column; overflow: hidden; color: var(--text-main); }
+
+        /* File Explorer Specific CSS */
+        .explorer-toolbar { padding: 8px; background: var(--hover-bg); border-bottom: 1px solid var(--glass-border); font-size: 12px; display: flex; gap: 10px; align-items: center; }
+        .path-input { flex: 1; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--glass-border); background: var(--window-bg); color: var(--text-main); font-family: inherit; }
+        .explorer-grid { flex: 1; padding: 10px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; align-content: start; }
+        .file-item { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 11px; word-break: break-all; }
+        .file-item:hover { background: var(--hover-bg); }
+        .file-icon { font-size: 24px; margin-bottom: 5px; }
+
+        /* Start Menu & Taskbar */
+        #start-menu { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%) translateY(150%); width: 400px; background: var(--start-menu-bg); backdrop-filter: blur(20px); border-radius: 8px; border: 1px solid var(--glass-border); opacity: 0; z-index: 1000; display: flex; flex-direction: column; padding: 24px; transition: 0.3s; }
+        #start-menu.active { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .app-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .app-item { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px; border-radius: 4px; cursor: pointer; }
+        .app-item:hover { background: var(--hover-bg); }
+        .app-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; background: #0078d4; }
+        .app-name { font-size: 11px; }
+
+        #taskbar { position: fixed; bottom: 0; width: 100%; height: 48px; background: var(--taskbar-bg); backdrop-filter: blur(20px); display: flex; justify-content: center; align-items: center; z-index: 2000; border-top: 1px solid var(--glass-border); }
+        .taskbar-icons { display: flex; gap: 8px; height: 100%; align-items: center; }
+        .taskbar-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; }
+        .taskbar-icon:hover { background: var(--hover-bg); }
+        .sys-tray { position: absolute; right: 0; height: 100%; display: flex; align-items: center; padding-right: 15px; font-size: 12px; gap: 10px; }
+        .clock { display: flex; flex-direction: column; align-items: flex-end; padding: 0 10px; }
+    </style>
+</head>
+<body>
+
+<div id="desktop">
+    <div class="desktop-icon" onclick="openFileExplorer()">
+        <img src="https://img.icons8.com/color/48/000000/folder-invoices--v1.png" alt="Explorer">
+        <span>File Explorer</span>
+    </div>
+</div>
+
+<div id="start-menu">
+    <div class="app-grid">
+        <div class="app-item" onclick="openFileExplorer()">
+            <div class="app-icon">📁</div><span class="app-name">Explorer</span>
+        </div>
+        <div class="app-item" onclick="if(window.Pytonium) Pytonium.win.close()">
+            <div class="app-icon" style="background:#d83b01;">⏻</div><span class="app-name">Shut Down</span>
+        </div>
+    </div>
+</div>
+
+<div id="taskbar">
+    <div class="taskbar-icons">
+        <div class="taskbar-icon" onclick="document.getElementById('start-menu').classList.toggle('active')">
+            <img src="https://img.icons8.com/fluency/48/000000/windows-11.png" alt="Start">
+        </div>
+    </div>
+    <div class="sys-tray">
+        <div class="clock" id="clock">
+            <span id="time">Loading...</span>
+            <span id="date">--/--/----</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Pytonium State Initialization
+    document.addEventListener("PytoniumReady", () => {
+        Pytonium.registerForStateUpdates("system", "time", val => document.getElementById('time').textContent = val);
+        Pytonium.registerForStateUpdates("system", "date", val => document.getElementById('date').textContent = val);
+    });
+
+    // --- File Explorer Logic ---
+    let zIndex = 100;
+
+    async function openFileExplorer(path = null) {
+        document.getElementById('start-menu').classList.remove('active');
+
+        // 1. Create the Window UI
+        const windowId = 'explorer-' + Date.now();
+        const windowDiv = document.createElement('div');
+        windowDiv.classList.add('window');
+        windowDiv.id = windowId;
+        windowDiv.style.zIndex = ++zIndex;
+        windowDiv.style.top = (50 + Math.random() * 50) + 'px';
+        windowDiv.style.left = (50 + Math.random() * 100) + 'px';
+
+        windowDiv.innerHTML = `
+                <div class="title-bar" onmousedown="dragMouseDown(event, this.parentElement)">
+                    <span class="title-bar-text">File Explorer</span>
+                    <div class="window-controls">
+                        <div class="control-btn close-btn" onclick="this.closest('.window').remove()"></div>
+                    </div>
+                </div>
+                <div class="window-content">
+                    <div class="explorer-toolbar">
+                        <button onclick="loadDirectory('${windowId}', null)">🏠 Home</button>
+                        <input type="text" class="path-input" id="path-${windowId}" readonly>
+                    </div>
+                    <div class="explorer-grid" id="grid-${windowId}">
+                        Loading...
+                    </div>
+                </div>
+            `;
+
+        windowDiv.addEventListener('mousedown', () => windowDiv.style.zIndex = ++zIndex);
+        document.getElementById('desktop').appendChild(windowDiv);
+
+        // 2. Fetch data via Pytonium Binding
+        loadDirectory(windowId, path);
+    }
+
+    // The async function that calls Python
+    async function loadDirectory(windowId, path) {
+        const grid = document.getElementById(`grid-${windowId}`);
+        const pathInput = document.getElementById(`path-${windowId}`);
+        grid.innerHTML = 'Loading data from Python...';
+
+        if (!window.data_api) {
+            grid.innerHTML = "Error: Pytonium data_api not connected.";
+            return;
+        }
+
+        // Call the bound Python method using promises
+        const result = await data_api.list_directory(path);
+
+        if (result.success) {
+            pathInput.value = result.current_path;
+            grid.innerHTML = '';
+
+            result.items.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'file-item';
+
+                const icon = item.is_dir ? '📁' : '📄';
+                const sizeLabel = item.size ? `<br><span style="opacity:0.6;font-size:9px">${item.size}</span>` : '';
+
+                el.innerHTML = `<div class="file-icon">${icon}</div><span>${item.name}</span>${sizeLabel}`;
+
+                // Allow navigating into directories
+                if(item.is_dir) {
+                    el.ondblclick = () => {
+                        // Simple path concatenation (works for most OSs in a prototype)
+                        const separator = result.current_path.includes('\\') ? '\\' : '/';
+                        const newPath = result.current_path.endsWith(separator) ?
+                            result.current_path + item.name :
+                            result.current_path + separator + item.name;
+                        loadDirectory(windowId, newPath);
+                    };
+                }
+                grid.appendChild(el);
+            });
+        } else {
+            grid.innerHTML = `<span style="color:red">Error: ${result.error}</span>`;
+        }
+    }
+
+    // Basic Window Dragging
+    function dragMouseDown(e, elmnt) {
+        e.preventDefault();
+        let pos3 = e.clientX, pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+        function elementDrag(e) {
+            e.preventDefault();
+            elmnt.style.top = (elmnt.offsetTop - (pos4 - e.clientY)) + "px";
+            elmnt.style.left = (elmnt.offsetLeft - (pos3 - e.clientX)) + "px";
+            pos3 = e.clientX; pos4 = e.clientY;
+        }
+        function closeDragElement() { document.onmouseup = null; document.onmousemove = null; }
+    }
+</script>
+</body>
+</html>

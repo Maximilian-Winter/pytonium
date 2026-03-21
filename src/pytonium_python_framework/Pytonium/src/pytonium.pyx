@@ -402,8 +402,8 @@ cdef inline void _on_paint_callback(void* user_data, const void* buffer, int wid
     ONLY during the callback — callers should copy with bytes(buffer) or
     numpy.copy() if they need to retain it.
     """
+    cdef const unsigned char[:] buf_view = <const unsigned char[:width * height * 4]>(<const unsigned char*>buffer)
     try:
-        cdef const unsigned char[:] buf_view = <const unsigned char[:width * height * 4]>(<const unsigned char*>buffer)
         (<PytoniumPaintCallbackWrapper>user_data)(buf_view, width, height)
     except Exception:
         import traceback
