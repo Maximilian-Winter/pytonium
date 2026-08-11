@@ -10,7 +10,10 @@
       "Bash(cp:*)",
       "Bash(ls:*)",
       "Bash(echo:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Read(//h/cpp_dev/PytoniumDev/pytonium/src/pytonium_python_framework/**)",
+      "Bash(find H:/cpp_dev/PytoniumDev/pytonium/src/pytonium_python_framework/Pytonium/ -name pytonium_library.* -o -name *.pyd)",
+      "Bash(find \"H:/cpp_dev/PytoniumDev/pytonium/pytonium_examples\" -maxdepth 2 -name \"cache\" -type d -exec rm -rf {} +)"
     ]
   },
   "outputStyle": "jiuitian"
