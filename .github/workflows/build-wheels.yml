@@ -227,3 +227,31 @@ jobs:
         with:
           files: release-artifacts/*.whl
           generate_release_notes: true
+
+  pypi:
+    name: Publish PyPI release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/Pytonium
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pytonium-*-wheel-py${{ env.PYTHON_VERSION }}
+          path: dist
+          merge-multiple: true
+
+      - name: Publish wheels to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          print-hash: true
