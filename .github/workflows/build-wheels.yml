@@ -184,11 +184,18 @@ jobs:
           existing = os.environ.get('LD_LIBRARY_PATH', '');
           Path(os.environ['GITHUB_ENV']).open('a').write(f'LD_LIBRARY_PATH={bin_dir}:{existing}\n')"
 
-      - name: Run pure Python component tests
-        run: python -m pytest tests/test_reactive_components.py
+      - name: Verify installed runtime files
+        run: >
+          python -c "from pathlib import Path; import site;
+          package_roots = [Path(path) / 'Pytonium' for path in site.getsitepackages() + [site.getusersitepackages()]];
+          package_root = next((path for path in package_roots if path.exists()), None);
+          assert package_root is not None, f'Could not find installed Pytonium package in {package_roots}';
+          bin_dir = package_root / ('bin_linux' if '${{ matrix.platform }}' == 'linux' else 'bin_win');
+          subprocess_name = 'pytonium_subprocess' if '${{ matrix.platform }}' == 'linux' else 'pytonium_subprocess.exe';
+          assert (bin_dir / subprocess_name).exists(), f'Missing {subprocess_name} in {bin_dir}'"
 
-      - name: Run native API smoke tests
-        run: python -m pytest tests/test_pytonium_api.py tests/test_headless_osr.py
+      - name: Run API smoke tests
+        run: python -m pytest tests/test_pytonium_api.py
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4

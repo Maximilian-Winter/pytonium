@@ -56,8 +56,6 @@ void CefWrapperClientHandler::PlatformSubclassWindow(CefRefPtr<CefBrowser> brows
     // For frameless windows on Linux, remove window manager decorations
     // by setting _MOTIF_WM_HINTS. The browser process handler sets the
     // m_FramelessWindow flag via CefWrapperApp before browser creation.
-    // Check if this browser's state indicates it should be frameless.
-    auto& state = GetBrowserState(browser->GetIdentifier());
     // Note: frameless state is managed via CefWrapperApp; for windowed
     // (non-OSR) frameless browsers, we remove decorations here.
     ::Display* display = cef_get_xdisplay();
