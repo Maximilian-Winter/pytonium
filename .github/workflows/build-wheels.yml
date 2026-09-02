@@ -1,0 +1,222 @@
+name: Build Pytonium Wheels
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+    paths:
+      - 'CMakeLists.txt'
+      - 'src/**'
+      - 'cef-binaries-linux/**'
+      - 'cef-binaries-windows/**'
+      - 'building_pythonium_core/**'
+      - '.github/workflows/build-wheels.yml'
+  pull_request:
+    paths:
+      - 'CMakeLists.txt'
+      - 'src/**'
+      - 'cef-binaries-linux/**'
+      - 'cef-binaries-windows/**'
+      - 'building_pythonium_core/**'
+      - '.github/workflows/build-wheels.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wheels-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_TYPE: Release
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows wheel
+            os: windows-2022
+            platform: windows
+            cmake_build_dir: cmake-build-release
+            cef_distribution: cef_binary_145.0.26+g6ed7554+chromium-145.0.7632.110_windows64_minimal
+            cef_dir: cef-binaries-windows
+            artifact_name: pytonium-windows-wheel
+          - label: Linux wheel
+            os: ubuntu-24.04
+            platform: linux
+            cmake_build_dir: build_linux
+            cef_distribution: cef_binary_145.0.26+g6ed7554+chromium-145.0.7632.110_linux64_minimal
+            cef_dir: cef-binaries-linux
+            artifact_name: pytonium-linux-wheel
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            binutils \
+            cmake \
+            ninja-build \
+            libx11-dev \
+            libxext-dev \
+            libatk-bridge2.0-0 \
+            libasound2t64 \
+            libgbm1 \
+            libgtk-3-0 \
+            libnss3 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxrandr2
+
+      - name: Install Python build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build scikit-build cmake ninja Cython pytest
+
+      - name: Cache CEF binary distribution
+        id: cache-cef
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.cef_dir }}
+          key: cef-${{ matrix.cef_distribution }}
+
+      - name: Download CEF binary distribution
+        if: steps.cache-cef.outputs.cache-hit != 'true'
+        run: >
+          python -c "from pathlib import Path; import hashlib; import shutil; import tarfile; import urllib.parse; import urllib.request;
+          distribution = '${{ matrix.cef_distribution }}';
+          target = Path('${{ matrix.cef_dir }}');
+          filename = distribution + '.tar.bz2';
+          url = 'https://cef-builds.spotifycdn.com/' + urllib.parse.quote(filename, safe='/:');
+          print(f'Downloading {url}');
+          archive = Path(filename);
+          expected_sha1 = urllib.request.urlopen(url + '.sha1').read().decode().strip();
+          urllib.request.urlretrieve(url, archive);
+          archive_file = archive.open('rb');
+          actual_sha1 = hashlib.file_digest(archive_file, 'sha1').hexdigest();
+          archive_file.close();
+          assert actual_sha1 == expected_sha1, f'SHA1 mismatch: {actual_sha1} != {expected_sha1}';
+          archive_tar = tarfile.open(archive, 'r:bz2');
+          archive_tar.extractall('.');
+          archive_tar.close();
+          extracted = Path(distribution);
+          assert extracted.exists(), f'Extracted CEF directory not found: {extracted}';
+          shutil.rmtree(target, ignore_errors=True);
+          extracted.rename(target)"
+
+      - name: Verify CEF inputs
+        run: >
+          python -c "from pathlib import Path;
+          root = Path('${{ matrix.cef_dir }}');
+          required = ['cmake/FindCEF.cmake', 'include/cef_app.h', 'libcef_dll/CMakeLists.txt', 'Release/libcef.so' if '${{ matrix.platform }}' == 'linux' else 'Release/libcef.lib'];
+          missing = [item for item in required if not (root / item).exists()];
+          assert not missing, f'Missing CEF inputs in {root}: {missing}'"
+
+      - name: Cache native build directory
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.cmake_build_dir }}
+          key: ${{ runner.os }}-cmake-${{ env.PYTHON_VERSION }}-${{ hashFiles('CMakeLists.txt', 'src/pytonium_library/**', 'src/pytonium_subprocess/**', '.github/workflows/build-wheels.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-${{ env.PYTHON_VERSION }}-
+            ${{ runner.os }}-cmake-
+
+      - name: Configure native build
+        run: >
+          cmake -S . -B ${{ matrix.cmake_build_dir }}
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+          -DUSE_SANDBOX=OFF
+
+      - name: Build pytonium_subprocess
+        run: >
+          cmake --build ${{ matrix.cmake_build_dir }}
+          --target pytonium_subprocess
+          --config ${{ env.BUILD_TYPE }}
+          --parallel
+
+      - name: Prepare Python wheel inputs
+        run: >
+          python building_pythonium_core/prepare_build.py
+          --platform ${{ matrix.platform }}
+          --build-dir ${{ matrix.cmake_build_dir }}
+          --verbose
+
+      - name: Build wheel
+        working-directory: src/pytonium_python_framework
+        run: python -m build --wheel
+
+      - name: Install built wheel
+        run: >
+          python -c "from pathlib import Path; import subprocess; import sys;
+          wheels = sorted(Path('src/pytonium_python_framework/dist').glob('*.whl'));
+          assert len(wheels) == 1, wheels;
+          subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', str(wheels[0])])"
+
+      - name: Configure Linux CEF runtime path
+        if: runner.os == 'Linux'
+        run: >
+          python -c "from pathlib import Path; import os; import site;
+          site_paths = site.getsitepackages() + [site.getusersitepackages()];
+          candidates = [Path(path) / 'Pytonium' / 'bin_linux' for path in site_paths];
+          bin_dir = next((path for path in candidates if path.exists()), None);
+          assert bin_dir is not None, f'Could not find installed Pytonium/bin_linux in {site_paths}';
+          existing = os.environ.get('LD_LIBRARY_PATH', '');
+          Path(os.environ['GITHUB_ENV']).open('a').write(f'LD_LIBRARY_PATH={bin_dir}:{existing}\n')"
+
+      - name: Run pure Python component tests
+        run: python -m pytest tests/test_reactive_components.py
+
+      - name: Run native API smoke tests
+        run: python -m pytest tests/test_pytonium_api.py tests/test_headless_osr.py
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}-py${{ env.PYTHON_VERSION }}
+          path: src/pytonium_python_framework/dist/*.whl
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish GitHub release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pytonium-*-wheel-py${{ env.PYTHON_VERSION }}
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*.whl
+          generate_release_notes: true
