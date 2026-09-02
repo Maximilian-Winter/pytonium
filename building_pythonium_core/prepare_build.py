@@ -68,8 +68,10 @@ def sync_cpp_library(dry_run=False, verbose=False):
         return False
 
     if not dst.exists():
-        print(f"ERROR: Target directory not found: {dst}")
-        return False
+        if verbose:
+            print(f"Target directory not found: {dst}, creating")
+        if not dry_run:
+            dst.mkdir(parents=True, exist_ok=True)
 
     if verbose or dry_run:
         action = "Would sync" if dry_run else "Syncing"
@@ -143,6 +145,9 @@ def copy_cef_binaries(platform, base_src, base_dest, dry_run=False, verbose=Fals
     if not src_path.exists():
         print(f"WARNING: CEF binaries not found: {base_src}")
         return 0
+
+    if not dry_run:
+        dest_path.mkdir(parents=True, exist_ok=True)
 
     dirs_to_copy = ["cmake", "include", "libcef_dll"]
     total_copied = 0
@@ -470,7 +475,7 @@ Examples:
     print("Next step: Build the wheel with:")
     print(f"  cd {PYTHON_FRAMEWORK_DIR}")
     print(f"  python -m build --wheel")
-    print(f"  After build, install. For example: pip install dist/pytonium-0.0.13-cp313-cp313-win_amd64.whl --force-reinstall")
+    print("  After build, install. For example: pip install dist/pytonium-*.whl --force-reinstall")
     return 0
 
 
