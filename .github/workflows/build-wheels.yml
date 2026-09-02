@@ -171,7 +171,7 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: src/pytonium_python_framework
         run: |
-          python -m auditwheel repair dist/*.whl -w wheelhouse
+          LD_LIBRARY_PATH="$PWD/Pytonium/bin_linux:${LD_LIBRARY_PATH:-}" python -m auditwheel repair --exclude libcef.so dist/*.whl -w wheelhouse
           rm dist/*.whl
           mv wheelhouse/*.whl dist/
 
