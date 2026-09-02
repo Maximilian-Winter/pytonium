@@ -82,6 +82,7 @@ jobs:
             libxext-dev \
             libatk-bridge2.0-0 \
             libasound2t64 \
+            patchelf \
             libgbm1 \
             libgtk-3-0 \
             libnss3 \
@@ -92,7 +93,7 @@ jobs:
       - name: Install Python build dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install build scikit-build cmake ninja Cython pytest
+          python -m pip install build scikit-build cmake ninja Cython pytest auditwheel
 
       - name: Cache CEF binary distribution
         id: cache-cef
@@ -165,6 +166,14 @@ jobs:
       - name: Build wheel
         working-directory: src/pytonium_python_framework
         run: python -m build --wheel
+
+      - name: Repair Linux wheel for PyPI
+        if: runner.os == 'Linux'
+        working-directory: src/pytonium_python_framework
+        run: |
+          python -m auditwheel repair dist/*.whl -w wheelhouse
+          rm dist/*.whl
+          mv wheelhouse/*.whl dist/
 
       - name: Install built wheel
         run: >
