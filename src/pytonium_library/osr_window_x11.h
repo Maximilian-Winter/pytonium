@@ -5,12 +5,9 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/extensions/XShm.h>
 #include "include/cef_render_handler.h"
 #include "include/cef_browser.h"
-
-// Forward declaration for MIT-SHM
-struct _XShmSegmentInfo;
-typedef struct _XShmSegmentInfo XShmSegmentInfo;
 
 // X11 off-screen rendering window for transparent Pytonium windows on Linux.
 // Creates a 32-bit ARGB X11 window (requires a running compositor for transparency).
