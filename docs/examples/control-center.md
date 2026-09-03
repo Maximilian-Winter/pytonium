@@ -7,7 +7,7 @@ title: Control Center
 This example demonstrates a dashboard-style application with multiple panels, each displaying different data from Python. It showcases state management with multiple namespaces, context menus for panel-specific actions, and a multi-panel layout.
 
 !!! tip "Full Source"
-    This page provides a conceptual walkthrough with key code snippets. The complete source code is available in the [pytonium_examples repository](https://github.com/Maximilian-Winter/pytonium_examples).
+    This page provides a conceptual walkthrough with key code snippets. The complete source code is available in the main repository at [`pytonium_examples/pytonium_example_control_center`](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_control_center).
 
 ---
 

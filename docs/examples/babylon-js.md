@@ -7,7 +7,7 @@ title: 3D with Babylon.js
 This example demonstrates how to load and render 3D content in Pytonium using [Babylon.js](https://www.babylonjs.com/), with custom URL schemes for local asset loading and MIME type mapping for binary 3D model files.
 
 !!! tip "Full Source"
-    The complete source code is available in the [pytonium_examples repository](https://github.com/Maximilian-Winter/pytonium_examples).
+    The complete source code is available in the main repository at [`pytonium_examples/pytonium_example_babylon_js`](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_babylon_js).
 
 ---
 

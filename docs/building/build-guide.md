@@ -282,4 +282,4 @@ rm -rf _skbuild dist Pytonium.egg-info
 
 - **[Subprocess Build](subprocess.md)** -- Detailed subprocess build guide
 - **[Prepare Build Script](prepare-build.md)** -- Full `prepare_build.py` reference
-- **[Pytonium Examples](https://github.com/Maximilian-Winter/pytonium_examples)** -- Example applications
+- **[Pytonium Examples](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples)** -- Example applications

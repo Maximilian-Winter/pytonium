@@ -202,4 +202,4 @@ class ColorPickerSection(Component):
 ## Source Code
 
 The full example (~760 lines including CSS) is in the repository at
-[`pytonium_examples/pytonium_example_reactive/main.py`](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_reactive/main.py).
+[`pytonium_examples/pytonium_example_reactive/main.py`](https://github.com/Maximilian-Winter/pytonium/blob/master/pytonium_examples/pytonium_example_reactive/main.py).

@@ -6,12 +6,12 @@ title: Examples Overview
 
 These examples demonstrate Pytonium's capabilities, from basic windowing to full desktop applications. Each example is a standalone project you can clone and run.
 
-!!! tip "Examples Repository"
-    All example source code is available at **[github.com/Maximilian-Winter/pytonium_examples](https://github.com/Maximilian-Winter/pytonium_examples)**. Clone the repository to run any example locally.
+!!! tip "Examples Directory"
+    All example source code is available in **[pytonium/pytonium_examples](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples)**. Clone the main repository to run any example locally.
 
     ```bash
-    git clone https://github.com/Maximilian-Winter/pytonium_examples.git
-    cd pytonium_examples
+    git clone https://github.com/Maximilian-Winter/pytonium.git
+    cd pytonium/pytonium_examples
     ```
 
 ---

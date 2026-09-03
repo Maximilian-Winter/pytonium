@@ -7,7 +7,7 @@ title: Frameless Window
 This example demonstrates how to create a frameless window with a custom HTML/CSS titlebar, including drag regions and window control buttons (minimize, maximize, close).
 
 !!! tip "Full Source"
-    The complete source code is available in the [pytonium_examples repository](https://github.com/Maximilian-Winter/pytonium_examples).
+    The complete source code is available in the main repository at [`pytonium_examples/pytonium_example_frameless`](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_frameless).
 
 ---
 

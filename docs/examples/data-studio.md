@@ -7,7 +7,7 @@ title: Data Studio
 This example demonstrates a data analysis tool where Python handles data loading and processing while JavaScript provides an interactive UI for exploring results. It showcases the use of `@returns_value_to_javascript` for query-style interactions and state management for progress reporting.
 
 !!! tip "Full Source"
-    This page provides a conceptual walkthrough with key code snippets. The complete source code is available in the [pytonium_examples repository](https://github.com/Maximilian-Winter/pytonium_examples).
+    This page provides a conceptual walkthrough with key code snippets. The complete source code is available in the main repository at [`pytonium_examples/pytonium_example_data_studio`](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_data_studio).
 
 ---
 

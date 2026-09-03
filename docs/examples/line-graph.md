@@ -7,7 +7,7 @@ title: Real-Time Line Graph
 This example demonstrates real-time data visualization by pushing data points from Python via state management and rendering a live-updating line chart in JavaScript using the HTML Canvas API.
 
 !!! tip "Full Source"
-    The complete source code is available in the [pytonium_examples repository](https://github.com/Maximilian-Winter/pytonium_examples).
+    The complete source code is available in the main repository at [`pytonium_examples/pytonium_example_line_graph`](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_line_graph).
 
 ---
 

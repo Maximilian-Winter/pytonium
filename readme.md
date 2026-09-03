@@ -6,7 +6,7 @@ Pytonium embeds the [Chromium Embedded Framework](https://bitbucket.org/chromium
 
 [![PyPI](https://img.shields.io/pypi/v/Pytonium)](https://pypi.org/project/Pytonium/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Maximilian-Winter/pytonium/blob/master/LICENSE)
 
 ## Install
 
@@ -78,16 +78,16 @@ async function callPython() {
 
 ## Examples
 
-Complete examples are included in the [`pytonium_examples/`](pytonium_examples/) directory:
+Complete examples are included in the [`pytonium_examples/`](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples) directory in this repository:
 
 | Example | Description |
 |---------|-------------|
-| [Simple App](pytonium_examples/pytonium_example_simple/) | Bindings, state management, and context menus |
-| [Frameless Window](pytonium_examples/pytonium_example_frameless/) | Custom HTML/CSS titlebar with window controls |
-| [Babylon.js 3D](pytonium_examples/pytonium_example_babylon_js/) | 3D rendering with custom schemes and MIME types |
-| [Line Graph](pytonium_examples/pytonium_example_line_graph/) | Real-time data visualization with state updates |
-| [Control Center](pytonium_examples/pytonium_example_control_center/) | Dashboard with multiple data panels |
-| [Data Studio](pytonium_examples/pytonium_example_data_studio/) | Interactive data analysis tool |
+| [Simple App](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_simple) | Bindings, state management, and context menus |
+| [Frameless Window](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_frameless) | Custom HTML/CSS titlebar with window controls |
+| [Babylon.js 3D](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_babylon_js) | 3D rendering with custom schemes and MIME types |
+| [Line Graph](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_line_graph) | Real-time data visualization with state updates |
+| [Control Center](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_control_center) | Dashboard with multiple data panels |
+| [Data Studio](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_data_studio) | Interactive data analysis tool |
 
 ## Documentation
 
@@ -109,7 +109,7 @@ Full documentation is available at **[maximilian-winter.github.io/pytonium](http
 
 ## Building from Source
 
-See the [Build Guide](https://maximilian-winter.github.io/pytonium/building/build-guide/) or [`how-to-build-from-source.md`](how-to-build-from-source.md) for detailed instructions.
+See the [Build Guide](https://maximilian-winter.github.io/pytonium/building/build-guide/) or [`how-to-build-from-source.md`](https://github.com/Maximilian-Winter/pytonium/blob/master/how-to-build-from-source.md) for detailed instructions.
 
 ```bash
 # Quick version (Windows)
@@ -123,4 +123,4 @@ pip install dist/pytonium-*.whl --force-reinstall
 
 ## License
 
-[MIT License](LICENSE) -- Pytonium also includes [CEF](https://bitbucket.org/chromiumembedded/cef/) (BSD) and [nlohmann/json](https://github.com/nlohmann/json) (MIT).
+[MIT License](https://github.com/Maximilian-Winter/pytonium/blob/master/LICENSE) -- Pytonium also includes [CEF](https://bitbucket.org/chromiumembedded/cef/) (BSD) and [nlohmann/json](https://github.com/nlohmann/json) (MIT).

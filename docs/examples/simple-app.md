@@ -7,7 +7,7 @@ title: Simple App
 This example demonstrates the fundamentals of a Pytonium application: custom schemes for local file loading, Python-to-JavaScript function bindings, and real-time state management.
 
 !!! tip "Full Source"
-    The complete source code is available in the [pytonium_examples repository](https://github.com/Maximilian-Winter/pytonium_examples).
+    The complete source code is available in the main repository at [`pytonium_examples/pytonium_example_simple`](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_simple).
 
 ---
 
