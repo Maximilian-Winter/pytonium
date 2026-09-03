@@ -9,6 +9,9 @@ import zipfile
 linux_bin_folder = "bin_linux"
 windows_bin_folder = "bin_win"
 is_sdist_release = False
+project_dir = Path(__file__).resolve().parent
+readme_path = project_dir / "README.md"
+long_description = readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
 
 if 'RELEASE_SDIST' in os.environ:
     is_sdist_release = True
@@ -95,6 +98,7 @@ def generate_package_list_and_manifest_file_list(os_bin_folder):
 
 
 def generate_manifest_file():
+    pytonium_manifest_file_list.append("README.md")
     pytonium_manifest_file_list.append("Pytonium\\pytonium.pyi")
     with open('./MANIFEST.in', 'w') as fp:
 
@@ -157,6 +161,8 @@ if os.path.exists('./Pytonium/bin_linux/libcef.so'):
 setup(
     name='Pytonium',
     packages=pytonium_packages,
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     cmake_args=['-DUSE_SANDBOX=OFF'],
     include_package_data=True
 )
