@@ -1,12 +1,25 @@
 # Pytonium
 
-**Build Python desktop apps with HTML, CSS, and JavaScript.**
-
-Pytonium embeds the [Chromium Embedded Framework](https://bitbucket.org/chromiumembedded/cef/) (CEF 145 / Chromium 145) in Python, giving you the full power of modern web technologies for your desktop application UI.
+**Build local Python desktop apps with a real Chromium UI.**
 
 [![PyPI](https://img.shields.io/pypi/v/Pytonium)](https://pypi.org/project/Pytonium/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Maximilian-Winter/pytonium/blob/master/LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+Pytonium embeds the [Chromium Embedded Framework](https://bitbucket.org/chromiumembedded/cef/) in Python, so you can build desktop software with the UI tools web developers already know: HTML, CSS, JavaScript, Canvas, WebGL, React, Svelte, Vue, Tailwind, Babylon.js, or just a single `index.html`.
+
+It is for people who want Python to stay in charge of the application, while the frontend gets the full browser platform instead of a small native widget set.
+
+## Why Pytonium?
+
+- **Use the web as your UI layer.** Render modern HTML/CSS/JS in a native desktop window powered by CEF 145 / Chromium 145.
+- **Keep your app logic in Python.** Bind Python functions and objects into JavaScript, including Promise-based return values.
+- **Share state across the boundary.** Push namespaced state from Python to JavaScript, listen for DOM events, and react to frontend changes from Python.
+- **Ship local assets cleanly.** Register custom URL schemes like `app://index.html` for HTML, CSS, JS, images, models, and data files.
+- **Control the window.** Build frameless windows, custom title bars, fullscreen experiences, context menus, and multi-window apps.
+- **Stay editor-friendly.** Generate TypeScript definitions for your Python bindings so frontend code gets autocomplete.
+
+Pytonium works especially well for internal tools, dashboards, data apps, visual editors, local AI tools, 3D previews, and experiments where Python libraries and a rich browser UI belong in the same process.
 
 ## Install
 
@@ -14,7 +27,20 @@ Pytonium embeds the [Chromium Embedded Framework](https://bitbucket.org/chromium
 pip install Pytonium
 ```
 
-## Quick Start
+The first import extracts the bundled CEF runtime once. After that, startup is normal.
+
+Supported platforms:
+
+| Platform | Status |
+| --- | --- |
+| Windows 10/11, x86_64 | Supported |
+| Linux X11, x86_64 | Supported |
+| macOS | Not supported yet |
+| Python | 3.10+ |
+
+See the [installation guide](https://maximilian-winter.github.io/pytonium/getting-started/installation/) for virtual environment setup and Linux system packages.
+
+## A Tiny App
 
 ```python
 import time
@@ -28,99 +54,85 @@ while p.is_running():
     p.update_message_loop()
 ```
 
-That's it -- a native desktop window running a full Chromium browser, in 7 lines of Python.
+That opens a native desktop window running Chromium. From there you can load local files, bind Python APIs, stream state to the page, or replace the native frame with your own HTML/CSS chrome.
 
-## Features
-
-- **Chromium rendering** -- Full browser engine for HTML/CSS/JS, use React, Tailwind, or any web framework
-- **Python-JS bridge** -- Call Python functions from JavaScript, return values via Promises
-- **State management** -- Shared state between Python and JS with namespace subscriptions and DOM events
-- **Custom URL schemes** -- Map `myapp://` to a local folder for loading HTML, assets, and 3D models
-- **Frameless windows** -- Build custom window chrome with HTML/CSS, Electron-style
-- **Window control** -- Position, size, minimize, maximize, fullscreen, drag, native handle access
-- **Multi-instance** -- Run multiple browser windows in a single process
-- **TypeScript definitions** -- Auto-generate `.d.ts` files for IDE auto-completion
-- **Async support** -- `asyncio` integration with `run_pytonium_async`
-- **Event callbacks** -- React to title changes, URL navigation, and fullscreen state
-- **Cross-platform** -- Windows 11 and Linux
-
-## Example: Python + JavaScript Interop
+## Python and JavaScript Together
 
 ```python
+import os
 from Pytonium import Pytonium, returns_value_to_javascript
 
 p = Pytonium()
 
-@returns_value_to_javascript("any")
-def get_data():
-    return {"answer": 42, "source": "Python"}
+@returns_value_to_javascript("object")
+def get_project_status():
+    return {
+        "name": "Pytonium",
+        "runtime": "Python",
+        "ui": "Chromium",
+    }
 
-p.bind_function_to_javascript(get_data, javascript_object="api")
-p.initialize("file:///path/to/index.html", 800, 600)
+p.bind_function_to_javascript(get_project_status, javascript_object="api")
 
-while p.is_running():
-    p.update_message_loop()
+content_root = os.path.dirname(os.path.abspath(__file__)) + "/"
+p.add_custom_scheme("app", content_root)
+p.initialize("app://index.html", 900, 600)
 ```
 
 ```javascript
-// In your HTML/JS -- wait for bindings, then call Python
-if (window.PytoniumReady) {
-    callPython();
-} else {
-    window.addEventListener('PytoniumReady', callPython);
+async function init() {
+  const status = await Pytonium.api.get_project_status();
+  document.querySelector("#status").textContent =
+    `${status.name}: ${status.runtime} + ${status.ui}`;
 }
 
-async function callPython() {
-    const result = await Pytonium.api.get_data();
-    console.log(result.answer); // 42
+if (window.PytoniumReady) {
+  init();
+} else {
+  window.addEventListener("PytoniumReady", init);
 }
 ```
 
+For a complete walkthrough with local files, state updates, callbacks, and TypeScript generation, start with [Your First App](https://maximilian-winter.github.io/pytonium/getting-started/first-app/).
+
 ## Examples
 
-Complete examples are included in the [`pytonium_examples/`](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples) directory in this repository:
+The [`pytonium_examples/`](pytonium_examples/) directory contains runnable apps that show different parts of the framework:
 
-| Example | Description |
-|---------|-------------|
-| [Simple App](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_simple) | Bindings, state management, and context menus |
-| [Frameless Window](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_frameless) | Custom HTML/CSS titlebar with window controls |
-| [Babylon.js 3D](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_babylon_js) | 3D rendering with custom schemes and MIME types |
-| [Line Graph](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_line_graph) | Real-time data visualization with state updates |
-| [Control Center](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_control_center) | Dashboard with multiple data panels |
-| [Data Studio](https://github.com/Maximilian-Winter/pytonium/tree/master/pytonium_examples/pytonium_example_data_studio) | Interactive data analysis tool |
+| Example | What it demonstrates |
+| --- | --- |
+| [Simple App](pytonium_examples/pytonium_example_simple/) | Bindings, shared state, context menus, and local files |
+| [Frameless Window](pytonium_examples/pytonium_example_frameless/) | Custom HTML/CSS titlebar and window controls |
+| [Babylon.js 3D](pytonium_examples/pytonium_example_babylon_js/) | WebGL, custom schemes, MIME types, and `.glb` assets |
+| [Line Graph](pytonium_examples/pytonium_example_line_graph/) | Live Python state updates rendered in Canvas |
+| [Control Center](pytonium_examples/pytonium_example_control_center/) | Dashboard-style UI with multiple state namespaces |
+| [Data Studio](pytonium_examples/pytonium_example_data_studio/) | Interactive local data analysis |
+| [Reactive App](pytonium_examples/pytonium_example_reactive/) | Python-authored reactive components |
+
+Browse the [examples guide](https://maximilian-winter.github.io/pytonium/examples/) for explanations and run instructions.
 
 ## Documentation
 
-Full documentation is available at **[maximilian-winter.github.io/pytonium](https://maximilian-winter.github.io/pytonium/)**, covering:
+The README is intentionally short. The real documentation lives here:
 
-- [Getting Started](https://maximilian-winter.github.io/pytonium/getting-started/installation/) -- Installation, quick start, and first app tutorial
-- [Guides](https://maximilian-winter.github.io/pytonium/guides/javascript-bindings/) -- JS bindings, state management, frameless windows, async, and more
-- [API Reference](https://maximilian-winter.github.io/pytonium/api/pytonium/) -- Complete Pytonium class reference (~35 methods)
-- [Examples](https://maximilian-winter.github.io/pytonium/examples/) -- Walkthroughs of each example app
-- [Building from Source](https://maximilian-winter.github.io/pytonium/building/build-guide/) -- Windows and Linux build instructions
+- [Getting Started](https://maximilian-winter.github.io/pytonium/getting-started/installation/)
+- [Quick Start](https://maximilian-winter.github.io/pytonium/getting-started/quickstart/)
+- [Guides](https://maximilian-winter.github.io/pytonium/guides/javascript-bindings/)
+- [API Reference](https://maximilian-winter.github.io/pytonium/api/pytonium/)
+- [Examples](https://maximilian-winter.github.io/pytonium/examples/)
+- [Building from Source](https://maximilian-winter.github.io/pytonium/building/build-guide/)
 
-## Platform Support
+## Build From Source
 
-| Platform | Status |
-|----------|--------|
-| Windows 11 | Fully supported |
-| Linux (X11) | Fully supported |
-| Python 3.10+ | Required (64-bit) |
+Most users should install from PyPI. If you want to work on Pytonium itself, see the [build guide](https://maximilian-winter.github.io/pytonium/building/build-guide/) or the repository-local [how-to-build-from-source.md](how-to-build-from-source.md).
 
-## Building from Source
-
-See the [Build Guide](https://maximilian-winter.github.io/pytonium/building/build-guide/) or [`how-to-build-from-source.md`](https://github.com/Maximilian-Winter/pytonium/blob/master/how-to-build-from-source.md) for detailed instructions.
+For docs development:
 
 ```bash
-# Quick version (Windows)
-pip install build scikit-build cmake ninja Cython
-cmake -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
-cmake --build cmake-build-release --target pytonium_subprocess --config Release
-cd building_pythonium_core && python prepare_build.py --platform windows --build-dir ../cmake-build-release
-cd ../src/pytonium_python_framework && python -m build --wheel
-pip install dist/pytonium-*.whl --force-reinstall
+pip install -r requirements-docs.txt
+mkdocs serve
 ```
 
 ## License
 
-[MIT License](https://github.com/Maximilian-Winter/pytonium/blob/master/LICENSE) -- Pytonium also includes [CEF](https://bitbucket.org/chromiumembedded/cef/) (BSD) and [nlohmann/json](https://github.com/nlohmann/json) (MIT).
+Pytonium is released under the [MIT License](LICENSE). It also includes CEF, which is distributed under the BSD license, and [nlohmann/json](https://github.com/nlohmann/json), which is distributed under the MIT license.
