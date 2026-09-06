@@ -1,0 +1,2 @@
+Pytonium
+numpy>=1.24
