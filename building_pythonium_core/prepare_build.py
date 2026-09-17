@@ -245,7 +245,10 @@ def copy_cef_runtime(platform, dry_run=False, verbose=False):
     release_src = cef_src / "Release"
     if release_src.exists():
         if platform == "windows":
-            extensions = [".dll", ".exe"]
+            # CEF's Windows runtime includes required non-library assets in
+            # Release/ as well. In particular, Chromium 145 aborts child
+            # processes when v8_context_snapshot.bin is missing.
+            extensions = [".dll", ".exe", ".bin", ".json"]
         else:
             extensions = [".so", ".so.1", ".bin", ".json"]
         for item in release_src.iterdir():

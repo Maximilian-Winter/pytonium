@@ -199,7 +199,9 @@ jobs:
           assert package_root is not None, f'Could not find installed Pytonium package in {package_roots}';
           bin_dir = package_root / ('bin_linux' if '${{ matrix.target.platform }}' == 'linux' else 'bin_win');
           subprocess_name = 'pytonium_subprocess' if '${{ matrix.target.platform }}' == 'linux' else 'pytonium_subprocess.exe';
-          assert (bin_dir / subprocess_name).exists(), f'Missing {subprocess_name} in {bin_dir}'"
+          required = [subprocess_name, 'v8_context_snapshot.bin'];
+          missing = [name for name in required if not (bin_dir / name).exists()];
+          assert not missing, f'Missing CEF runtime files in {bin_dir}: {missing}'"
 
       - name: Run API smoke tests
         run: python -m pytest tests/test_pytonium_api.py
