@@ -32,18 +32,18 @@ concurrency:
 
 env:
   BUILD_TYPE: Release
-  PYTHON_VERSION: '3.12'
 
 jobs:
   build:
-    name: ${{ matrix.label }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.target.label }} (Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.target.os }}
     timeout-minutes: 90
 
     strategy:
       fail-fast: false
       matrix:
-        include:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        target:
           - label: Windows wheel
             os: windows-2022
             platform: windows
@@ -66,7 +66,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Install Linux build dependencies
@@ -99,24 +99,22 @@ jobs:
         id: cache-cef
         uses: actions/cache@v4
         with:
-          path: ${{ matrix.cef_dir }}
-          key: cef-${{ matrix.cef_distribution }}
+          path: ${{ matrix.target.cef_dir }}
+          key: cef-${{ matrix.target.cef_distribution }}
 
       - name: Download CEF binary distribution
         if: steps.cache-cef.outputs.cache-hit != 'true'
         run: >
           python -c "from pathlib import Path; import hashlib; import shutil; import tarfile; import urllib.parse; import urllib.request;
-          distribution = '${{ matrix.cef_distribution }}';
-          target = Path('${{ matrix.cef_dir }}');
+          distribution = '${{ matrix.target.cef_distribution }}';
+          target = Path('${{ matrix.target.cef_dir }}');
           filename = distribution + '.tar.bz2';
           url = 'https://cef-builds.spotifycdn.com/' + urllib.parse.quote(filename, safe='/:');
           print(f'Downloading {url}');
           archive = Path(filename);
           expected_sha1 = urllib.request.urlopen(url + '.sha1').read().decode().strip();
           urllib.request.urlretrieve(url, archive);
-          archive_file = archive.open('rb');
-          actual_sha1 = hashlib.file_digest(archive_file, 'sha1').hexdigest();
-          archive_file.close();
+          actual_sha1 = hashlib.sha1(archive.read_bytes()).hexdigest();
           assert actual_sha1 == expected_sha1, f'SHA1 mismatch: {actual_sha1} != {expected_sha1}';
           archive_tar = tarfile.open(archive, 'r:bz2');
           archive_tar.extractall('.');
@@ -129,29 +127,29 @@ jobs:
       - name: Verify CEF inputs
         run: >
           python -c "from pathlib import Path;
-          root = Path('${{ matrix.cef_dir }}');
-          required = ['cmake/FindCEF.cmake', 'include/cef_app.h', 'libcef_dll/CMakeLists.txt', 'Release/libcef.so' if '${{ matrix.platform }}' == 'linux' else 'Release/libcef.lib'];
+          root = Path('${{ matrix.target.cef_dir }}');
+          required = ['cmake/FindCEF.cmake', 'include/cef_app.h', 'libcef_dll/CMakeLists.txt', 'Release/libcef.so' if '${{ matrix.target.platform }}' == 'linux' else 'Release/libcef.lib'];
           missing = [item for item in required if not (root / item).exists()];
           assert not missing, f'Missing CEF inputs in {root}: {missing}'"
 
       - name: Cache native build directory
         uses: actions/cache@v4
         with:
-          path: ${{ matrix.cmake_build_dir }}
-          key: ${{ runner.os }}-cmake-${{ env.PYTHON_VERSION }}-${{ hashFiles('CMakeLists.txt', 'src/pytonium_library/**', 'src/pytonium_subprocess/**', '.github/workflows/build-wheels.yml') }}
+          path: ${{ matrix.target.cmake_build_dir }}
+          key: ${{ runner.os }}-cmake-${{ matrix.python-version }}-${{ hashFiles('CMakeLists.txt', 'src/pytonium_library/**', 'src/pytonium_subprocess/**', '.github/workflows/build-wheels.yml') }}
           restore-keys: |
-            ${{ runner.os }}-cmake-${{ env.PYTHON_VERSION }}-
+            ${{ runner.os }}-cmake-${{ matrix.python-version }}-
             ${{ runner.os }}-cmake-
 
       - name: Configure native build
         run: >
-          cmake -S . -B ${{ matrix.cmake_build_dir }}
+          cmake -S . -B ${{ matrix.target.cmake_build_dir }}
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           -DUSE_SANDBOX=OFF
 
       - name: Build pytonium_subprocess
         run: >
-          cmake --build ${{ matrix.cmake_build_dir }}
+          cmake --build ${{ matrix.target.cmake_build_dir }}
           --target pytonium_subprocess
           --config ${{ env.BUILD_TYPE }}
           --parallel
@@ -159,8 +157,8 @@ jobs:
       - name: Prepare Python wheel inputs
         run: >
           python building_pythonium_core/prepare_build.py
-          --platform ${{ matrix.platform }}
-          --build-dir ${{ matrix.cmake_build_dir }}
+          --platform ${{ matrix.target.platform }}
+          --build-dir ${{ matrix.target.cmake_build_dir }}
           --verbose
 
       - name: Build wheel
@@ -199,8 +197,8 @@ jobs:
           package_roots = [Path(path) / 'Pytonium' for path in site.getsitepackages() + [site.getusersitepackages()]];
           package_root = next((path for path in package_roots if path.exists()), None);
           assert package_root is not None, f'Could not find installed Pytonium package in {package_roots}';
-          bin_dir = package_root / ('bin_linux' if '${{ matrix.platform }}' == 'linux' else 'bin_win');
-          subprocess_name = 'pytonium_subprocess' if '${{ matrix.platform }}' == 'linux' else 'pytonium_subprocess.exe';
+          bin_dir = package_root / ('bin_linux' if '${{ matrix.target.platform }}' == 'linux' else 'bin_win');
+          subprocess_name = 'pytonium_subprocess' if '${{ matrix.target.platform }}' == 'linux' else 'pytonium_subprocess.exe';
           assert (bin_dir / subprocess_name).exists(), f'Missing {subprocess_name} in {bin_dir}'"
 
       - name: Run API smoke tests
@@ -209,7 +207,7 @@ jobs:
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}-py${{ env.PYTHON_VERSION }}
+          name: ${{ matrix.target.artifact_name }}-py${{ matrix.python-version }}
           path: src/pytonium_python_framework/dist/*.whl
           if-no-files-found: error
           retention-days: 14
@@ -227,7 +225,7 @@ jobs:
       - name: Download wheel artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: pytonium-*-wheel-py${{ env.PYTHON_VERSION }}
+          pattern: pytonium-*-wheel-py*
           path: release-artifacts
           merge-multiple: true
 
@@ -255,7 +253,7 @@ jobs:
       - name: Download wheel artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: pytonium-*-wheel-py${{ env.PYTHON_VERSION }}
+          pattern: pytonium-*-wheel-py*
           path: dist
           merge-multiple: true
 
