@@ -151,6 +151,26 @@ class Pytonium:
         """Poll the last rendered frame. Returns (buffer_or_None, width, height)."""
         ...
 
+    # Browser-content capture (excludes native window chrome)
+    def capture_screenshot(
+        self,
+        path: str,
+        callback: Optional[Callable[[Optional[str], Optional[Exception]], None]] = None,
+        *,
+        overwrite: bool = False,
+    ) -> int: ...
+    def start_recording(
+        self,
+        path: str,
+        *,
+        fps: int = 30,
+        quality: int = 85,
+        ffmpeg_path: Optional[str] = None,
+        overwrite: bool = False,
+    ) -> None: ...
+    def stop_recording(self, timeout: float = 30.0) -> str: ...
+    def is_recording(self) -> bool: ...
+
     # Input forwarding (works with any browser mode)
     def send_mouse_move(self, x: int, y: int, mouse_leave: bool = False, modifiers: int = 0) -> None: ...
     def send_mouse_click(self, x: int, y: int, button: int = 0, mouse_up: bool = False,

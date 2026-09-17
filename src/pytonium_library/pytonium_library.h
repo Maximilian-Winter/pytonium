@@ -17,6 +17,7 @@
 #endif
 
 #include "osr_window_headless.h"
+#include "capture_devtools_observer.h"
 
 
 #include "javascript_binding.h"
@@ -134,6 +135,15 @@ public:
     // Poll the last rendered frame (zero-copy read). Returns nullptr if no
     // frame has been rendered yet. Valid until next OnPaint or SetHeadlessSize.
     const void* GetPaintBuffer(int& width, int& height);
+
+    // Browser-content capture through the Chrome DevTools Page domain.
+    int CaptureScreenshot(screenshot_result_callback_ptr callback, void* user_data);
+    bool StartScreencast(int quality,
+                         screencast_frame_callback_ptr frame_callback,
+                         capture_error_callback_ptr error_callback,
+                         void* user_data);
+    void StopScreencast();
+    bool IsScreencasting() const;
 
     // --- Input forwarding (works for any browser mode) ---
 
@@ -273,6 +283,9 @@ private:
     CefRefPtr<OsrWindowX11> m_OsrWindow;
 #endif
     CefRefPtr<OsrWindowHeadless> m_OsrWindowHeadless;
+    headless_paint_callback_ptr m_PendingPaintCallback = nullptr;
+    void* m_PendingPaintCallbackUserData = nullptr;
+    CefRefPtr<CaptureDevToolsObserver> m_CaptureObserver;
 
     std::vector<JavascriptBinding> m_Javascript_Bindings;
     std::vector<JavascriptPythonBinding> m_Javascript_Python_Bindings;

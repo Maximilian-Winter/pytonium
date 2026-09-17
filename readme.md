@@ -75,6 +75,10 @@ Find more examples and walkthroughs in the [examples guide](https://maximilian-w
 
 Bug reports, feature requests, documentation improvements, and example apps are welcome. [Open an issue](https://github.com/Maximilian-Winter/pytonium/issues) or read the [contributing guide](https://maximilian-winter.github.io/pytonium/about/contributing/) to get started.
 
+To build the Markdown documentation locally, install `requirements-docs.txt`
+and run `python build_docs.py`. Use `python build_docs.py --serve` for a
+live-reloading preview.
+
 ## License
 
 Pytonium is [MIT licensed](LICENSE). See [third-party licenses](https://maximilian-winter.github.io/pytonium/about/license/) for CEF and other included dependencies.

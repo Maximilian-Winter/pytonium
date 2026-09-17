@@ -26,6 +26,7 @@ These examples demonstrate Pytonium's capabilities, from basic windowing to full
 | **[Real-Time Line Graph](line-graph.md)** | Live data visualization with Python state updates | `set_state` in a loop, `registerForStateUpdates`, Canvas rendering |
 | **[Control Center](control-center.md)** | Dashboard-style app with multiple panels | Multiple state namespaces, context menus, multi-panel layout |
 | **[Data Studio](data-studio.md)** | Data analysis tool with interactive UI | File loading from Python, `@returns_value_to_javascript` for queries |
+| **[Screenshots and Recording](capture.md)** | Capture the rendered browser viewport to PNG and H.264 MP4 | DevTools capture, FFmpeg, asynchronous callbacks |
 
 ---
 
@@ -68,3 +69,7 @@ python main.py
 **Need real-time data?** The [Line Graph](line-graph.md) example shows the pattern for pushing data from Python and rendering live updates in JavaScript.
 
 **Building something larger?** The [Control Center](control-center.md) and [Data Studio](data-studio.md) examples demonstrate multi-panel layouts, multiple state namespaces, and more advanced binding patterns.
+
+**Need visual output from an app?** The [Screenshots and Recording](capture.md)
+example captures only the browser content and demonstrates safe FFmpeg
+finalization.

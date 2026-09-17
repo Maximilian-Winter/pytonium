@@ -221,6 +221,72 @@ if not Pytonium.is_cef_initialized():
 
 ---
 
+## Screenshots & Recording
+
+Capture methods record the browser viewport only. Native title bars, window
+borders, cursors, native menus, and audio are not included. Keep calling
+`update_message_loop()` while a screenshot or recording is active.
+
+For complete setup, lifecycle, headless-mode, and troubleshooting examples,
+see the [Screenshots and Recording guide](../guides/screenshots-recording.md).
+
+### `capture_screenshot`
+
+```python
+capture_screenshot(path: str, callback=None, *, overwrite: bool = False) -> int
+```
+
+Request an asynchronous PNG screenshot. The optional callback receives
+`(path, error)` when capture completes.
+
+```python
+def screenshot_done(path, error):
+    if error:
+        print(f"Screenshot failed: {error}")
+    else:
+        print(f"Saved {path}")
+
+request_id = p.capture_screenshot("capture.png", screenshot_done)
+```
+
+### `start_recording` / `stop_recording`
+
+```python
+start_recording(
+    path: str,
+    *,
+    fps: int = 30,
+    quality: int = 85,
+    ffmpeg_path: str | None = None,
+    overwrite: bool = False,
+) -> None
+
+stop_recording(timeout: float = 30.0) -> str
+is_recording() -> bool
+```
+
+Recording requires an FFmpeg build with `libx264`. Pytonium finds `ffmpeg` on
+`PATH`, or you can provide an explicit executable path. The output is a silent
+H.264 MP4 whose dimensions are fixed by the first captured frame. Later resize
+frames are scaled and letterboxed, static pages keep real-time duration through
+duplicate frames, and transparent regions are rendered against black. FFmpeg is
+not bundled with Pytonium wheels.
+
+```python
+p.start_recording("demo.mp4", fps=30)
+
+while p.is_running():
+    p.update_message_loop()
+    # Call this from application logic when recording should finish:
+    if p.is_recording() and should_stop_recording():
+        print(f"Saved {p.stop_recording()}")
+```
+
+Existing output files are protected by default. Pass `overwrite=True` to
+replace them intentionally.
+
+---
+
 ## JavaScript Bindings
 
 ### `bind_function_to_javascript`

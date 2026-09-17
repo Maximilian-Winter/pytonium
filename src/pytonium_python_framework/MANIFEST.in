@@ -13,7 +13,9 @@ include Pytonium\bin_win\libEGL.dll
 include Pytonium\bin_win\libGLESv2.dll
 include Pytonium\bin_win\pytonium_subprocess.exe
 include Pytonium\bin_win\resources.pak
+include Pytonium\bin_win\v8_context_snapshot.bin
 include Pytonium\bin_win\vk_swiftshader.dll
+include Pytonium\bin_win\vk_swiftshader_icd.json
 include Pytonium\bin_win\vulkan-1.dll
 include Pytonium\bin_win\locales\af.pak
 include Pytonium\bin_win\locales\af_FEMININE.pak
@@ -235,4 +237,5 @@ include Pytonium\bin_win\locales\zh-TW.pak
 include Pytonium\bin_win\locales\zh-TW_FEMININE.pak
 include Pytonium\bin_win\locales\zh-TW_MASCULINE.pak
 include Pytonium\bin_win\locales\zh-TW_NEUTER.pak
+include README.md
 include Pytonium\pytonium.pyi

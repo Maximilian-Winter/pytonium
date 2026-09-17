@@ -204,7 +204,7 @@ jobs:
           assert not missing, f'Missing CEF runtime files in {bin_dir}: {missing}'"
 
       - name: Run API smoke tests
-        run: python -m pytest tests/test_pytonium_api.py
+        run: python -m pytest tests/test_pytonium_api.py building_pythonium_core/test_capture.py
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4

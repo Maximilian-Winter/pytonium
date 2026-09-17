@@ -6,7 +6,17 @@
 import inspect
 import warnings
 
-from .pytonium_library cimport PytoniumLibrary, CefValueWrapper, state_callback_object_ptr, headless_paint_callback_ptr
+from .capture import RecordingSession, prepare_output_path, write_png_atomic
+from .pytonium_library cimport (
+    PytoniumLibrary,
+    CefValueWrapper,
+    state_callback_object_ptr,
+    headless_paint_callback_ptr,
+    screenshot_result_callback_ptr,
+    screencast_frame_callback_ptr,
+    capture_error_callback_ptr,
+)
+from libc.stddef cimport size_t
 from libcpp.string cimport string
 
 from libcpp cimport bool as boolie
@@ -410,6 +420,68 @@ cdef inline void _on_paint_callback(void* user_data, const void* buffer, int wid
         traceback.print_exc()
 
 
+cdef class PytoniumCaptureCallbackWrapper:
+    """Routes native DevTools capture callbacks to a Pytonium instance."""
+    cdef object owner
+
+    def __init__(self, owner):
+        self.owner = owner
+
+    def screenshot_result(self, int request_id, success, data, error):
+        self.owner._handle_screenshot_result(request_id, success, data, error)
+
+    def screencast_frame(self, data, int width, int height):
+        self.owner._handle_screencast_frame(data, width, height)
+
+    def capture_error(self, error):
+        self.owner._handle_capture_error(error)
+
+
+cdef inline void _on_screenshot_result(
+    void* user_data, int request_id, boolie success,
+    const void* data, size_t data_size, const char* error
+) noexcept with gil:
+    cdef bytes payload = b""
+    cdef const unsigned char[:] data_view
+    try:
+        if success and data != NULL and data_size > 0:
+            data_view = <const unsigned char[:data_size]>(<const unsigned char*>data)
+            payload = bytes(data_view)
+        error_text = error.decode("utf-8", "replace") if error != NULL else ""
+        (<PytoniumCaptureCallbackWrapper>user_data).screenshot_result(
+            request_id, bool(success), payload, error_text
+        )
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
+cdef inline void _on_screencast_frame(
+    void* user_data, const void* data, size_t data_size,
+    int width, int height
+) noexcept with gil:
+    cdef const unsigned char[:] data_view
+    try:
+        if data == NULL or data_size == 0:
+            return
+        data_view = <const unsigned char[:data_size]>(<const unsigned char*>data)
+        (<PytoniumCaptureCallbackWrapper>user_data).screencast_frame(
+            bytes(data_view), width, height
+        )
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
+cdef inline void _on_capture_error(void* user_data, const char* error) noexcept with gil:
+    try:
+        error_text = error.decode("utf-8", "replace") if error != NULL else "Capture failed"
+        (<PytoniumCaptureCallbackWrapper>user_data).capture_error(error_text)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
 cdef str _global_pytonium_subprocess_path = ""
 
 def python_type_to_ts_type(python_type):
@@ -429,6 +501,9 @@ cdef class Pytonium:
     cdef list _pytonium_state_handler
     cdef PytoniumContextMenuWrapper _pytonium_context_menu
     cdef list _event_callback_wrappers
+    cdef PytoniumCaptureCallbackWrapper _capture_callback_wrapper
+    cdef dict _screenshot_requests
+    cdef object _recording_session
 
     def __init__(self):
         global _global_pytonium_subprocess_path
@@ -436,6 +511,9 @@ cdef class Pytonium:
         self._pytonium_state_handler = []
         self._pytonium_context_menu = PytoniumContextMenuWrapper()
         self._event_callback_wrappers = []
+        self._capture_callback_wrapper = PytoniumCaptureCallbackWrapper(self)
+        self._screenshot_requests = {}
+        self._recording_session = None
         self.pytonium_library = PytoniumLibrary()
         self.pytonium_library.SetCustomSubprocessPath(_global_pytonium_subprocess_path.encode('utf-8'))
 
@@ -860,6 +938,7 @@ cdef class Pytonium:
 
     def close_browser(self) -> None:
         """Close this instance's browser window without shutting down CEF."""
+        self._finalize_recording_for_close()
         self.pytonium_library.CloseBrowser()
 
     def get_browser_id(self) -> int:
@@ -872,6 +951,7 @@ cdef class Pytonium:
 
     def shutdown(self) -> None:
         """Shut down the Pytonium browser and CEF framework."""
+        self._finalize_recording_for_close()
         self.pytonium_library.ShutdownPytonium()
 
     def is_running(self) -> bool:
@@ -894,6 +974,8 @@ cdef class Pytonium:
     def update_message_loop(self) -> None:
         """Process pending CEF messages. Call this in your main loop."""
         self.pytonium_library.UpdateMessageLoop()
+        if self._recording_session is not None and not self.pytonium_library.IsBrowserRunning():
+            self._finalize_recording_for_close()
 
     def add_custom_scheme(self, scheme_identifier: str, scheme_content_root_folder: str) -> None:
         """Register a custom URL scheme for serving local content.
@@ -1018,6 +1100,148 @@ cdef class Pytonium:
         cdef const unsigned char[:] buf_view = <const unsigned char[:width * height * 4]>(<const unsigned char*>buf)
         return (buf_view, width, height)
 
+    # --- Browser-content capture ---
+
+    def capture_screenshot(self, path: str, callback=None, *, overwrite: bool = False) -> int:
+        """Capture the browser viewport to a PNG file asynchronously.
+
+        Native title bars, borders, cursors, and native menus are excluded.
+        The request completes while ``update_message_loop()`` is running.
+
+        Args:
+            path: Destination path ending in ``.png``.
+            callback: Optional ``callback(path, error)`` invoked on completion.
+                On success ``path`` is the absolute output path and ``error`` is
+                None. On failure ``path`` is None and ``error`` is an Exception.
+            overwrite: Replace an existing file when True.
+
+        Returns:
+            The positive DevTools request ID.
+        """
+        if not self.pytonium_library.IsBrowserRunning():
+            raise RuntimeError("capture_screenshot() requires an initialized browser")
+        if callback is not None and not callable(callback):
+            raise TypeError("callback must be callable or None")
+
+        output_path = prepare_output_path(path, ".png", overwrite)
+        cdef int request_id = self.pytonium_library.CaptureScreenshot(
+            _on_screenshot_result, <void*>self._capture_callback_wrapper
+        )
+        if request_id == 0:
+            raise RuntimeError("CEF rejected the screenshot request")
+        self._screenshot_requests[request_id] = (
+            output_path, callback, bool(overwrite)
+        )
+        return request_id
+
+    def start_recording(
+        self,
+        path: str,
+        *,
+        fps: int = 30,
+        quality: int = 85,
+        ffmpeg_path=None,
+        overwrite: bool = False,
+    ) -> None:
+        """Start recording the browser viewport to a silent H.264 MP4.
+
+        FFmpeg must be installed on PATH or supplied with ``ffmpeg_path``.
+        Native window chrome and audio are not captured.
+        """
+        if not self.pytonium_library.IsBrowserRunning():
+            raise RuntimeError("start_recording() requires an initialized browser")
+        if self._recording_session is not None:
+            raise RuntimeError("A recording is already active")
+
+        session = RecordingSession(
+            path,
+            fps=fps,
+            quality=quality,
+            ffmpeg_path=ffmpeg_path,
+            overwrite=overwrite,
+        )
+        self._recording_session = session
+        session.start()
+        if not self.pytonium_library.StartScreencast(
+            quality,
+            _on_screencast_frame,
+            _on_capture_error,
+            <void*>self._capture_callback_wrapper,
+        ):
+            self._recording_session = None
+            session.abort()
+            raise RuntimeError("CEF rejected the screencast request")
+
+    def stop_recording(self, timeout: float = 30.0) -> str:
+        """Stop the active recording, finalize its MP4, and return its path."""
+        if self._recording_session is None:
+            raise RuntimeError("No recording is active")
+        if timeout <= 0:
+            raise ValueError("timeout must be greater than zero")
+        session = self._recording_session
+        self._recording_session = None
+        self.pytonium_library.StopScreencast()
+        return session.finish(timeout)
+
+    def is_recording(self) -> bool:
+        """Return True while a recording session is actively accepting frames."""
+        return (
+            self._recording_session is not None
+            and self._recording_session.is_recording
+        )
+
+    def _handle_screenshot_result(self, request_id, success, data, error_text):
+        request = self._screenshot_requests.pop(request_id, None)
+        if request is None:
+            return
+        output_path, callback, overwrite = request
+        result_path = None
+        result_error = None
+        try:
+            if not success:
+                raise RuntimeError(error_text or "Screenshot capture failed")
+            result_path = write_png_atomic(output_path, data, overwrite)
+        except Exception as exc:
+            result_error = exc
+
+        if callback is not None:
+            try:
+                callback(result_path, result_error)
+            except Exception:
+                import traceback
+                traceback.print_exc()
+        elif result_error is not None:
+            warnings.warn(
+                f"Screenshot capture failed: {result_error}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+    def _handle_screencast_frame(self, data, width, height):
+        if self._recording_session is not None:
+            self._recording_session.push_frame(data, width, height)
+
+    def _handle_capture_error(self, error_text):
+        if self._recording_session is not None:
+            self._recording_session.fail(error_text)
+            warnings.warn(
+                f"Recording capture failed: {error_text}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+    def _finalize_recording_for_close(self):
+        if self._recording_session is None:
+            return
+        try:
+            self.stop_recording()
+        except Exception as exc:
+            warnings.warn(
+                f"Unable to finalize active recording: {exc}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
     # --- Input forwarding ---
 
     def send_mouse_move(self, x: int, y: int, mouse_leave: bool = False, modifiers: int = 0):
@@ -1115,6 +1339,7 @@ cdef class Pytonium:
 
     def close_window(self):
         """Close the window."""
+        self._finalize_recording_for_close()
         self.pytonium_library.CloseWindow()
 
     def is_maximized(self) -> bool:

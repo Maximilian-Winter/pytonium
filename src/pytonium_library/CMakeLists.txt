@@ -32,6 +32,8 @@ set(PYTONIUM_LIBRARY_SRCS
         Logging.h
         application_context_menu_binding.h
         cef_custom_scheme.h
+        capture_devtools_observer.h
+        capture_devtools_observer.cc
         osr_render_handler_dispatcher.h
         osr_render_handler_dispatcher.cc
         osr_window_headless.h

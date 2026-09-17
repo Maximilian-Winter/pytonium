@@ -150,6 +150,33 @@ The type stubs at `src/pytonium_python_framework/Pytonium/pytonium.pyi` are **ha
 
 ---
 
+## Building the Documentation Locally
+
+Install the documentation dependencies once:
+
+```bash
+python -m pip install -r requirements-docs.txt
+```
+
+Build the Markdown documentation into the static `site/` directory:
+
+```bash
+python build_docs.py
+```
+
+The helper uses MkDocs strict mode, so invalid configuration and documentation
+warnings fail the build. To preview changes with automatic browser reloads:
+
+```bash
+python build_docs.py --serve
+```
+
+The preview is available at `http://127.0.0.1:8000/`. Use `--address` to select
+another interface or port, or `--output` to choose a different static output
+directory.
+
+---
+
 ## Project Structure
 
 ```
@@ -167,6 +194,7 @@ pytonium/
             setup.py                # scikit-build setup
     tests/                          # Test suite
     building_pythonium_core/        # Build preparation scripts
+    build_docs.py                    # Local documentation build/preview helper
     docs/                           # MkDocs documentation
     cef-binaries-windows/           # CEF binaries (not in git)
     cef-binaries-linux/             # CEF binaries (not in git)

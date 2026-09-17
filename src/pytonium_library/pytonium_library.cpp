@@ -290,6 +290,9 @@ int PytoniumLibrary::CreateBrowser(const std::string& url, int width, int height
     m_BrowserId = m_Browser->GetIdentifier();
     s_InstanceCount++;
 
+    m_CaptureObserver = new CaptureDevToolsObserver(m_Browser);
+    m_CaptureObserver->Attach();
+
     // Register per-browser bindings on the client handler
     handler->RegisterBrowserBindings(m_BrowserId,
         m_Javascript_Bindings, m_Javascript_Python_Bindings,
@@ -316,6 +319,10 @@ int PytoniumLibrary::CreateBrowser(const std::string& url, int width, int height
 void PytoniumLibrary::CloseBrowser()
 {
     if (m_Browser) {
+        if (m_CaptureObserver) {
+            m_CaptureObserver->Detach();
+            m_CaptureObserver = nullptr;
+        }
         m_Browser->GetHost()->CloseBrowser(true);
         m_Browser = nullptr;
         m_BrowserId = -1;
@@ -1103,6 +1110,8 @@ void PytoniumLibrary::SetHeadlessMode(bool headless) {
 }
 
 void PytoniumLibrary::SetOnPaintCallback(headless_paint_callback_ptr callback, void* user_data) {
+    m_PendingPaintCallback = callback;
+    m_PendingPaintCallbackUserData = user_data;
     if (m_OsrWindowHeadless) {
         m_OsrWindowHeadless->SetPaintCallback(callback, user_data);
     }
@@ -1123,6 +1132,34 @@ const void* PytoniumLibrary::GetPaintBuffer(int& width, int& height) {
     width = m_OsrWindowHeadless->GetWidth();
     height = m_OsrWindowHeadless->GetHeight();
     return m_OsrWindowHeadless->GetBuffer();
+}
+
+int PytoniumLibrary::CaptureScreenshot(
+    screenshot_result_callback_ptr callback, void* user_data) {
+    if (!m_Browser || !m_CaptureObserver) {
+        return 0;
+    }
+    return m_CaptureObserver->CaptureScreenshot(callback, user_data);
+}
+
+bool PytoniumLibrary::StartScreencast(
+    int quality, screencast_frame_callback_ptr frame_callback,
+    capture_error_callback_ptr error_callback, void* user_data) {
+    if (!m_Browser || !m_CaptureObserver) {
+        return false;
+    }
+    return m_CaptureObserver->StartScreencast(
+        quality, frame_callback, error_callback, user_data);
+}
+
+void PytoniumLibrary::StopScreencast() {
+    if (m_CaptureObserver) {
+        m_CaptureObserver->StopScreencast();
+    }
+}
+
+bool PytoniumLibrary::IsScreencasting() const {
+    return m_CaptureObserver && m_CaptureObserver->IsScreencasting();
 }
 
 void PytoniumLibrary::SendMouseMoveEvent(int x, int y, bool mouseLeave, uint32_t modifiers) {
@@ -1221,6 +1258,8 @@ int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int hei
     if (m_HeadlessMode) {
         // Headless: no OS window, just a buffer + callback
         m_OsrWindowHeadless = new OsrWindowHeadless(width, height);
+        m_OsrWindowHeadless->SetPaintCallback(
+            m_PendingPaintCallback, m_PendingPaintCallbackUserData);
         // osrWindowHandle stays kNullWindowHandle — CEF supports this for headless
     }
 #if defined(OS_WIN)
@@ -1329,6 +1368,9 @@ int PytoniumLibrary::CreateBrowserOsr(const std::string& url, int width, int hei
 
     m_BrowserId = m_Browser->GetIdentifier();
     s_InstanceCount++;
+
+    m_CaptureObserver = new CaptureDevToolsObserver(m_Browser);
+    m_CaptureObserver->Attach();
 
     // Connect the browser to the appropriate OSR handler and register with dispatcher
     if (m_HeadlessMode) {

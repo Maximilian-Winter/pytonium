@@ -119,6 +119,7 @@ nav:
     - TypeScript Definitions: guides/typescript-definitions.md
     - Async Integration: guides/async-integration.md
     - Event Callbacks: guides/event-callbacks.md
+    - Screenshots & Recording: guides/screenshots-recording.md
     - Reactive Components: guides/reactive-components.md
     - Reactive Elements: guides/reactive-elements.md
     - Reactive Interactivity: guides/reactive-interactivity.md
@@ -132,6 +133,7 @@ nav:
     - Control Center: examples/control-center.md
     - Data Studio: examples/data-studio.md
     - Reactive App: examples/reactive-app.md
+    - Screenshots & Recording: examples/capture.md
   - API Reference:
     - Pytonium Class: api/pytonium.md
     - Decorators & Helpers: api/helpers.md

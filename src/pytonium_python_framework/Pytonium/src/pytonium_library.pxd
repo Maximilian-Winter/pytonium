@@ -5,6 +5,7 @@ from libcpp.string cimport string
 from libcpp cimport bool
 from libcpp.map cimport map  # Import map from the C++ standard library
 from libcpp.vector cimport vector  # Import vector from the C++ standard library
+from libc.stddef cimport size_t
 
 cdef extern from "src/pytonium_library/javascript_binding.h":
     cdef enum ValueType:  # Enum to represent value types
@@ -77,6 +78,11 @@ cdef extern from "src/pytonium_library/application_context_menu_binding.h":
 cdef extern from "src/pytonium_library/osr_window_headless.h":
     ctypedef void (*headless_paint_callback_ptr)(void* user_data, const void* buffer, int width, int height)
 
+cdef extern from "src/pytonium_library/capture_devtools_observer.h":
+    ctypedef void (*screenshot_result_callback_ptr)(void* user_data, int request_id, bool success, const void* data, size_t data_size, const char* error)
+    ctypedef void (*screencast_frame_callback_ptr)(void* user_data, const void* data, size_t data_size, int width, int height)
+    ctypedef void (*capture_error_callback_ptr)(void* user_data, const char* error)
+
 # Declare the class with cdef
 cdef extern from "src/pytonium_library/pytonium_library.h":
     cdef cppclass PytoniumLibrary:
@@ -133,6 +139,12 @@ cdef extern from "src/pytonium_library/pytonium_library.h":
         void SetOnPaintCallback(headless_paint_callback_ptr callback, void* user_data);
         void SetHeadlessSize(int width, int height);
         const void* GetPaintBuffer(int& width, int& height);
+
+        # Browser-content capture
+        int CaptureScreenshot(screenshot_result_callback_ptr callback, void* user_data);
+        bool StartScreencast(int quality, screencast_frame_callback_ptr frame_callback, capture_error_callback_ptr error_callback, void* user_data);
+        void StopScreencast();
+        bool IsScreencasting();
 
         # Input forwarding
         void SendMouseMoveEvent(int x, int y, bool mouseLeave, unsigned int modifiers);
